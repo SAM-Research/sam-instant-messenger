@@ -15,19 +15,9 @@ jobs:
     steps:
     - name: Checkout code
       uses: actions/checkout@v4
-  format:
-    steps:
     - name: Run fmt
       run: cargo fmt --all -- --check
-    concurrency:
-      group: check
-  clippy:
     - name: Run Clippy
       run: cargo clippy --all-targets --all-features -- -D warnings
-    concurrency:
-      group: check
-  test:
     - name: Run Test
       run: cargo test --all
-    concurrency:
-      group: check
