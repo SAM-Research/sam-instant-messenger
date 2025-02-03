@@ -1,6 +1,9 @@
 [package]
-name = "client"
+name = "sam-client"
 version = "0.1.0"
 edition = "2021"
 
 [dependencies]
+derive_more = { version = "1.0.0", features = ["display", "error", "from"] }
+libsignal-protocol = { git = "https://github.com/signalapp/libsignal.git", version = "0.1.0" }
+sam-lib = { path = "../lib" }
