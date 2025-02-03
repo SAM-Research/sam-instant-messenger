@@ -5,4 +5,4 @@ edition = "2021"
 
 [dependencies]
 derive_more = { version = "1.0.0", features = ["display", "error", "from"] }
-sam-lib = { path = "../lib" }
+sam-common = { path = "../common" }
