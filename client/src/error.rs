@@ -5,8 +5,9 @@ use sqlx::{sqlite::SqliteError, Error as SqlxError};
 
 #[derive(Debug, Display, Error, From)]
 pub enum ClientError {
+    #[display("Failed to parse an invalid ServiceId: {_0}")]
     #[error(ignore)]
-    Custom(String),
+    InvalidServiceId(String),
     SignalProtocol(SignalProtocolError),
     Sqlite(SqliteError),
     Lib(LibError),

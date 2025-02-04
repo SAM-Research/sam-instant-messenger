@@ -1,8 +1,13 @@
-CREATE TABLE Identity (
-  id                  INTEGER PRIMARY KEY,
-  aci                 TEXT NOT NULL,
-  pni                 TEXT NOT NULL,
-  password            TEXT NOT NULL
+CREATE TABLE Aci (
+  aci   TEXT NOT NULL
+);
+
+CREATE TABLE Username (
+  username  TEXT NOT NULL
+);
+
+CREATE TABLE Password (
+  password  TEXT NOT NULL
 );
 
 CREATE TABLE IdentityKeys (

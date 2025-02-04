@@ -37,8 +37,44 @@ impl SqliteIdentityKeyStore {
         .map(|_| ())
         .map_err(ClientError::from)
     }
-    pub fn new(database: Pool<Sqlite>, _key_pair: IdentityKeyPair, _registration_id: u32) -> Self {
-        Self { database }
+
+    async fn insert_account_key_information(
+        &self,
+        key_pair: IdentityKeyPair,
+        registration_id: u32,
+    ) -> Result<(), ClientError> {
+        let pk = BASE64_STANDARD.encode(key_pair.identity_key().serialize());
+        let sk = BASE64_STANDARD.encode(key_pair.private_key().serialize());
+
+        sqlx::query!(
+            r#"
+            INSERT INTO IdentityKeys (public_key, private_key, registration_id)
+            VALUES (?, ?, ?)
+            "#,
+            pk,
+            sk,
+            registration_id,
+        )
+        .execute(&self.database)
+        .await
+        .map(|_| ())
+        .map_err(ClientError::from)
+    }
+
+    pub async fn create(
+        database: Pool<Sqlite>,
+        key_pair: IdentityKeyPair,
+        registration_id: u32,
+    ) -> Result<Self, ClientError> {
+        let id_store = Self { database };
+        id_store
+            .insert_account_key_information(key_pair, registration_id)
+            .await?;
+        Ok(id_store)
+    }
+
+    pub async fn load(database: Pool<Sqlite>) -> Result<Self, ClientError> {
+        Ok(Self { database })
     }
 }
 

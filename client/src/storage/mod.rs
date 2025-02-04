@@ -23,13 +23,14 @@ pub trait StoreConfig {
 
 pub trait ContactStore {}
 
+#[async_trait(?Send)]
 pub trait AccountStore {
-    fn set_aci(&self, aci: Aci) -> Result<(), ClientError>;
-    fn get_aci(&self) -> Result<Aci, ClientError>;
-    fn set_password(&self, password: String) -> Result<(), ClientError>;
-    fn get_password(&self) -> Result<String, ClientError>;
-    fn set_username(&self, username: String) -> Result<(), ClientError>;
-    fn get_username(&self) -> Result<String, ClientError>;
+    async fn set_aci(&self, aci: Aci) -> Result<(), ClientError>;
+    async fn get_aci(&self) -> Result<Aci, ClientError>;
+    async fn set_password(&self, password: String) -> Result<(), ClientError>;
+    async fn get_password(&self) -> Result<String, ClientError>;
+    async fn set_username(&self, username: String) -> Result<(), ClientError>;
+    async fn get_username(&self) -> Result<String, ClientError>;
 }
 
 pub trait StoreType {
