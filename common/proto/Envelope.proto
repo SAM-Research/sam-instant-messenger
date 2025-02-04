@@ -1,0 +1,22 @@
+package sam_message;
+
+enum MessageType {
+  SIGNAL_MESSAGE = 1;
+  PRE_KEY_SIGNAL_MESSAGE = 2;
+  SENDER_KEY_MESSAGE = 3;
+  PLAINTEXT_CONTENT = 4;
+}
+
+message ClientEnvelope {
+  required MessageType type = 1;
+  map<uint32, bytes> content = 2;
+  required string destination = 3;
+  required string source = 4;
+}
+
+message ServerEnvelope {
+  required MessageType type = 1;
+  required bytes content = 2;
+  required string destination = 3;
+  required string source = 4;
+}
