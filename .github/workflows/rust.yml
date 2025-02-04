@@ -13,14 +13,6 @@ jobs:
   build:
     runs-on: ubuntu-latest
     steps:
-    - name: Checkout code
-      uses: actions/checkout@v4
-    - name: Run fmt
-      run: cargo fmt --all -- --check
-    - name: Run Clippy
-      run: cargo clippy --all-targets --all-features -- -D warnings
-    - name: Run Test
-      run: cargo test --all 
     - name: Set up cache for Protobuf
       uses: actions/cache@v4
       with:
@@ -37,3 +29,12 @@ jobs:
         # Install Protoc.
         wget https://github.com/protocolbuffers/protobuf/releases/download/v21.3/protoc-21.3-linux-x86_64.zip
         unzip -o protoc-21.3-linux-x86_64.zip -d ~/.local
+    - name: Checkout code
+      uses: actions/checkout@v4
+    - name: Run fmt
+      run: cargo fmt --all -- --check
+    - name: Run Clippy
+      run: cargo clippy --all-targets --all-features -- -D warnings
+    - name: Run Test
+      run: cargo test --all 
+
