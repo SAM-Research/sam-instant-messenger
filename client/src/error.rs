@@ -3,8 +3,6 @@ use libsignal_protocol::SignalProtocolError;
 use sam_common::LibError;
 use sqlx::{sqlite::SqliteError, Error as SqlxError};
 
-pub type Result<T> = std::result::Result<T, ClientError>;
-
 #[derive(Debug, Display, Error, From)]
 pub enum ClientError {
     #[error(ignore)]

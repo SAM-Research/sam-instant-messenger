@@ -1,32 +1,35 @@
-use std::fmt::Debug;
-
-use crate::Result;
+use crate::ClientError;
 use async_trait::async_trait;
 use bon::Builder;
 use libsignal_protocol::{
-    Aci, IdentityKeyPair, IdentityKeyStore, KyberPreKeyStore, Pni, PreKeyStore, SenderKeyStore,
+    Aci, IdentityKeyPair, IdentityKeyStore, KyberPreKeyStore, PreKeyStore, SenderKeyStore,
     SessionStore, SignedPreKeyStore,
 };
+use std::fmt::Debug;
 pub mod sqlite;
 
 #[async_trait(?Send)]
 pub trait StoreConfig {
     type StoreType: StoreType;
 
-    async fn build<ID: Into<u32>>(
+    async fn create_store<ID: Into<u32>>(
         self,
         key_pair: IdentityKeyPair,
         registration_id: ID,
-    ) -> Result<Store<Self::StoreType>>;
+    ) -> Result<Store<Self::StoreType>, ClientError>;
+
+    async fn load_store(self) -> Result<Store<Self::StoreType>, ClientError>;
 }
 
 pub trait ContactStore {}
 
 pub trait AccountStore {
-    fn set_aci(&self, aci: Aci) -> Result<()>;
-    fn get_aci(&self) -> Result<Aci>;
-    fn set_pni(&self, pni: Pni) -> Result<()>;
-    fn set_password(&self, password: String) -> Result<()>;
+    fn set_aci(&self, aci: Aci) -> Result<(), ClientError>;
+    fn get_aci(&self) -> Result<Aci, ClientError>;
+    fn set_password(&self, password: String) -> Result<(), ClientError>;
+    fn get_password(&self) -> Result<String, ClientError>;
+    fn set_username(&self, username: String) -> Result<(), ClientError>;
+    fn get_username(&self) -> Result<String, ClientError>;
 }
 
 pub trait StoreType {
