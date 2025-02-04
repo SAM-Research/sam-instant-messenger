@@ -1,6 +1,6 @@
 use derive_more::derive::{Display, Error, From};
 use libsignal_protocol::SignalProtocolError;
-use sam_lib::LibError;
+use sam_common::LibError;
 
 pub type Result<T> = std::result::Result<T, ClientError>;
 
