@@ -3,10 +3,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         .type_attribute("ClientEnvelope", "#[derive(bon::Builder)]")
         .type_attribute("ServerEnvelope", "#[derive(bon::Builder)]")
         .include_file("_includes.rs")
-        .compile_protos(
-            &["proto/Envelope.proto"],
-            &["proto"],
-        )?;
+        .compile_protos(&["proto/Envelope.proto"], &["proto"])?;
 
     Ok(())
 }

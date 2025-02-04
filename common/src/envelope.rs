@@ -1,15 +1,12 @@
-
-
-
 #[cfg(test)]
-mod envelope_test{
-    use std::collections::HashMap;
-    use crate::{sam_message::{ClientEnvelope, ServerEnvelope}};
+mod envelope_test {
     use crate::sam_message::client_envelope::Type;
+    use crate::sam_message::{ClientEnvelope, ServerEnvelope};
+    use std::collections::HashMap;
 
     #[test]
     fn client_envelope_test() {
-        let envelope: ClientEnvelope = ClientEnvelope{
+        let envelope: ClientEnvelope = ClientEnvelope {
             r#type: Type::SignalMessage.into(),
             destination: "Magnus".to_string(),
             source: "Alex".to_string(),
@@ -30,7 +27,7 @@ mod envelope_test{
 
     #[test]
     fn server_envelope_test() {
-        let envelope: ServerEnvelope = ServerEnvelope{
+        let envelope: ServerEnvelope = ServerEnvelope {
             r#type: Type::SignalMessage.into(),
             destination: "Magnus".to_string(),
             source: "Alex".to_string(),
@@ -42,6 +39,4 @@ mod envelope_test{
         assert_eq!(envelope.source, "Alex".to_string());
         assert_eq!(envelope.content, vec![10, 20, 30]);
     }
-
-
 }
