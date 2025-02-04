@@ -7,3 +7,8 @@ edition = "2021"
 derive_more = { version = "1.0.0", features = ["display", "error", "from"] }
 libsignal-protocol = { git = "https://github.com/signalapp/libsignal.git", version = "0.1.0" }
 sam-common = { path = "../common" }
+async-trait = "0.1.83"
+uuid = { version = "1.10.0", features = ["v4", "fast-rng", "macro-diagnostics"] }
+base64 = "0.22.1"
+bon = "3.0.0"
+sqlx = { version = "0.8.2", features = ["sqlite", "runtime-tokio"] }
