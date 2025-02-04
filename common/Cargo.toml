@@ -1,5 +1,5 @@
 [package]
-name = "sam-lib"
+name = "sam-common"
 version = "0.1.0"
 edition = "2021"
 
