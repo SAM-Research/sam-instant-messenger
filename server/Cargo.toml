@@ -10,3 +10,5 @@ async-trait = "0.1.86"
 dotenv = "0.15.0"
 derive_more = { version = "1.0.0", features = ["display", "error", "from"] }
 sam-common = { path = "../common" }
+libsignal-protocol = { git = "https://github.com/signalapp/libsignal.git", version = "0.1.0" }
+bincode = "1.3.3"
