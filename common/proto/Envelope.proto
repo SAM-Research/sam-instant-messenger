@@ -1,5 +1,6 @@
 package sam_message;
 
+
 enum EnvelopeType {
   SIGNAL_MESSAGE = 1;
   PRE_KEY_SIGNAL_MESSAGE = 2;
@@ -12,7 +13,6 @@ message ClientEnvelope {
   map<uint32, bytes> content = 2;
   required string destination = 3;
   required string source = 4;
-
 }
 
 message ServerEnvelope {

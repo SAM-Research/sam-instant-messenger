@@ -1,3 +1,4 @@
+mod envelope;
 pub mod error;
 mod proto;
 
