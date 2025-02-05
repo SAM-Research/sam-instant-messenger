@@ -1,8 +1,8 @@
 use derive_more::derive::{Display, Error, From};
+use libsignal_core::curve::CurveError;
 use libsignal_protocol::SignalProtocolError;
 use sam_common::LibError;
 use sqlx::{sqlite::SqliteError, Error as SqlxError};
-
 #[derive(Debug, Display, Error, From)]
 pub enum ClientError {
     #[display("Failed to parse an invalid ServiceId: {_0}")]
@@ -11,6 +11,7 @@ pub enum ClientError {
     SignalProtocol(SignalProtocolError),
     Sqlite(SqliteError),
     Lib(LibError),
+    Curve(CurveError),
 }
 
 impl From<SqlxError> for ClientError {

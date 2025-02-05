@@ -85,3 +85,48 @@ impl SenderKeyStore for SqliteSenderKeyStore {
         }
     }
 }
+
+#[cfg(test)]
+mod test {
+    use libsignal_protocol::SessionRecord;
+    use libsignal_protocol::SessionStore;
+
+    use crate::storage::sqlite::{
+        sender_key::SqliteSessionStore,
+        sqlite_test::{alice_address, connect},
+    };
+
+    #[tokio::test]
+    async fn load_and_store_session() {
+        let mut session_store = SqliteSessionStore::new(connect().await);
+        let address = alice_address();
+        let record = SessionRecord::new_fresh();
+        session_store
+            .store_session(&address, &record)
+            .await
+            .unwrap();
+
+        assert_eq!(
+            session_store
+                .load_session(&address)
+                .await
+                .unwrap()
+                .unwrap()
+                .serialize()
+                .unwrap(),
+            record.serialize().unwrap()
+        );
+    }
+
+    #[tokio::test]
+    async fn no_session_in_new_store() {
+        let session_store = SqliteSessionStore::new(connect().await);
+        let address = alice_address();
+
+        assert!(session_store
+            .load_session(&address)
+            .await
+            .unwrap()
+            .is_none());
+    }
+}

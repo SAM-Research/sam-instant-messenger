@@ -99,3 +99,251 @@ impl StoreConfig for SqliteStoreConfig {
             .build())
     }
 }
+
+#[cfg(test)]
+pub mod sqlite_test {
+    use libsignal_protocol::{IdentityKeyPair, ProtocolAddress};
+    use rand::rngs::OsRng;
+    use sqlx::{sqlite::SqlitePoolOptions, SqlitePool};
+
+    pub async fn connect() -> SqlitePool {
+        let db_url = "sqlite::memory:".to_owned();
+        let pool = SqlitePoolOptions::new()
+            .connect(&db_url)
+            .await
+            .expect("Could not connect to database");
+        sqlx::migrate!("database/migrations")
+            .run(&pool)
+            .await
+            .expect("should be able to run migrations");
+
+        pool
+    }
+    pub fn alice_address() -> ProtocolAddress {
+        ProtocolAddress::new("alice".to_owned(), 0.into())
+    }
+    pub fn bob_address() -> ProtocolAddress {
+        ProtocolAddress::new("bob".to_owned(), 0.into())
+    }
+    pub fn key_pair() -> IdentityKeyPair {
+        IdentityKeyPair::generate(&mut OsRng)
+    }
+
+    /*
+
+    #[tokio::test]
+    async fn insert_and_get_key_ids() {
+        let pool = connect().await;
+
+        let device = Device::new(pool.clone());
+
+        device
+            .insert_account_key_information(
+                IdentityKeyPair::generate(&mut OsRng),
+                new_rand_number(),
+            )
+            .await
+            .unwrap();
+
+        let mut key_man = KeyManager::default();
+        let mut device_identity_key_store = DeviceIdentityKeyStore::new(device.clone());
+        let mut device_pre_key_store = DevicePreKeyStore::new(device.clone());
+        let mut device_signed_pre_key_store = DeviceSignedPreKeyStore::new(device.clone());
+        let mut device_kyber_pre_key_store = DeviceKyberPreKeyStore::new(device.clone());
+        let pre_key_record = key_man
+            .generate_pre_key(&mut device_pre_key_store, &mut OsRng)
+            .await
+            .unwrap();
+        let signed_pre_key_record1 = key_man
+            .generate_signed_pre_key(
+                &mut device_identity_key_store,
+                &mut device_signed_pre_key_store,
+                &mut OsRng,
+            )
+            .await
+            .unwrap();
+        let signed_pre_key_record2 = key_man
+            .generate_signed_pre_key(
+                &mut device_identity_key_store,
+                &mut device_signed_pre_key_store,
+                &mut OsRng,
+            )
+            .await
+            .unwrap();
+        let kyber_pre_key_record1 = key_man
+            .generate_kyber_pre_key(
+                &mut device_identity_key_store,
+                &mut device_kyber_pre_key_store,
+            )
+            .await
+            .unwrap();
+        let kyber_pre_key_record2 = key_man
+            .generate_kyber_pre_key(
+                &mut device_identity_key_store,
+                &mut device_kyber_pre_key_store,
+            )
+            .await
+            .unwrap();
+        let kyber_pre_key_record3 = key_man
+            .generate_kyber_pre_key(
+                &mut device_identity_key_store,
+                &mut device_kyber_pre_key_store,
+            )
+            .await
+            .unwrap();
+
+        device_pre_key_store
+            .save_pre_key(pre_key_record.id().unwrap(), &pre_key_record)
+            .await
+            .unwrap();
+
+        device_signed_pre_key_store
+            .save_signed_pre_key(
+                signed_pre_key_record1.id().unwrap(),
+                &signed_pre_key_record1,
+            )
+            .await
+            .unwrap();
+        device_signed_pre_key_store
+            .save_signed_pre_key(
+                signed_pre_key_record2.id().unwrap(),
+                &signed_pre_key_record2,
+            )
+            .await
+            .unwrap();
+
+        device_kyber_pre_key_store
+            .save_kyber_pre_key(kyber_pre_key_record1.id().unwrap(), &kyber_pre_key_record1)
+            .await
+            .unwrap();
+        device_kyber_pre_key_store
+            .save_kyber_pre_key(kyber_pre_key_record2.id().unwrap(), &kyber_pre_key_record2)
+            .await
+            .unwrap();
+        device_kyber_pre_key_store
+            .save_kyber_pre_key(kyber_pre_key_record3.id().unwrap(), &kyber_pre_key_record3)
+            .await
+            .unwrap();
+
+        let (pkidmax, spkidmax, kpkidmax) = device.get_key_ids().await.unwrap();
+
+        assert_eq!(pkidmax, 0);
+        assert_eq!(spkidmax, 1);
+        assert_eq!(kpkidmax, 2);
+    }
+
+    #[tokio::test]
+    async fn remove_key_and_get_ids_test() {
+        let pool = connect().await;
+
+        let device = Device::new(pool.clone());
+
+        device
+            .insert_account_key_information(
+                IdentityKeyPair::generate(&mut OsRng),
+                new_rand_number(),
+            )
+            .await
+            .unwrap();
+
+        let mut key_man = KeyManager::default();
+        let mut device_identity_key_store = DeviceIdentityKeyStore::new(device.clone());
+        let mut device_pre_key_store = DevicePreKeyStore::new(device.clone());
+        let mut device_signed_pre_key_store = DeviceSignedPreKeyStore::new(device.clone());
+        let mut device_kyber_pre_key_store = DeviceKyberPreKeyStore::new(device.clone());
+        let pre_key_record1 = key_man
+            .generate_pre_key(&mut device_pre_key_store, &mut OsRng)
+            .await
+            .unwrap();
+        let pre_key_record2 = key_man
+            .generate_pre_key(&mut device_pre_key_store, &mut OsRng)
+            .await
+            .unwrap();
+        let signed_pre_key_record1 = key_man
+            .generate_signed_pre_key(
+                &mut device_identity_key_store,
+                &mut device_signed_pre_key_store,
+                &mut OsRng,
+            )
+            .await
+            .unwrap();
+        let signed_pre_key_record2 = key_man
+            .generate_signed_pre_key(
+                &mut device_identity_key_store,
+                &mut device_signed_pre_key_store,
+                &mut OsRng,
+            )
+            .await
+            .unwrap();
+        let kyber_pre_key_record1 = key_man
+            .generate_kyber_pre_key(
+                &mut device_identity_key_store,
+                &mut device_kyber_pre_key_store,
+            )
+            .await
+            .unwrap();
+        let kyber_pre_key_record2 = key_man
+            .generate_kyber_pre_key(
+                &mut device_identity_key_store,
+                &mut device_kyber_pre_key_store,
+            )
+            .await
+            .unwrap();
+        let kyber_pre_key_record3 = key_man
+            .generate_kyber_pre_key(
+                &mut device_identity_key_store,
+                &mut device_kyber_pre_key_store,
+            )
+            .await
+            .unwrap();
+
+        device_pre_key_store
+            .save_pre_key(pre_key_record1.id().unwrap(), &pre_key_record1)
+            .await
+            .unwrap();
+        device_pre_key_store
+            .remove_pre_key(pre_key_record1.id().unwrap())
+            .await
+            .unwrap();
+        device_pre_key_store
+            .save_pre_key(pre_key_record2.id().unwrap(), &pre_key_record2)
+            .await
+            .unwrap();
+
+        device_signed_pre_key_store
+            .save_signed_pre_key(
+                signed_pre_key_record1.id().unwrap(),
+                &signed_pre_key_record1,
+            )
+            .await
+            .unwrap();
+        device_signed_pre_key_store
+            .save_signed_pre_key(
+                signed_pre_key_record2.id().unwrap(),
+                &signed_pre_key_record2,
+            )
+            .await
+            .unwrap();
+
+        device_kyber_pre_key_store
+            .save_kyber_pre_key(kyber_pre_key_record1.id().unwrap(), &kyber_pre_key_record1)
+            .await
+            .unwrap();
+        device_kyber_pre_key_store
+            .save_kyber_pre_key(kyber_pre_key_record2.id().unwrap(), &kyber_pre_key_record2)
+            .await
+            .unwrap();
+        device_kyber_pre_key_store
+            .save_kyber_pre_key(kyber_pre_key_record3.id().unwrap(), &kyber_pre_key_record3)
+            .await
+            .unwrap();
+
+        let (pkidmax, spkidmax, kpkidmax) = device.get_key_ids().await.unwrap();
+
+        assert_eq!(pkidmax, 1);
+        assert_eq!(spkidmax, 1);
+        assert_eq!(kpkidmax, 2);
+    }
+
+    */
+}

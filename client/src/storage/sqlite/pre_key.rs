@@ -3,7 +3,7 @@ use base64::{prelude::BASE64_STANDARD, Engine};
 use libsignal_protocol::{PreKeyId, PreKeyRecord, PreKeyStore, SignalProtocolError};
 use sqlx::{Pool, Sqlite};
 
-use crate::ClientError;
+use crate::{storage::ProvidesKeyId, ClientError};
 
 #[derive(Debug)]
 pub struct SqlitePreKeyStore {
@@ -13,6 +13,15 @@ pub struct SqlitePreKeyStore {
 impl SqlitePreKeyStore {
     pub fn new(database: Pool<Sqlite>) -> Self {
         Self { database }
+    }
+}
+
+#[async_trait(?Send)]
+impl ProvidesKeyId for SqlitePreKeyStore {
+    type KeyIdType = PreKeyId;
+
+    async fn next_key_id(&self) -> Result<Self::KeyIdType, ClientError> {
+        todo!()
     }
 }
 
@@ -111,3 +120,73 @@ impl PreKeyStore for SqlitePreKeyStore {
         })
     }
 }
+
+#[cfg(test)]
+mod test {
+    #[tokio::test]
+    async fn no_identity_in_new_store() {}
+}
+/*
+#[tokio::test]
+    async fn save_and_get_pre_key_test() {
+        let mut key_man = KeyManager::default();
+        let device = Device::new(connect().await);
+        let mut device_pre_key_store = DevicePreKeyStore::new(device);
+        let pre_key_record = key_man
+            .generate_pre_key(&mut device_pre_key_store, &mut OsRng)
+            .await
+            .unwrap();
+
+        device_pre_key_store
+            .save_pre_key(pre_key_record.id().unwrap(), &pre_key_record)
+            .await
+            .unwrap();
+
+        let retrived_pre_key = device_pre_key_store
+            .get_pre_key(pre_key_record.id().unwrap())
+            .await
+            .unwrap();
+
+        assert_eq!(retrived_pre_key.id().unwrap(), pre_key_record.id().unwrap());
+
+        assert_eq!(
+            retrived_pre_key.public_key().unwrap(),
+            pre_key_record.key_pair().unwrap().public_key
+        );
+
+        assert_eq!(
+            retrived_pre_key.private_key().unwrap().serialize(),
+            pre_key_record.key_pair().unwrap().private_key.serialize()
+        );
+    }
+    #[tokio::test]
+    async fn remove_pre_key_test() {
+        let mut key_man = KeyManager::default();
+        let device = Device::new(connect().await);
+        let mut device_pre_key_store = DevicePreKeyStore::new(device);
+        let pre_key_record = key_man
+            .generate_pre_key(&mut device_pre_key_store, &mut OsRng)
+            .await
+            .unwrap();
+
+        device_pre_key_store
+            .save_pre_key(pre_key_record.id().unwrap(), &pre_key_record)
+            .await
+            .unwrap();
+
+        let _ = device_pre_key_store
+            .get_pre_key(pre_key_record.id().unwrap())
+            .await
+            .unwrap();
+
+        device_pre_key_store
+            .remove_pre_key(pre_key_record.id().unwrap())
+            .await
+            .unwrap();
+
+        device_pre_key_store
+            .get_pre_key(pre_key_record.id().unwrap())
+            .await
+            .expect_err("We should not be able to retrive the key after deletion");
+    }
+*/

@@ -6,7 +6,7 @@ use libsignal_protocol::{
 };
 use sqlx::{Pool, Sqlite};
 
-use crate::ClientError;
+use crate::{storage::ProvidesKeyId, ClientError};
 
 #[derive(Debug)]
 pub struct SqliteSignedPreKeyStore {
@@ -16,6 +16,15 @@ pub struct SqliteSignedPreKeyStore {
 impl SqliteSignedPreKeyStore {
     pub fn new(database: Pool<Sqlite>) -> Self {
         Self { database }
+    }
+}
+
+#[async_trait(?Send)]
+impl ProvidesKeyId for SqliteSignedPreKeyStore {
+    type KeyIdType = SignedPreKeyId;
+
+    async fn next_key_id(&self) -> Result<Self::KeyIdType, ClientError> {
+        todo!()
     }
 }
 
@@ -94,3 +103,57 @@ impl SignedPreKeyStore for SqliteSignedPreKeyStore {
         })
     }
 }
+/*
+    #[tokio::test]
+    async fn get_and_save_signed_pre_key_test() {
+        let pool = connect().await;
+
+        let device = Device::new(pool.clone());
+
+        device
+            .insert_account_key_information(
+                IdentityKeyPair::generate(&mut OsRng),
+                new_rand_number(),
+            )
+            .await
+            .unwrap();
+
+        let mut key_man = KeyManager::default();
+        let mut device_identity_key_store = DeviceIdentityKeyStore::new(device.clone());
+        let mut device_signed_pre_key_store = DeviceSignedPreKeyStore::new(device);
+        let signed_pre_key_record = key_man
+            .generate_signed_pre_key(
+                &mut device_identity_key_store,
+                &mut device_signed_pre_key_store,
+                &mut OsRng,
+            )
+            .await
+            .unwrap();
+        device_signed_pre_key_store
+            .save_signed_pre_key(signed_pre_key_record.id().unwrap(), &signed_pre_key_record)
+            .await
+            .unwrap();
+
+        let retrived_record = device_signed_pre_key_store
+            .get_signed_pre_key(signed_pre_key_record.id().unwrap())
+            .await
+            .unwrap();
+
+        assert_eq!(
+            retrived_record.id().unwrap(),
+            signed_pre_key_record.id().unwrap()
+        );
+        assert_eq!(
+            retrived_record.public_key().unwrap(),
+            signed_pre_key_record.key_pair().unwrap().public_key
+        );
+        assert_eq!(
+            retrived_record.private_key().unwrap().serialize(),
+            signed_pre_key_record
+                .key_pair()
+                .unwrap()
+                .private_key
+                .serialize()
+        );
+    }
+*/

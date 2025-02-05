@@ -33,13 +33,20 @@ pub trait AccountStore {
     async fn get_username(&self) -> Result<String, ClientError>;
 }
 
+#[async_trait(?Send)]
+pub trait ProvidesKeyId {
+    type KeyIdType;
+
+    async fn next_key_id(&self) -> Result<Self::KeyIdType, ClientError>;
+}
+
 pub trait StoreType {
     type ContactStore: ContactStore + Debug;
     type AccountStore: AccountStore + Debug;
     type IdentityKeyStore: IdentityKeyStore + Debug;
-    type PreKeyStore: PreKeyStore + Debug;
+    type PreKeyStore: PreKeyStore + ProvidesKeyId + Debug;
     type SignedPreKeyStore: SignedPreKeyStore + Debug;
-    type KyberPreKeyStore: KyberPreKeyStore + Debug;
+    type KyberPreKeyStore: KyberPreKeyStore + ProvidesKeyId + Debug;
     type SessionStore: SessionStore + Debug;
     type SenderKeyStore: SenderKeyStore + Debug;
 }

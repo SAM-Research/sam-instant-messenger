@@ -6,7 +6,7 @@ use libsignal_protocol::{
 };
 use sqlx::{Pool, Sqlite};
 
-use crate::ClientError;
+use crate::{storage::ProvidesKeyId, ClientError};
 
 #[derive(Debug)]
 pub struct SqliteKyberPreKeyStore {
@@ -16,6 +16,15 @@ pub struct SqliteKyberPreKeyStore {
 impl SqliteKyberPreKeyStore {
     pub fn new(database: Pool<Sqlite>) -> Self {
         Self { database }
+    }
+}
+
+#[async_trait(?Send)]
+impl ProvidesKeyId for SqliteKyberPreKeyStore {
+    type KeyIdType = KyberPreKeyId;
+
+    async fn next_key_id(&self) -> Result<Self::KeyIdType, ClientError> {
+        todo!()
     }
 }
 
@@ -93,3 +102,66 @@ impl KyberPreKeyStore for SqliteKyberPreKeyStore {
         Ok(())
     }
 }
+/*
+
+    #[tokio::test]
+    async fn get_and_save_kyber_pre_key_test() {
+        let pool = connect().await;
+
+        let device = Device::new(pool.clone());
+
+        device
+            .insert_account_key_information(
+                IdentityKeyPair::generate(&mut OsRng),
+                new_rand_number(),
+            )
+            .await
+            .unwrap();
+
+        let mut key_man = KeyManager::default();
+        let mut device_identity_key_store = DeviceIdentityKeyStore::new(device.clone());
+        let mut device_kyber_pre_key_store = DeviceKyberPreKeyStore::new(device);
+        let kyber_pre_key_record = key_man
+            .generate_kyber_pre_key(
+                &mut device_identity_key_store,
+                &mut device_kyber_pre_key_store,
+            )
+            .await
+            .unwrap();
+
+        device_kyber_pre_key_store
+            .save_kyber_pre_key(kyber_pre_key_record.id().unwrap(), &kyber_pre_key_record)
+            .await
+            .unwrap();
+
+        let retrived_record = device_kyber_pre_key_store
+            .get_kyber_pre_key(kyber_pre_key_record.id().unwrap())
+            .await
+            .unwrap();
+
+        assert_eq!(
+            retrived_record.id().unwrap(),
+            kyber_pre_key_record.id().unwrap()
+        );
+
+        assert_eq!(
+            retrived_record.public_key().unwrap().serialize(),
+            kyber_pre_key_record
+                .key_pair()
+                .unwrap()
+                .public_key
+                .serialize()
+        );
+
+        assert_eq!(
+            retrived_record.secret_key().unwrap().serialize(),
+            kyber_pre_key_record
+                .key_pair()
+                .unwrap()
+                .secret_key
+                .serialize()
+        );
+    }
+
+
+*/
