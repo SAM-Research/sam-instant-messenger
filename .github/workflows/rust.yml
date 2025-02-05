@@ -18,15 +18,22 @@ jobs:
     
     - name: Setup
       uses: ./.github/actions/setup
+      env:
+        RUNNER_OS: ${{ runner.os }}
 
     - name: Run fmt
       run: cargo fmt --all -- --check
 
   clippy:
     runs-on: ubuntu-latest
-    steps:
+    steps:   
+    - name: Checkout code
+      uses: actions/checkout@v4
+
     - name: Setup
       uses: ./.github/actions/setup
+      env:
+        RUNNER_OS: ${{ runner.os }}
 
     - name: Run Clippy
       run: DATABASE_URL=${{ secrets.DATABASE_URL_CLIENT }} cargo clippy --all-targets --all-features -- -D warnings
@@ -34,8 +41,13 @@ jobs:
   test:
     runs-on: ubuntu-latest
     steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
     - name: Setup
       uses: ./.github/actions/setup
+      env:
+        RUNNER_OS: ${{ runner.os }}
 
     - name: Run Test
       run: DATABASE_URL=${{ secrets.DATABASE_URL_CLIENT }} cargo test --all 
