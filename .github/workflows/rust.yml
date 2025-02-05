@@ -36,7 +36,7 @@ jobs:
     - name: Run fmt
       run: cargo fmt --all -- --check
     - name: Run Clippy
-      run: cargo clippy --all-targets --all-features -- -D warnings
+      run: DATABASE_URL=${{ secrets.DATABASE_URL_CLIENT }} cargo clippy --all-targets --all-features -- -D warnings
     - name: Run Test
       run: DATABASE_URL=${{ secrets.DATABASE_URL_CLIENT }} cargo test --all 
 
