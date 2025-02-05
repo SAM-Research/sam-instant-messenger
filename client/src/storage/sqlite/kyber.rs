@@ -18,13 +18,86 @@ impl SqliteKyberPreKeyStore {
         Self { database }
     }
 }
+/*
 
+async fn get_key_ids(&self) -> Result<(u32, u32, u32), Self::Error> {
+       sqlx::query!(
+           r#"
+           WITH max_pre_key_id_table AS (
+               SELECT
+                   1 AS _id,
+                   MAX(pre_key_id) AS max_pre_key_id
+               FROM
+                   DevicePreKeyStore
+           ), max_signed_pre_key_id_table AS (
+               SELECT
+                   1 AS _id,
+                   MAX(signed_pre_key_id) AS max_signed_pre_key_id
+               FROM
+                   DeviceSignedPreKeyStore
+           ), max_kyber_pre_key_id_table AS (
+               SELECT
+                   1 AS _id,
+                   MAX(kyber_pre_key_id) AS max_kyber_pre_key_id
+               FROM
+                   DeviceKyberPreKeyStore
+           )
+           SELECT
+               CASE WHEN mpk.max_pre_key_id IS NOT NULL
+                   THEN mpk.max_pre_key_id
+               ELSE
+                   0
+               END AS mpkid,
+               CASE WHEN spk.max_signed_pre_key_id IS NOT NULL
+                   THEN spk.max_signed_pre_key_id
+               ELSE
+                   0
+               END AS spkid,
+               CASE WHEN kpk.max_kyber_pre_key_id IS NOT NULL
+                   THEN kpk.max_kyber_pre_key_id
+               ELSE
+                   0
+               END AS kpkid
+           FROM
+               max_pre_key_id_table mpk
+               INNER JOIN max_signed_pre_key_id_table spk ON spk._id = mpk._id
+               INNER JOIN max_kyber_pre_key_id_table kpk ON kpk._id = mpk._id
+           "#
+       )
+       .fetch_one(&self.pool)
+       .await
+       .map(|row| (row.mpkid as u32, row.spkid as u32, row.kpkid as u32))
+       .map_err(|err| SignalProtocolError::InvalidArgument(format!("{err}")))
+   }
+*/
 #[async_trait(?Send)]
 impl ProvidesKeyId for SqliteKyberPreKeyStore {
     type KeyIdType = KyberPreKeyId;
 
     async fn next_key_id(&self) -> Result<Self::KeyIdType, ClientError> {
-        todo!()
+        sqlx::query!(
+            r#"
+            WITH max_signed_pre_key_id_table AS (
+                SELECT
+                    1 AS _id,
+                    MAX(signed_pre_key_id) AS max_signed_pre_key_id
+                FROM
+                    DeviceSignedPreKeyStore
+                )
+                SELECT
+                    CASE WHEN spk.max_signed_pre_key_id IS NOT NULL
+                    THEN spk.max_signed_pre_key_id
+                    ELSE
+                    0
+                    END AS spkid
+                FROM
+                    max_signed_pre_key_id_table spk
+                "#
+        )
+        .fetch_one(&self.database)
+        .await
+        .map(|row| Self::KeyIdType::from(row.spkid as u32))
+        .map_err(|err| ClientError::from(err))
     }
 }
 
