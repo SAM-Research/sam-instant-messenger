@@ -36,5 +36,5 @@ jobs:
     - name: Run Clippy
       run: cargo clippy --all-targets --all-features -- -D warnings
     - name: Run Test
-      run: cargo test --all 
+      run: DATABASE_URL=${{ secrets.DATABASE_URL_CLIENT }} cargo test --all 
 
