@@ -23,7 +23,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
     - name: Setup
-      uses: ./.github/actiosns/setup
+      uses: ./.github/actions/setup
 
     - name: Run Clippy
       run: DATABASE_URL=${{ secrets.DATABASE_URL_CLIENT }} cargo clippy --all-targets --all-features -- -D warnings
