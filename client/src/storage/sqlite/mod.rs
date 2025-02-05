@@ -56,18 +56,13 @@ pub struct SqliteStoreConfig {
     database: Pool<Sqlite>,
 }
 
-fn pre_build_store(
-    database: Pool<Sqlite>,
-) -> StoreBuilder<
-    SqliteStoreType,
-    SetSessionStore<
-        SetSenderKeyStore<
-            SetKyberPreKeyStore<
-                SetSignedPreKeyStore<SetPreKeyStore<SetAccountStore<SetContactStore>>>,
-            >,
-        >,
+type BuilderProperties = SetSessionStore<
+    SetSenderKeyStore<
+        SetKyberPreKeyStore<SetSignedPreKeyStore<SetPreKeyStore<SetAccountStore<SetContactStore>>>>,
     >,
-> {
+>;
+type PreparedStoreBuilder = StoreBuilder<SqliteStoreType, BuilderProperties>;
+fn pre_build_store(database: Pool<Sqlite>) -> PreparedStoreBuilder {
     SqliteStore::builder()
         .contact_store(SqliteContactStore::new(database.clone()))
         .account_store(SqliteAccountStore::new(database.clone()))
