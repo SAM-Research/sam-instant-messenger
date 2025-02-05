@@ -3,10 +3,11 @@ name: Setup
 on:
   workflow_call:  
     secrets: inherit
-    inputs:
-      runner_os:
-        description: 'Runner OS'
-        required: true
+
+inputs:
+  runner_os:
+    description: 'Runner OS'
+    required: true
 
 jobs:
   build:
