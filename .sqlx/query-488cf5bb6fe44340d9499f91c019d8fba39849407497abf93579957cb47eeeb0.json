@@ -1,0 +1,20 @@
+{
+  "db_name": "SQLite",
+  "query": "\n            SELECT * FROM Aci;\n            ",
+  "describe": {
+    "columns": [
+      {
+        "name": "aci",
+        "ordinal": 0,
+        "type_info": "Text"
+      }
+    ],
+    "parameters": {
+      "Right": 0
+    },
+    "nullable": [
+      false
+    ]
+  },
+  "hash": "488cf5bb6fe44340d9499f91c019d8fba39849407497abf93579957cb47eeeb0"
+}

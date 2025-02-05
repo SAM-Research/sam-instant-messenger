@@ -1,0 +1,12 @@
+{
+  "db_name": "SQLite",
+  "query": "\n            INSERT INTO DeviceIdentityKeyStore (address, identity_key)\n            VALUES (?, ?)\n            ON CONFLICT(address) DO UPDATE SET identity_key = ?\n            ",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Right": 3
+    },
+    "nullable": []
+  },
+  "hash": "17a424d34e0e56d9f316e127cdc64fa10ee9406c04e22780db76121d4a3d6269"
+}

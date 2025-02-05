@@ -1,0 +1,20 @@
+{
+  "db_name": "SQLite",
+  "query": "\n            SELECT\n                sender_key_record\n            FROM\n                DeviceSenderKeyStore\n            WHERE\n                address = ?\n            ",
+  "describe": {
+    "columns": [
+      {
+        "name": "sender_key_record",
+        "ordinal": 0,
+        "type_info": "Text"
+      }
+    ],
+    "parameters": {
+      "Right": 1
+    },
+    "nullable": [
+      false
+    ]
+  },
+  "hash": "6fcb0dcfa3b4c695ea0b26895f9fdf8baa0c40ec9b7d05772ab059a671051357"
+}
