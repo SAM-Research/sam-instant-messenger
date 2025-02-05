@@ -2,10 +2,11 @@ name: Setup
 
 on:
   workflow_call:  
+    secrets: inherit
 
 jobs:
   build:
-    runs-on: ubuntu-latest
+    runs-on: "composite"
     steps:
     - name: Set up cache for Protobuf
       uses: actions/cache@v4
