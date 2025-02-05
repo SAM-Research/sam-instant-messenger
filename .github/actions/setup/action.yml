@@ -19,9 +19,9 @@ jobs:
         path: |
           ~/.local/bin/protoc
           ~/.cache/protobuf
-        key: ${{ inputs.runner_os }}-protobuf-${{ hashFiles('/home/runner/.local/include/google/protobuf/descriptor.proto') }}
+        key: ubuntu-protobuf-${{ hashFiles('/home/runner/.local/include/google/protobuf/descriptor.proto') }}
         restore-keys: |
-          ${{ inputs.runner_os }}-protobuf-
+          ubuntu-protobuf-
 
     - name: Install Protobuf
       if: steps.cache.outputs.cache-hit != 'true'
@@ -34,9 +34,9 @@ jobs:
       uses: actions/cache@v4
       with:
         path: ~/.cargo/bin/sqlx
-        key: sqlx-cli-${{ inputs.runner_os }}-${{ hashFiles('**/Cargo.lock') }}
+        key: sqlx-cli-ubuntu-${{ hashFiles('**/Cargo.lock') }}
         restore-keys: |
-          sqlx-cli-${{ inputs.runner_os }}-
+          sqlx-cli-ubuntu-
 
     - name: Install SQLx CLI if not cached
       run: |
