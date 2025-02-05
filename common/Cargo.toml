@@ -7,6 +7,7 @@ edition = "2021"
 derive_more = { version = "1.0.0", features = ["display", "error", "from"] }
 bon = "3.3.2"
 prost = "0.13.3"
+uuid = { version = "1.13.1", features = ["v4"] }
 
 [build-dependencies]
 prost-build = "0.13.3"

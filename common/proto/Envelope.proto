@@ -1,6 +1,6 @@
 package sam_message;
 
-enum MessageType {
+enum EnvelopeType {
   SIGNAL_MESSAGE = 1;
   PRE_KEY_SIGNAL_MESSAGE = 2;
   SENDER_KEY_MESSAGE = 3;
@@ -8,15 +8,35 @@ enum MessageType {
 }
 
 message ClientEnvelope {
-  required MessageType type = 1;
+  required EnvelopeType type = 1;
   map<uint32, bytes> content = 2;
   required string destination = 3;
   required string source = 4;
+
 }
 
 message ServerEnvelope {
-  required MessageType type = 1;
+  required EnvelopeType type = 1;
   required bytes content = 2;
   required string destination = 3;
   required string source = 4;
+  required string id = 5;
+}
+
+enum MessageType {
+  MESSAGE = 1;
+  ACK = 2;
+  ERROR = 3;
+}
+
+message ClientMessage {
+  required MessageType type = 1;
+  required string id = 2;
+  optional ClientEnvelope message = 3;
+}
+
+message ServerMessage {
+  required MessageType type = 1;
+  required string id = 2;
+  optional ServerEnvelope message = 3;
 }
