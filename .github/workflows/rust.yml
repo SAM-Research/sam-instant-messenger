@@ -41,7 +41,7 @@ jobs:
     - name: Install SQLx CLI if not cached
       run: |
         if ! command -v sqlx &> /dev/null; then
-          cargo install sqlx-cli --no-default-features --features postgres
+          cargo install sqlx-cli
         else
           echo "sqlx-cli found in cache, skipping installation"
         fi
@@ -53,7 +53,7 @@ jobs:
       uses: actions/checkout@v4
 
     - name: Setup sqlx
-      run: cargo install sqlx-cli && cd client/database/ && sqlx db create -D sqlite://dev.db && sqlx migrate run -D sqlite://dev.db && cd ../..
+      run: cd client/database/ && sqlx db create -D sqlite://dev.db && sqlx migrate run -D sqlite://dev.db && cd ../..
 
     - name: Run fmt
       run: cargo fmt --all -- --check
