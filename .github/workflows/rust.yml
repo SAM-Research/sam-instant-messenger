@@ -104,7 +104,7 @@ jobs:
       run: cd client/database/ && sqlx db create -D sqlite://dev.db && sqlx migrate run -D sqlite://dev.db && cd ../..
         
     - name: Run Clippy
-      run: DATABASE_URL=${{ secrets.DATABASE_URL_CLIENT }} cargo clippy --all-targets --all-features -- -D warnings
+      run: cargo clippy --all-targets --all-features -- -D warnings
   
   test:
     runs-on: ubuntu-latest
@@ -152,4 +152,4 @@ jobs:
       run: cd client/database/ && sqlx db create -D sqlite://dev.db && sqlx migrate run -D sqlite://dev.db && cd ../..
 
     - name: Run Test
-      run: DATABASE_URL=${{ secrets.DATABASE_URL_CLIENT }} cargo test --all 
+      run: cargo test --all 
