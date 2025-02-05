@@ -5,7 +5,7 @@ on:
     secrets: inherit
     inputs:
       runner_os:
-        description: "The OS of the GitHub runner"
+        description: 'Runner OS'
         required: true
 
 jobs:
@@ -19,7 +19,7 @@ jobs:
         path: |
           ~/.local/bin/protoc
           ~/.cache/protobuf
-        key: ${{ runner.os }}-protobuf-${{ hashFiles('/home/runner/.local/include/google/protobuf/descriptor.proto') }}
+        key: ${{ inputs.runner_os }}-protobuf-${{ hashFiles('/home/runner/.local/include/google/protobuf/descriptor.proto') }}
         restore-keys: |
           ${{ inputs.runner_os }}-protobuf-
 
