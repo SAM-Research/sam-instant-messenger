@@ -1,0 +1,52 @@
+name: Setup
+
+on:
+  workflow_call:  
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+    - name: Set up cache for Protobuf
+      uses: actions/cache@v4
+      with:
+        path: |
+          ~/.local/bin/protoc
+          ~/.cache/protobuf
+        key: ${{ runner.os }}-protobuf-${{ hashFiles('/home/runner/.local/include/google/protobuf/descriptor.proto') }}
+        restore-keys: |
+          ${{ runner.os }}-protobuf-
+
+    - name: Install Protobuf
+      if: steps.cache.outputs.cache-hit != 'true'
+      run: |
+        # Install Protoc.
+        wget https://github.com/protocolbuffers/protobuf/releases/download/v21.3/protoc-21.3-linux-x86_64.zip
+        unzip -o protoc-21.3-linux-x86_64.zip -d ~/.local
+
+    - name: Cache Cargo bin (for sqlx-cli)
+      uses: actions/cache@v4
+      with:
+        path: ~/.cargo/bin/sqlx
+        key: sqlx-cli-${{ runner.os }}-${{ hashFiles('**/Cargo.lock') }}
+        restore-keys: |
+          sqlx-cli-${{ runner.os }}-
+
+    - name: Install SQLx CLI if not cached
+      run: |
+        if ! command -v sqlx &> /dev/null; then
+          cargo install sqlx-cli
+        else
+          echo "sqlx-cli found in cache, skipping installation"
+        fi
+
+    - name: Verify SQLx installation
+      run: sqlx --version
+
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Setup sqlx
+      run: cd client/database/ && sqlx db create -D sqlite://dev.db && sqlx migrate run -D sqlite://dev.db && cd ../..
+
+
