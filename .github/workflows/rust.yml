@@ -31,6 +31,8 @@ jobs:
         unzip -o protoc-21.3-linux-x86_64.zip -d ~/.local
     - name: Checkout code
       uses: actions/checkout@v4
+    - name: Setup sqlx
+      run: cargo install sqlx-cli && cd client/database/ && sqlx db create -D sqlite://dev.db && sqlx migrate run -D sqlite://dev.db && cd ../..
     - name: Run fmt
       run: cargo fmt --all -- --check
     - name: Run Clippy
