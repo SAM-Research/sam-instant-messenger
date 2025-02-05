@@ -44,9 +44,6 @@ jobs:
     - name: Verify SQLx installation
       run: sqlx --version
 
-    - name: Checkout code
-      uses: actions/checkout@v4
-
     - name: Setup sqlx
       run: cd client/database/ && sqlx db create -D sqlite://dev.db && sqlx migrate run -D sqlite://dev.db && cd ../..
 
