@@ -18,63 +18,10 @@ impl SqliteKyberPreKeyStore {
         Self { database }
     }
 }
-/*
 
-async fn get_key_ids(&self) -> Result<(u32, u32, u32), Self::Error> {
-       sqlx::query!(
-           r#"
-           WITH max_pre_key_id_table AS (
-               SELECT
-                   1 AS _id,
-                   MAX(pre_key_id) AS max_pre_key_id
-               FROM
-                   DevicePreKeyStore
-           ), max_signed_pre_key_id_table AS (
-               SELECT
-                   1 AS _id,
-                   MAX(signed_pre_key_id) AS max_signed_pre_key_id
-               FROM
-                   DeviceSignedPreKeyStore
-           ), max_kyber_pre_key_id_table AS (
-               SELECT
-                   1 AS _id,
-                   MAX(kyber_pre_key_id) AS max_kyber_pre_key_id
-               FROM
-                   DeviceKyberPreKeyStore
-           )
-           SELECT
-               CASE WHEN mpk.max_pre_key_id IS NOT NULL
-                   THEN mpk.max_pre_key_id
-               ELSE
-                   0
-               END AS mpkid,
-               CASE WHEN spk.max_signed_pre_key_id IS NOT NULL
-                   THEN spk.max_signed_pre_key_id
-               ELSE
-                   0
-               END AS spkid,
-               CASE WHEN kpk.max_kyber_pre_key_id IS NOT NULL
-                   THEN kpk.max_kyber_pre_key_id
-               ELSE
-                   0
-               END AS kpkid
-           FROM
-               max_pre_key_id_table mpk
-               INNER JOIN max_signed_pre_key_id_table spk ON spk._id = mpk._id
-               INNER JOIN max_kyber_pre_key_id_table kpk ON kpk._id = mpk._id
-           "#
-       )
-       .fetch_one(&self.pool)
-       .await
-       .map(|row| (row.mpkid as u32, row.spkid as u32, row.kpkid as u32))
-       .map_err(|err| SignalProtocolError::InvalidArgument(format!("{err}")))
-   }
-*/
 #[async_trait(?Send)]
-impl ProvidesKeyId for SqliteKyberPreKeyStore {
-    type KeyIdType = KyberPreKeyId;
-
-    async fn next_key_id(&self) -> Result<Self::KeyIdType, ClientError> {
+impl ProvidesKeyId<KyberPreKeyId> for SqliteKyberPreKeyStore {
+    async fn next_key_id(&self) -> Result<KyberPreKeyId, ClientError> {
         sqlx::query!(
             r#"
             WITH max_signed_pre_key_id_table AS (
@@ -96,8 +43,8 @@ impl ProvidesKeyId for SqliteKyberPreKeyStore {
         )
         .fetch_one(&self.database)
         .await
-        .map(|row| Self::KeyIdType::from(row.spkid as u32))
-        .map_err(|err| ClientError::from(err))
+        .map(|row| KyberPreKeyId::from(row.spkid as u32))
+        .map_err(ClientError::from)
     }
 }
 
@@ -175,39 +122,35 @@ impl KyberPreKeyStore for SqliteKyberPreKeyStore {
         Ok(())
     }
 }
-/*
+
+#[cfg(test)]
+mod test {
+    use libsignal_protocol::{
+        kem::KeyType, GenericSignedPreKey as _, IdentityKeyPair, KyberPreKeyRecord,
+        KyberPreKeyStore as _,
+    };
+    use rand::rngs::OsRng;
+
+    use crate::storage::sqlite::{kyber::SqliteKyberPreKeyStore, sqlite_test::connect};
 
     #[tokio::test]
-    async fn get_and_save_kyber_pre_key_test() {
+    async fn saved_kyber_pre_key_can_be_retrieved() {
         let pool = connect().await;
+        let database = pool.clone();
+        let mut kyber_pre_key_store = SqliteKyberPreKeyStore::new(database);
+        let id = 1.into();
+        let mut csprng = OsRng;
+        let identity_key = IdentityKeyPair::generate(&mut csprng);
+        let kyber_pre_key_record =
+            KyberPreKeyRecord::generate(KeyType::Kyber1024, id, identity_key.private_key())
+                .expect("should be able to generate a Kyber pre key");
 
-        let device = Device::new(pool.clone());
-
-        device
-            .insert_account_key_information(
-                IdentityKeyPair::generate(&mut OsRng),
-                new_rand_number(),
-            )
-            .await
-            .unwrap();
-
-        let mut key_man = KeyManager::default();
-        let mut device_identity_key_store = DeviceIdentityKeyStore::new(device.clone());
-        let mut device_kyber_pre_key_store = DeviceKyberPreKeyStore::new(device);
-        let kyber_pre_key_record = key_man
-            .generate_kyber_pre_key(
-                &mut device_identity_key_store,
-                &mut device_kyber_pre_key_store,
-            )
-            .await
-            .unwrap();
-
-        device_kyber_pre_key_store
+        kyber_pre_key_store
             .save_kyber_pre_key(kyber_pre_key_record.id().unwrap(), &kyber_pre_key_record)
             .await
             .unwrap();
 
-        let retrived_record = device_kyber_pre_key_store
+        let retrived_record = kyber_pre_key_store
             .get_kyber_pre_key(kyber_pre_key_record.id().unwrap())
             .await
             .unwrap();
@@ -235,6 +178,4 @@ impl KyberPreKeyStore for SqliteKyberPreKeyStore {
                 .serialize()
         );
     }
-
-
-*/
+}

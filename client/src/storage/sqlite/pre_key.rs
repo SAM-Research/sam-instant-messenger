@@ -17,10 +17,8 @@ impl SqlitePreKeyStore {
 }
 
 #[async_trait(?Send)]
-impl ProvidesKeyId for SqlitePreKeyStore {
-    type KeyIdType = PreKeyId;
-
-    async fn next_key_id(&self) -> Result<Self::KeyIdType, ClientError> {
+impl ProvidesKeyId<PreKeyId> for SqlitePreKeyStore {
+    async fn next_key_id(&self) -> Result<PreKeyId, ClientError> {
         sqlx::query!(
             r#"
             WITH max_pre_key_id_table AS (
@@ -42,8 +40,8 @@ impl ProvidesKeyId for SqlitePreKeyStore {
         )
         .fetch_one(&self.database)
         .await
-        .map(|row| Self::KeyIdType::from(row.pkid as u32))
-        .map_err(|err| ClientError::from(err))
+        .map(|row| PreKeyId::from(row.pkid as u32))
+        .map_err(ClientError::from)
     }
 }
 
@@ -83,6 +81,7 @@ impl PreKeyStore for SqlitePreKeyStore {
                     Box::new(err),
                 )
             }),
+
             Err(err) => Err(SignalProtocolError::ApplicationCallbackError(
                 "save pre key",
                 Box::new(ClientError::from(err)),
@@ -145,29 +144,25 @@ impl PreKeyStore for SqlitePreKeyStore {
 
 #[cfg(test)]
 mod test {
-    #[tokio::test]
-    async fn no_identity_in_new_store() {}
-}
-/*
-#[tokio::test]
-    async fn save_and_get_pre_key_test() {
-        let mut key_man = KeyManager::default();
-        let device = Device::new(connect().await);
-        let mut device_pre_key_store = DevicePreKeyStore::new(device);
-        let pre_key_record = key_man
-            .generate_pre_key(&mut device_pre_key_store, &mut OsRng)
-            .await
-            .unwrap();
+    use libsignal_protocol::{KeyPair, PreKeyRecord, PreKeyStore as _};
+    use rand::rngs::OsRng;
 
-        device_pre_key_store
+    use crate::storage::sqlite::{pre_key::SqlitePreKeyStore, sqlite_test::connect};
+
+    #[tokio::test]
+    async fn pre_key_can_be_saved_and_retrieved() {
+        let database = connect().await;
+        let mut pre_key_store = SqlitePreKeyStore::new(database);
+        let id = 0.into();
+        let mut csprng = OsRng;
+        let pre_key_record = PreKeyRecord::new(id, &KeyPair::generate(&mut csprng));
+
+        pre_key_store
             .save_pre_key(pre_key_record.id().unwrap(), &pre_key_record)
             .await
             .unwrap();
 
-        let retrived_pre_key = device_pre_key_store
-            .get_pre_key(pre_key_record.id().unwrap())
-            .await
-            .unwrap();
+        let retrived_pre_key = pre_key_store.get_pre_key(id).await.unwrap();
 
         assert_eq!(retrived_pre_key.id().unwrap(), pre_key_record.id().unwrap());
 
@@ -181,34 +176,30 @@ mod test {
             pre_key_record.key_pair().unwrap().private_key.serialize()
         );
     }
-    #[tokio::test]
-    async fn remove_pre_key_test() {
-        let mut key_man = KeyManager::default();
-        let device = Device::new(connect().await);
-        let mut device_pre_key_store = DevicePreKeyStore::new(device);
-        let pre_key_record = key_man
-            .generate_pre_key(&mut device_pre_key_store, &mut OsRng)
-            .await
-            .unwrap();
 
-        device_pre_key_store
+    #[tokio::test]
+    async fn pre_key_can_be_removed() {
+        let database = connect().await;
+        let mut pre_key_store = SqlitePreKeyStore::new(database);
+        let id = 0.into();
+        let mut csprng = OsRng;
+        let pre_key_record = PreKeyRecord::new(id, &KeyPair::generate(&mut csprng));
+
+        pre_key_store
             .save_pre_key(pre_key_record.id().unwrap(), &pre_key_record)
             .await
             .unwrap();
 
-        let _ = device_pre_key_store
-            .get_pre_key(pre_key_record.id().unwrap())
-            .await
-            .unwrap();
+        let _ = pre_key_store.get_pre_key(id).await.unwrap();
 
-        device_pre_key_store
+        pre_key_store
             .remove_pre_key(pre_key_record.id().unwrap())
             .await
             .unwrap();
 
-        device_pre_key_store
+        pre_key_store
             .get_pre_key(pre_key_record.id().unwrap())
             .await
             .expect_err("We should not be able to retrive the key after deletion");
     }
-*/
+}

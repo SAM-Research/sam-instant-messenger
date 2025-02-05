@@ -2,8 +2,8 @@ use crate::ClientError;
 use async_trait::async_trait;
 use bon::Builder;
 use libsignal_protocol::{
-    Aci, IdentityKeyPair, IdentityKeyStore, KyberPreKeyStore, PreKeyStore, SenderKeyStore,
-    SessionStore, SignedPreKeyStore,
+    Aci, IdentityKeyPair, IdentityKeyStore, KyberPreKeyId, KyberPreKeyStore, PreKeyId, PreKeyStore,
+    SenderKeyStore, SessionStore, SignedPreKeyId, SignedPreKeyStore,
 };
 use std::fmt::Debug;
 pub mod sqlite;
@@ -34,19 +34,17 @@ pub trait AccountStore {
 }
 
 #[async_trait(?Send)]
-pub trait ProvidesKeyId {
-    type KeyIdType;
-
-    async fn next_key_id(&self) -> Result<Self::KeyIdType, ClientError>;
+pub trait ProvidesKeyId<T> {
+    async fn next_key_id(&self) -> Result<T, ClientError>;
 }
 
 pub trait StoreType {
     type ContactStore: ContactStore + Debug;
     type AccountStore: AccountStore + Debug;
     type IdentityKeyStore: IdentityKeyStore + Debug;
-    type PreKeyStore: PreKeyStore + ProvidesKeyId + Debug;
-    type SignedPreKeyStore: SignedPreKeyStore + Debug;
-    type KyberPreKeyStore: KyberPreKeyStore + ProvidesKeyId + Debug;
+    type PreKeyStore: PreKeyStore + ProvidesKeyId<PreKeyId> + Debug;
+    type SignedPreKeyStore: SignedPreKeyStore + ProvidesKeyId<SignedPreKeyId> + Debug;
+    type KyberPreKeyStore: KyberPreKeyStore + ProvidesKeyId<KyberPreKeyId> + Debug;
     type SessionStore: SessionStore + Debug;
     type SenderKeyStore: SenderKeyStore + Debug;
 }

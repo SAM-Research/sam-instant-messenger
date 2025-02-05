@@ -20,10 +20,8 @@ impl SqliteSignedPreKeyStore {
 }
 
 #[async_trait(?Send)]
-impl ProvidesKeyId for SqliteSignedPreKeyStore {
-    type KeyIdType = SignedPreKeyId;
-
-    async fn next_key_id(&self) -> Result<Self::KeyIdType, ClientError> {
+impl ProvidesKeyId<SignedPreKeyId> for SqliteSignedPreKeyStore {
+    async fn next_key_id(&self) -> Result<SignedPreKeyId, ClientError> {
         sqlx::query!(
             r#"
             WITH max_signed_pre_key_id_table AS (
@@ -45,8 +43,8 @@ impl ProvidesKeyId for SqliteSignedPreKeyStore {
         )
         .fetch_one(&self.database)
         .await
-        .map(|row| Self::KeyIdType::from(row.pkid as u32))
-        .map_err(|err| ClientError::from(err))
+        .map(|row| SignedPreKeyId::from(row.pkid as u32))
+        .map_err(ClientError::from)
     }
 }
 
@@ -125,38 +123,40 @@ impl SignedPreKeyStore for SqliteSignedPreKeyStore {
         })
     }
 }
-/*
+
+#[cfg(test)]
+mod test {
+    use libsignal_protocol::{
+        GenericSignedPreKey as _, IdentityKeyPair, KeyPair, SignedPreKeyRecord,
+        SignedPreKeyStore as _,
+    };
+    use rand::rngs::OsRng;
+    use sam_common::time_now;
+
+    use crate::storage::sqlite::{signed_pre_key::SqliteSignedPreKeyStore, sqlite_test::connect};
+
     #[tokio::test]
-    async fn get_and_save_signed_pre_key_test() {
+    async fn signed_pre_key_can_be_saved_and_retrieved() {
         let pool = connect().await;
+        let mut signed_pre_key_store = SqliteSignedPreKeyStore::new(pool);
+        let mut csprng = OsRng;
+        let identity_key = IdentityKeyPair::generate(&mut csprng);
 
-        let device = Device::new(pool.clone());
+        let signed_pre_key_pair = KeyPair::generate(&mut csprng);
+        let signature = identity_key
+            .private_key()
+            .calculate_signature(&signed_pre_key_pair.public_key.serialize(), &mut csprng)
+            .expect("should be able to sign pre key record");
 
-        device
-            .insert_account_key_information(
-                IdentityKeyPair::generate(&mut OsRng),
-                new_rand_number(),
-            )
-            .await
-            .unwrap();
+        let signed_pre_key_record =
+            SignedPreKeyRecord::new(0.into(), time_now(), &signed_pre_key_pair, &signature);
 
-        let mut key_man = KeyManager::default();
-        let mut device_identity_key_store = DeviceIdentityKeyStore::new(device.clone());
-        let mut device_signed_pre_key_store = DeviceSignedPreKeyStore::new(device);
-        let signed_pre_key_record = key_man
-            .generate_signed_pre_key(
-                &mut device_identity_key_store,
-                &mut device_signed_pre_key_store,
-                &mut OsRng,
-            )
-            .await
-            .unwrap();
-        device_signed_pre_key_store
+        signed_pre_key_store
             .save_signed_pre_key(signed_pre_key_record.id().unwrap(), &signed_pre_key_record)
             .await
             .unwrap();
 
-        let retrived_record = device_signed_pre_key_store
+        let retrived_record = signed_pre_key_store
             .get_signed_pre_key(signed_pre_key_record.id().unwrap())
             .await
             .unwrap();
@@ -178,4 +178,4 @@ impl SignedPreKeyStore for SqliteSignedPreKeyStore {
                 .serialize()
         );
     }
-*/
+}

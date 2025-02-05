@@ -1,4 +1,4 @@
-use crate::storage::{Store, StoreType};
+use crate::storage::{ProvidesKeyId, Store, StoreType};
 use crate::ClientError;
 use async_trait::async_trait;
 use libsignal_protocol::kem::KeyType;
@@ -19,22 +19,22 @@ pub struct PreKeyCollection {
 
 #[async_trait(?Send)]
 pub trait KeyManager {
-    async fn generate_pre_key<R>(&mut self, csprng: &mut R) -> Result<PreKeyRecord, ClientError>
-    where
-        R: Rng + CryptoRng;
-    async fn generate_signed_pre_key<R>(
+    async fn generate_pre_key<R: Rng + CryptoRng>(
         &mut self,
         csprng: &mut R,
-    ) -> Result<SignedPreKeyRecord, ClientError>
-    where
-        R: Rng + CryptoRng;
+    ) -> Result<PreKeyRecord, ClientError>;
+
+    async fn generate_signed_pre_key<R: Rng + CryptoRng>(
+        &mut self,
+        csprng: &mut R,
+    ) -> Result<SignedPreKeyRecord, ClientError>;
+
     async fn generate_kyber_pre_key(&mut self) -> Result<KyberPreKeyRecord, ClientError>;
-    async fn generate_key_bundle<R>(
+
+    async fn generate_key_bundle<R: Rng + CryptoRng>(
         &mut self,
         csprng: &mut R,
-    ) -> Result<PreKeyCollection, ClientError>
-    where
-        R: Rng + CryptoRng;
+    ) -> Result<PreKeyCollection, ClientError>;
 }
 
 #[async_trait(?Send)]
@@ -43,7 +43,7 @@ impl<T: StoreType> KeyManager for Store<T> {
     where
         R: Rng + CryptoRng,
     {
-        let id = 0.into();
+        let id = self.pre_key_store.next_key_id().await?;
 
         let key_pair = KeyPair::generate(csprng);
         let record = PreKeyRecord::new(id, &key_pair);
@@ -58,7 +58,7 @@ impl<T: StoreType> KeyManager for Store<T> {
     where
         R: Rng + CryptoRng,
     {
-        let id = 0.into();
+        let id = self.signed_pre_key_store.next_key_id().await?;
         let signed_pre_key_pair = KeyPair::generate(csprng);
         let signature = self
             .identity_key_store
@@ -77,7 +77,7 @@ impl<T: StoreType> KeyManager for Store<T> {
     }
 
     async fn generate_kyber_pre_key(&mut self) -> Result<KyberPreKeyRecord, ClientError> {
-        let id = 0.into();
+        let id = self.kyber_pre_key_store.next_key_id().await?;
         let record = KyberPreKeyRecord::generate(
             KeyType::Kyber1024,
             id,
