@@ -1,0 +1,12 @@
+{
+  "db_name": "SQLite",
+  "query": "\n            INSERT INTO DeviceSessionStore (address, session_record)\n            VALUES (?, ?)\n            ON CONFLICT(address) DO UPDATE SET session_record = ?\n            ",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Right": 3
+    },
+    "nullable": []
+  },
+  "hash": "61e09c0274cd24359014def47313229daeb2cd0f8e7e1658e089e9e50b8d1846"
+}

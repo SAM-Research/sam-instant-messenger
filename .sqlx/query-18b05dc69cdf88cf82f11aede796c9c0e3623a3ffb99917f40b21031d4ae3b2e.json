@@ -1,0 +1,12 @@
+{
+  "db_name": "SQLite",
+  "query": "\n            DELETE FROM\n                DevicePreKeyStore\n            WHERE\n                pre_key_id = ?\n            ",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Right": 1
+    },
+    "nullable": []
+  },
+  "hash": "18b05dc69cdf88cf82f11aede796c9c0e3623a3ffb99917f40b21031d4ae3b2e"
+}

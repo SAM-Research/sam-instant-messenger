@@ -1,0 +1,20 @@
+{
+  "db_name": "SQLite",
+  "query": "\n            WITH max_signed_pre_key_id_table AS (\n                SELECT\n                    1 AS _id,\n                    MAX(signed_pre_key_id) AS max_signed_pre_key_id\n                FROM\n                    DeviceSignedPreKeyStore\n                )\n                SELECT\n                    CASE WHEN spk.max_signed_pre_key_id IS NOT NULL\n                    THEN spk.max_signed_pre_key_id\n                    ELSE\n                    0\n                    END AS spkid\n                FROM\n                    max_signed_pre_key_id_table spk\n                ",
+  "describe": {
+    "columns": [
+      {
+        "name": "spkid",
+        "ordinal": 0,
+        "type_info": "Integer"
+      }
+    ],
+    "parameters": {
+      "Right": 0
+    },
+    "nullable": [
+      false
+    ]
+  },
+  "hash": "7b2cd8f058b1c6f41cbe6c1efa10eabc748a9e795db75dbb8c77d4aff86a9e1d"
+}

@@ -1,0 +1,20 @@
+{
+  "db_name": "SQLite",
+  "query": "\n            SELECT\n                identity_key\n            FROM\n                DeviceIdentityKeyStore\n            WHERE\n                address = ?\n            ",
+  "describe": {
+    "columns": [
+      {
+        "name": "identity_key",
+        "ordinal": 0,
+        "type_info": "Text"
+      }
+    ],
+    "parameters": {
+      "Right": 1
+    },
+    "nullable": [
+      false
+    ]
+  },
+  "hash": "b073d1d50dce96c03621c564ee6d636645f78417060a4f64d333cc1099a180aa"
+}

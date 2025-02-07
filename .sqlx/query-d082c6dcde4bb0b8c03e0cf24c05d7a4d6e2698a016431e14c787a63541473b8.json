@@ -1,0 +1,20 @@
+{
+  "db_name": "SQLite",
+  "query": "\n            SELECT\n                session_record\n            FROM\n                DeviceSessionStore\n            WHERE\n                address = ?\n            ",
+  "describe": {
+    "columns": [
+      {
+        "name": "session_record",
+        "ordinal": 0,
+        "type_info": "Text"
+      }
+    ],
+    "parameters": {
+      "Right": 1
+    },
+    "nullable": [
+      false
+    ]
+  },
+  "hash": "d082c6dcde4bb0b8c03e0cf24c05d7a4d6e2698a016431e14c787a63541473b8"
+}

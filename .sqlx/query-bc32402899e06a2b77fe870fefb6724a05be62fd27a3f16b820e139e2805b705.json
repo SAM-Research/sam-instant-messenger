@@ -1,0 +1,12 @@
+{
+  "db_name": "SQLite",
+  "query": "\n            INSERT INTO IdentityKeys (public_key, private_key, registration_id)\n            VALUES (?, ?, ?)\n            ",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Right": 3
+    },
+    "nullable": []
+  },
+  "hash": "bc32402899e06a2b77fe870fefb6724a05be62fd27a3f16b820e139e2805b705"
+}

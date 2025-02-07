@@ -1,0 +1,12 @@
+{
+  "db_name": "SQLite",
+  "query": "\n            INSERT INTO DeviceSignedPreKeyStore (signed_pre_key_id, signed_pre_key_record)\n            VALUES (?, ?)\n            ON CONFLICT(signed_pre_key_id) DO UPDATE SET signed_pre_key_record = ?\n            ",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Right": 3
+    },
+    "nullable": []
+  },
+  "hash": "bb45af3d7e022a5f0b00d96a3dac22f63fea28dc344957427531d10bae547b57"
+}
