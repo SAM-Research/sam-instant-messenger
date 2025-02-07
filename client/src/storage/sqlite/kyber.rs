@@ -117,7 +117,7 @@ impl KyberPreKeyStore for SqliteKyberPreKeyStore {
     async fn mark_kyber_pre_key_used(
         &mut self,
         _kyber_prekey_id: KyberPreKeyId,
-    ) -> std::result::Result<(), SignalProtocolError> {
+    ) -> Result<(), SignalProtocolError> {
         // TODO: Why does Signal have this??
         Ok(())
     }

@@ -127,7 +127,7 @@ impl IdentityKeyStore for SqliteIdentityKeyStore {
         }
     }
 
-    async fn get_local_registration_id(&self) -> std::result::Result<u32, SignalProtocolError> {
+    async fn get_local_registration_id(&self) -> Result<u32, SignalProtocolError> {
         sqlx::query!(
             r#"
             SELECT
@@ -151,7 +151,7 @@ impl IdentityKeyStore for SqliteIdentityKeyStore {
         &mut self,
         address: &ProtocolAddress,
         identity: &IdentityKey,
-    ) -> std::result::Result<bool, SignalProtocolError> {
+    ) -> Result<bool, SignalProtocolError> {
         match self
             .get_identity(address)
             .await
@@ -188,7 +188,7 @@ impl IdentityKeyStore for SqliteIdentityKeyStore {
         address: &ProtocolAddress,
         identity: &IdentityKey,
         _direction: Direction,
-    ) -> std::result::Result<bool, SignalProtocolError> {
+    ) -> Result<bool, SignalProtocolError> {
         match self.get_identity(address).await? {
             Some(i) => Ok(i == *identity),
             None => Ok(true),
@@ -198,7 +198,7 @@ impl IdentityKeyStore for SqliteIdentityKeyStore {
     async fn get_identity(
         &self,
         address: &ProtocolAddress,
-    ) -> std::result::Result<Option<IdentityKey>, SignalProtocolError> {
+    ) -> Result<Option<IdentityKey>, SignalProtocolError> {
         let addr = format!("{}", address);
 
         match sqlx::query!(
