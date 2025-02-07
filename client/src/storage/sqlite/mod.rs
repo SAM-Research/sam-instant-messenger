@@ -5,8 +5,8 @@ use identity::SqliteIdentityKeyStore;
 use kyber::SqliteKyberPreKeyStore;
 use libsignal_protocol::IdentityKeyPair;
 use pre_key::SqlitePreKeyStore;
-use sender_key::SqliteSessionStore;
-use session::SqliteSenderKeyStore;
+use session::SqliteSessionStore;
+use sender_key::SqliteSenderKeyStore;
 use signed_pre_key::SqliteSignedPreKeyStore;
 use sqlx::{Pool, Sqlite};
 
@@ -25,8 +25,8 @@ pub mod contact;
 pub mod identity;
 pub mod kyber;
 pub mod pre_key;
-pub mod sender_key;
 pub mod session;
+pub mod sender_key;
 pub mod signed_pre_key;
 
 #[derive(Debug)]
