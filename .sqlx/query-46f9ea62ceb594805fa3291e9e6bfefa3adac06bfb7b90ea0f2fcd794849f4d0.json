@@ -1,0 +1,12 @@
+{
+  "db_name": "SQLite",
+  "query": "\n            DELETE FROM Username;\n            INSERT INTO Username\n            VALUES (?)\n            ",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Right": 1
+    },
+    "nullable": []
+  },
+  "hash": "46f9ea62ceb594805fa3291e9e6bfefa3adac06bfb7b90ea0f2fcd794849f4d0"
+}

@@ -1,0 +1,12 @@
+{
+  "db_name": "SQLite",
+  "query": "\n            DELETE FROM Aci;\n            INSERT INTO Aci\n            VALUES (?)\n            ",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Right": 1
+    },
+    "nullable": []
+  },
+  "hash": "324ac3e78232bc92d82d6ea75b119f2d5fb0c5d1dd963545dd63bf751828e5df"
+}

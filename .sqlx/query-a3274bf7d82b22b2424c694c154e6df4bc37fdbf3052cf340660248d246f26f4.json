@@ -1,0 +1,20 @@
+{
+  "db_name": "SQLite",
+  "query": "\n            SELECT\n                pre_key_record\n            FROM\n                DevicePreKeyStore\n            WHERE\n                pre_key_id = ?\n            ",
+  "describe": {
+    "columns": [
+      {
+        "name": "pre_key_record",
+        "ordinal": 0,
+        "type_info": "Text"
+      }
+    ],
+    "parameters": {
+      "Right": 1
+    },
+    "nullable": [
+      false
+    ]
+  },
+  "hash": "a3274bf7d82b22b2424c694c154e6df4bc37fdbf3052cf340660248d246f26f4"
+}

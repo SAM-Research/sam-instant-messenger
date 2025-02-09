@@ -1,0 +1,20 @@
+{
+  "db_name": "SQLite",
+  "query": "\n            SELECT\n                kyber_pre_key_record\n            FROM\n                DeviceKyberPreKeyStore\n            WHERE\n                kyber_pre_key_id = ?\n            ",
+  "describe": {
+    "columns": [
+      {
+        "name": "kyber_pre_key_record",
+        "ordinal": 0,
+        "type_info": "Text"
+      }
+    ],
+    "parameters": {
+      "Right": 1
+    },
+    "nullable": [
+      false
+    ]
+  },
+  "hash": "f3b8187882c71092bf24fb5ffa6ed09f96ca98514a31adeb81e7e6e9ac514d7e"
+}

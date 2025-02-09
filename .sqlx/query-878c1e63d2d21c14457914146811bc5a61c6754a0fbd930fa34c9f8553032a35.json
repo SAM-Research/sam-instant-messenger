@@ -1,0 +1,26 @@
+{
+  "db_name": "SQLite",
+  "query": "\n            SELECT\n                public_key, private_key\n            FROM\n                IdentityKeys \n            ",
+  "describe": {
+    "columns": [
+      {
+        "name": "public_key",
+        "ordinal": 0,
+        "type_info": "Text"
+      },
+      {
+        "name": "private_key",
+        "ordinal": 1,
+        "type_info": "Text"
+      }
+    ],
+    "parameters": {
+      "Right": 0
+    },
+    "nullable": [
+      false,
+      false
+    ]
+  },
+  "hash": "878c1e63d2d21c14457914146811bc5a61c6754a0fbd930fa34c9f8553032a35"
+}

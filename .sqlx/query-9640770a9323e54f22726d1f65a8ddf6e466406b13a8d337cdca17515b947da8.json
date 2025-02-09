@@ -1,0 +1,12 @@
+{
+  "db_name": "SQLite",
+  "query": "\n            INSERT INTO DeviceKyberPreKeyStore (kyber_pre_key_id, kyber_pre_key_record)\n            VALUES (?, ?)\n            ON CONFLICT(kyber_pre_key_id) DO UPDATE SET kyber_pre_key_record = ?\n            ",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Right": 3
+    },
+    "nullable": []
+  },
+  "hash": "9640770a9323e54f22726d1f65a8ddf6e466406b13a8d337cdca17515b947da8"
+}

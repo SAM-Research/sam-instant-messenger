@@ -1,0 +1,20 @@
+{
+  "db_name": "SQLite",
+  "query": "\n            SELECT\n                registration_id\n            FROM\n                IdentityKeys\n            ",
+  "describe": {
+    "columns": [
+      {
+        "name": "registration_id",
+        "ordinal": 0,
+        "type_info": "Integer"
+      }
+    ],
+    "parameters": {
+      "Right": 0
+    },
+    "nullable": [
+      false
+    ]
+  },
+  "hash": "1b64754d66abbc566e4db219bf1afcb371363192dcef551420e8d2d195588685"
+}

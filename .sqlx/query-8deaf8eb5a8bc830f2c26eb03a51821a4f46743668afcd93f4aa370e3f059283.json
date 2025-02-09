@@ -1,0 +1,20 @@
+{
+  "db_name": "SQLite",
+  "query": "\n            SELECT * FROM Password;\n            ",
+  "describe": {
+    "columns": [
+      {
+        "name": "password",
+        "ordinal": 0,
+        "type_info": "Text"
+      }
+    ],
+    "parameters": {
+      "Right": 0
+    },
+    "nullable": [
+      false
+    ]
+  },
+  "hash": "8deaf8eb5a8bc830f2c26eb03a51821a4f46743668afcd93f4aa370e3f059283"
+}

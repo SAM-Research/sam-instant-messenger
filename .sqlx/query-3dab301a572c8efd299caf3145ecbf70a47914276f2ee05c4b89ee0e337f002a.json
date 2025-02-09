@@ -1,0 +1,12 @@
+{
+  "db_name": "SQLite",
+  "query": "\n            DELETE FROM Password;\n            INSERT INTO Password\n            VALUES (?)\n            ",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Right": 1
+    },
+    "nullable": []
+  },
+  "hash": "3dab301a572c8efd299caf3145ecbf70a47914276f2ee05c4b89ee0e337f002a"
+}
