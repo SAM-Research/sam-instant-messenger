@@ -1,34 +1,37 @@
-use libsignal_protocol::{GenericSignedPreKey, IdentityKey, KyberPreKeyRecord, SignedPreKeyRecord};
+use libsignal_protocol::{
+    GenericSignedPreKey, IdentityKey, KyberPreKeyRecord, PreKeyRecord, SignedPreKeyRecord,
+};
 use serde::{Deserialize, Serialize};
 use serde_with::{base64::Base64, serde_as};
-use uuid::Uuid;
 
 #[derive(Debug, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct BundleResponse {
     #[serde(with = "id_key")]
     pub identity_key: IdentityKey,
-    devices: Vec<PreKeyBundle>,
+    pub devices: Vec<KeyBundle>,
 }
 
 #[derive(Debug, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
-pub struct PreKeyBundle {
-    device_id: u32,
-    registration_id: u32,
-    pre_key: Option<UploadPreKey>,
-    pq_pre_key: UploadSignedPreKey,
-    signed_pre_key: UploadSignedPreKey,
+pub struct KeyBundle {
+    pub device_id: u32,
+    pub registration_id: u32,
+    pub pre_key: Option<UploadPreKey>,
+    pub pq_pre_key: UploadSignedPreKey,
+    pub signed_pre_key: UploadSignedPreKey,
 }
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
 #[serde(rename_all = "camelCase")]
 pub struct PublishKeyBundleRequest {
-    pub pre_key: Option<Vec<UploadPreKey>>,
+    pub pre_keys: Option<Vec<UploadPreKey>>,
     pub signed_pre_key: Option<UploadSignedPreKey>,
-    pub pq_pre_key: Option<Vec<UploadSignedPreKey>>,
+    pub pq_pre_keys: Option<Vec<UploadSignedPreKey>>,
     pub pq_last_resort_pre_key: Option<UploadSignedPreKey>,
 }
+
+pub type PublishKeyBundle = PublishKeyBundleRequest;
 
 #[serde_as]
 #[derive(Debug, Serialize, Deserialize, Clone, PartialEq, Eq)]
@@ -37,6 +40,15 @@ pub struct UploadPreKey {
     pub key_id: u32,
     #[serde_as(as = "Base64")]
     pub public_key: Box<[u8]>,
+}
+
+impl From<PreKeyRecord> for UploadPreKey {
+    fn from(value: PreKeyRecord) -> Self {
+        UploadPreKey {
+            key_id: value.id().expect("Can get ID").into(),
+            public_key: value.public_key().expect("Can get public_key").serialize(),
+        }
+    }
 }
 
 #[serde_as]

@@ -12,6 +12,7 @@ pub enum ServerError {
     DeviceAlreadyRegistered,
     #[error(ignore)]
     HKDFOutputTooLong(u32),
+    KeyVerification,
 }
 
 #[derive(Debug, Clone)]

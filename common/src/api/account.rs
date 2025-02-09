@@ -1,19 +1,15 @@
-use libsignal_protocol::{GenericSignedPreKey, IdentityKey, KyberPreKeyRecord, SignedPreKeyRecord};
+use libsignal_protocol::IdentityKey;
 use serde::{Deserialize, Serialize};
-use serde_with::{base64::Base64, serde_as};
 use uuid::Uuid;
 
-use super::keys::{id_key, UploadSignedPreKey};
+use super::{device::DeviceActivationInfo, keys::id_key};
 
 #[derive(Debug, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct RegistrationRequest {
-    pub name: String,
-    pub registration_id: u32,
     #[serde(with = "id_key")]
     pub identity_key: IdentityKey,
-    pub signed_prekey: UploadSignedPreKey,
-    pub post_quantum_prekey: UploadSignedPreKey,
+    pub device_activation: DeviceActivationInfo,
 }
 
 #[derive(Serialize, Deserialize, Clone)]

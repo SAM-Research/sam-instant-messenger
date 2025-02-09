@@ -1,6 +1,6 @@
 use serde::{Deserialize, Serialize};
 
-use super::keys::UploadSignedPreKey;
+use super::keys::PublishKeyBundle;
 
 #[derive(Serialize, Deserialize, Clone)]
 #[serde(rename_all = "camelCase")]
@@ -20,14 +20,13 @@ pub struct LinkDeviceResponse {
 #[serde(rename_all = "camelCase")]
 pub struct LinkDeviceRequest {
     pub verification_code: String,
-    pub device_activation_request: DeviceActivationRequest,
+    pub device_activation: DeviceActivationInfo,
 }
 
 #[derive(Debug, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
-pub struct DeviceActivationRequest {
-    pub aci_signed_pre_key: UploadSignedPreKey,
-    pub pni_signed_pre_key: UploadSignedPreKey,
-    pub aci_pq_last_resort_pre_key: UploadSignedPreKey,
-    pub pni_pq_last_resort_pre_key: UploadSignedPreKey,
+pub struct DeviceActivationInfo {
+    pub device_name: String,
+    pub registration_id: u32,
+    pub key_bundle: PublishKeyBundle,
 }
