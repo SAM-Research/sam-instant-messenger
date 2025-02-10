@@ -82,4 +82,11 @@ impl AccountStore for PostgresAccountStore {
         .map(|_| ())
         .map_err(|err| AccountStoreError::Database(err.into()))
     }
+
+    async fn add_used_device_link_token(
+        &mut self,
+        _device_link_token: String,
+    ) -> Result<(), AccountStoreError> {
+        todo!()
+    }
 }

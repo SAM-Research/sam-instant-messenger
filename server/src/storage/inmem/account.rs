@@ -64,4 +64,11 @@ impl AccountStore for InMemoryAccountStore {
             ))
             .map(|_| ())
     }
+
+    async fn add_used_device_link_token(
+        &mut self,
+        _device_link_token: String,
+    ) -> Result<(), AccountStoreError> {
+        todo!()
+    }
 }

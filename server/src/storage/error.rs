@@ -18,12 +18,16 @@ pub enum DeviceStoreError {
     AccountNotFound(String),
     #[error(ignore)]
     DeviceIdTaken(u32),
+    #[error(ignore)]
+    DeviceNotFound(u32),
     Database(BoxDynError),
 }
 
 #[derive(Debug, Display, From, Error)]
 pub enum KeyStoreError {
     Database(BoxDynError),
+    #[error(ignore)]
+    AddressNotFound(String),
 }
 
 #[derive(Debug, Display, From, Error)]

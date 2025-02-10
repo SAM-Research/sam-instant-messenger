@@ -24,7 +24,11 @@ impl KeyStore for PostgresKeyStore {
     ) -> Result<(), KeyStoreError> {
         todo!()
     }
-    async fn store_last_resort_ec_pre_key(&mut self) {
+    async fn store_last_resort_ec_pre_key(
+        &mut self,
+        _pk: PreKeyRecord,
+        _owner: &ProtocolAddress,
+    ) -> Result<(), KeyStoreError> {
         todo!()
     }
     async fn store_one_time_pq_pre_keys(
@@ -56,10 +60,16 @@ impl KeyStore for PostgresKeyStore {
     ) -> Result<PreKeyBundle, KeyStoreError> {
         todo!()
     }
-    async fn get_one_time_ec_pre_key_count(&self, _service_id: &Aci) -> Result<u32, KeyStoreError> {
+    async fn get_one_time_ec_pre_key_count(
+        &self,
+        _address: &ProtocolAddress,
+    ) -> Result<usize, KeyStoreError> {
         todo!()
     }
-    async fn get_one_time_pq_pre_key_count(&self, _service_id: &Aci) -> Result<u32, KeyStoreError> {
+    async fn get_one_time_pq_pre_key_count(
+        &self,
+        _address: &ProtocolAddress,
+    ) -> Result<usize, KeyStoreError> {
         todo!()
     }
 }
