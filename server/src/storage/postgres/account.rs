@@ -1,6 +1,10 @@
-use crate::storage::{error::AccountStoreError, Account, AccountStore};
+use std::str::FromStr;
+
+use crate::storage::{
+    account::Account, error::AccountStoreError, traits::AccountStore, IdentityKey, PublicKey as _,
+};
 use async_trait::async_trait;
-use libsignal_protocol::{Aci, IdentityKey, PublicKey};
+use sam_common::address::AccountId;
 use sqlx::{Pool, Postgres};
 
 #[derive(Debug)]
@@ -10,13 +14,13 @@ pub struct PostgresAccountStore {
 
 #[async_trait(?Send)]
 impl AccountStore for PostgresAccountStore {
-    async fn add_account(&mut self, account: &Account) -> Result<(), AccountStoreError> {
+    async fn add_account(&mut self, account: Account) -> Result<(), AccountStoreError> {
         sqlx::query!(
             r#"
             INSERT INTO accounts (aci, aci_identity_key)
             VALUES ($1, $2)
             "#,
-            account.aci().service_id_string(),
+            account.aci().to_string(),
             &*account.identity_key().serialize(),
         )
         .execute(&self.database)
@@ -25,7 +29,7 @@ impl AccountStore for PostgresAccountStore {
         .map_err(|err| AccountStoreError::Database(err.into()))
     }
 
-    async fn get_account(&self, service_id: &Aci) -> Result<Account, AccountStoreError> {
+    async fn get_account(&self, service_id: &AccountId) -> Result<Account, AccountStoreError> {
         sqlx::query!(
             r#"
             SELECT aci, 
@@ -33,16 +37,14 @@ impl AccountStore for PostgresAccountStore {
             FROM accounts
             WHERE aci = $1 
             "#,
-            service_id.service_id_string(),
+            service_id.to_string(),
         )
         .fetch_one(&self.database)
         .await
         .map(|row| {
             Account::builder()
-                .aci(Aci::parse_from_service_id_string(&row.aci).unwrap())
-                .identity_key(IdentityKey::new(
-                    PublicKey::deserialize(row.aci_identity_key.as_slice()).unwrap(),
-                ))
+                .aci(AccountId::from_str(&row.aci).unwrap())
+                .identity_key(IdentityKey::deserialize(row.aci_identity_key.as_slice()))
                 .build()
         })
         .map_err(|err| AccountStoreError::Database(err.into()))
@@ -50,8 +52,8 @@ impl AccountStore for PostgresAccountStore {
 
     async fn update_account_identifier(
         &mut self,
-        service_id: &Aci,
-        new_aci: Aci,
+        service_id: &AccountId,
+        new_aci: &AccountId,
     ) -> Result<(), AccountStoreError> {
         sqlx::query!(
             r#"
@@ -59,8 +61,8 @@ impl AccountStore for PostgresAccountStore {
             SET aci = $2
             WHERE aci = $1 
             "#,
-            service_id.service_id_string(),
-            new_aci.service_id_string()
+            service_id.to_string(),
+            new_aci.to_string()
         )
         .execute(&self.database)
         .await
@@ -68,14 +70,14 @@ impl AccountStore for PostgresAccountStore {
         .map_err(|err| AccountStoreError::Database(err.into()))
     }
 
-    async fn delete_account(&mut self, service_id: &Aci) -> Result<(), AccountStoreError> {
+    async fn delete_account(&mut self, service_id: &AccountId) -> Result<(), AccountStoreError> {
         sqlx::query!(
             r#"
             DELETE 
             FROM accounts
             WHERE aci = $1 
             "#,
-            service_id.service_id_string()
+            service_id.to_string()
         )
         .execute(&self.database)
         .await

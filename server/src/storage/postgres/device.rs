@@ -1,7 +1,7 @@
 use async_trait::async_trait;
-use libsignal_protocol::{Aci, ProtocolAddress};
+use sam_common::address::{AccountId, DeviceAddress};
 
-use crate::storage::{error::DeviceStoreError, Device, DeviceStore};
+use crate::storage::{device::Device, error::DeviceStoreError, traits::DeviceStore};
 
 #[derive(Debug)]
 pub struct PostgresDeviceStore {}
@@ -10,21 +10,24 @@ pub struct PostgresDeviceStore {}
 impl DeviceStore for PostgresDeviceStore {
     async fn add_device(
         &mut self,
-        _service_id: &Aci,
-        _device: &Device,
+        _device: Device,
+        _service_id: &AccountId,
     ) -> Result<(), DeviceStoreError> {
         todo!()
     }
 
-    async fn get_all_devices(&self, _service_id: &Aci) -> Result<Vec<Device>, DeviceStoreError> {
+    async fn get_all_devices(
+        &self,
+        _service_id: &AccountId,
+    ) -> Result<Vec<Device>, DeviceStoreError> {
         todo!()
     }
 
-    async fn get_device(&self, _address: &ProtocolAddress) -> Result<Device, DeviceStoreError> {
+    async fn get_device(&self, _address: &DeviceAddress) -> Result<Device, DeviceStoreError> {
         todo!()
     }
 
-    async fn delete_device(&mut self, _address: &ProtocolAddress) -> Result<(), DeviceStoreError> {
+    async fn delete_device(&mut self, _address: &DeviceAddress) -> Result<(), DeviceStoreError> {
         todo!()
     }
 }
