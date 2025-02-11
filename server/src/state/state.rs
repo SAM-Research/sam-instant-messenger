@@ -2,21 +2,31 @@ use std::sync::Arc;
 
 use tokio::sync::Mutex;
 
-use super::traits::{
-    account_manager::AccountManager, key_manager::KeyManager, message_manager::MessageManager,
-};
+use super::traits::state_type::StateType;
 
-type BoxMutex<T> = Arc<Mutex<Box<T>>>;
+type AMutex<T> = Arc<Mutex<T>>;
 
-#[derive(Clone, bon::Builder)]
-pub struct ServerState {
-    pub accounts: BoxMutex<dyn AccountManager>,
-    pub messages: BoxMutex<dyn MessageManager>,
-    pub keys: BoxMutex<dyn KeyManager>,
+pub struct ServerState<T: StateType> {
+    pub accounts: AMutex<T::AccountManager>,
+    pub devices: AMutex<T::DeviceManager>,
+    pub messages: AMutex<T::MessageManager>,
+    pub keys: AMutex<T::KeyManager>,
     pub link_secret: String,
 }
 
-impl ServerState {
+impl<T: StateType> Clone for ServerState<T> {
+    fn clone(&self) -> Self {
+        Self {
+            accounts: self.accounts.clone(),
+            devices: self.devices.clone(),
+            messages: self.messages.clone(),
+            keys: self.keys.clone(),
+            link_secret: self.link_secret.clone(),
+        }
+    }
+}
+
+impl<T: StateType> ServerState<T> {
     pub async fn init(&mut self) {}
     pub async fn cleanup(&mut self) {}
 }

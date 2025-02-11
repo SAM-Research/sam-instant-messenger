@@ -3,7 +3,7 @@ use axum::{
     Router,
 };
 
-use crate::state::ServerState;
+use crate::state::{traits::state_type::StateType, ServerState};
 
 use super::account::{account_register_endpoint, delete_account_endpoint};
 use super::device::{
@@ -12,7 +12,7 @@ use super::device::{
 use super::keys::{keys_bundles_endpoint, publish_keys_endpoint};
 use super::websocket::websocket_endpoint;
 
-pub fn router() -> Router<ServerState> {
+pub fn router<T: StateType>() -> Router<ServerState<T>> {
     Router::new()
         .route("/", get(|| async { "Hello From SAM Service" }))
         .route("/api/v1/account", post(account_register_endpoint))

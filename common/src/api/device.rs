@@ -1,32 +1,46 @@
 use serde::{Deserialize, Serialize};
+use uuid::Uuid;
 
 use super::keys::PublishKeyBundle;
 
-#[derive(Serialize, Deserialize, Clone)]
+#[derive(Debug, Serialize, Deserialize, Clone)]
 #[serde(rename_all = "camelCase")]
 pub struct LinkDeviceToken {
-    pub verification_code: String,
-    pub token_identifier: String,
+    id: String,
+    token: String,
+}
+
+impl LinkDeviceToken {
+    pub fn new(id: String, token: String) -> Self {
+        Self { id, token }
+    }
+    pub fn id(&self) -> &str {
+        &self.id
+    }
+
+    pub fn token(&self) -> &str {
+        &self.token
+    }
 }
 
 #[derive(Serialize, Deserialize, Clone)]
 #[serde(rename_all = "camelCase")]
 pub struct LinkDeviceResponse {
-    pub aci: String,
+    pub account_id: Uuid,
     pub device_id: u32,
 }
 
 #[derive(Debug, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct LinkDeviceRequest {
-    pub verification_code: String,
+    pub token: LinkDeviceToken,
     pub device_activation: DeviceActivationInfo,
 }
 
 #[derive(Debug, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct DeviceActivationInfo {
-    pub device_name: String,
+    pub name: String,
     pub registration_id: u32,
     pub key_bundle: PublishKeyBundle,
 }

@@ -7,7 +7,7 @@ use libsignal_protocol::{
     PreKeyRecord, PreKeyStore, SignedPreKeyRecord, SignedPreKeyStore,
 };
 use rand::{CryptoRng, Rng};
-use sam_common::time_now;
+use sam_common::system_time_now;
 
 #[derive(Debug)]
 pub struct PreKeyCollection {
@@ -67,7 +67,8 @@ impl<T: StoreType> KeyManager for Store<T> {
             .private_key()
             .calculate_signature(&signed_pre_key_pair.public_key.serialize(), csprng)?;
 
-        let record = SignedPreKeyRecord::new(id, time_now(), &signed_pre_key_pair, &signature);
+        let record =
+            SignedPreKeyRecord::new(id, system_time_now(), &signed_pre_key_pair, &signature);
 
         self.signed_pre_key_store
             .save_signed_pre_key(id, &record)

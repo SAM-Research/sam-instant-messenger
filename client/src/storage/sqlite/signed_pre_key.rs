@@ -131,7 +131,7 @@ mod test {
         SignedPreKeyStore as _,
     };
     use rand::rngs::OsRng;
-    use sam_common::time_now;
+    use sam_common::system_time_now;
 
     use crate::storage::sqlite::{signed_pre_key::SqliteSignedPreKeyStore, sqlite_test::connect};
 
@@ -148,8 +148,12 @@ mod test {
             .calculate_signature(&signed_pre_key_pair.public_key.serialize(), &mut csprng)
             .expect("should be able to sign pre key record");
 
-        let signed_pre_key_record =
-            SignedPreKeyRecord::new(0.into(), time_now(), &signed_pre_key_pair, &signature);
+        let signed_pre_key_record = SignedPreKeyRecord::new(
+            0.into(),
+            system_time_now(),
+            &signed_pre_key_pair,
+            &signature,
+        );
 
         signed_pre_key_store
             .save_signed_pre_key(signed_pre_key_record.id().unwrap(), &signed_pre_key_record)
