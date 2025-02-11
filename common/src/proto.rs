@@ -112,7 +112,7 @@ mod envelope_test {
         let ack_uuid = MessageId::generate();
         let ack: ClientMessage = ClientMessage {
             r#type: MessageType::Ack.into(),
-            id: ack_uuid.clone().into(),
+            id: ack_uuid.into(),
             message: None,
         };
 
@@ -138,9 +138,9 @@ mod envelope_test {
 
         let message_uuid = Uuid::new_v4().to_string();
         let envelope: ClientEnvelope = ClientEnvelope::new(
-            EnvelopeType::SignalMessage.into(),
+            EnvelopeType::SignalMessage,
             alice_address.account_id(),
-            bob_address.clone(),
+            bob_address,
             HashMap::from([
                 (1.into(), vec![10, 20, 30]),
                 (2.into(), vec![40, 50, 60]),
@@ -182,7 +182,7 @@ mod envelope_test {
         let uuid = MessageId::generate();
         let ack: ServerMessage = ServerMessage {
             r#type: MessageType::Ack.into(),
-            id: uuid.clone().into(),
+            id: uuid.into(),
             message: None,
         };
 
@@ -198,7 +198,7 @@ mod envelope_test {
         let error_uuid = MessageId::generate();
         let error: ServerMessage = ServerMessage {
             r#type: MessageType::Error.into(),
-            id: error_uuid.clone().into(),
+            id: error_uuid.into(),
             message: None,
         };
 
@@ -217,15 +217,15 @@ mod envelope_test {
 
         let message_uuid = MessageId::generate();
         let envelope: ServerEnvelope = ServerEnvelope::new(
-            EnvelopeType::SignalMessage.into(),
-            alice_address.clone(),
-            bob_address.clone(),
+            EnvelopeType::SignalMessage,
+            alice_address,
+            bob_address,
             vec![10, 20, 30],
-            message_uuid.clone().into(),
+            message_uuid,
         );
         let message: ServerMessage = ServerMessage {
             r#type: MessageType::Message.into(),
-            id: message_uuid.clone().into(),
+            id: message_uuid.into(),
             message: Some(envelope.clone()),
         };
 
