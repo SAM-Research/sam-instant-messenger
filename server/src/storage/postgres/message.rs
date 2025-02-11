@@ -1,5 +1,5 @@
 use async_trait::async_trait;
-use sam_common::{address::DeviceAddress, sam_message::ServerEnvelope};
+use sam_common::{address::DeviceAddress, ValidServerEnvelope};
 
 use crate::storage::{error::MessageStoreError, traits::MessageStore};
 
@@ -10,8 +10,7 @@ pub struct PostgresMessageStore {}
 impl MessageStore for PostgresMessageStore {
     async fn push_message_queue(
         &mut self,
-        _messages: Vec<ServerEnvelope>,
-        _address: &DeviceAddress,
+        _messages: Vec<ValidServerEnvelope>,
     ) -> Result<(), MessageStoreError> {
         todo!()
     }
@@ -19,25 +18,25 @@ impl MessageStore for PostgresMessageStore {
     async fn pop_msg_queue(
         &mut self,
         _address: &DeviceAddress,
-    ) -> Result<Vec<ServerEnvelope>, MessageStoreError> {
+    ) -> Result<Vec<ValidServerEnvelope>, MessageStoreError> {
         todo!()
     }
 
-    async fn count_messages(&self, _address: &DeviceAddress) -> Result<u32, MessageStoreError> {
+    async fn count_messages(&self, _address: &DeviceAddress) -> Result<usize, MessageStoreError> {
         todo!()
     }
 
     async fn get_messages(
         &self,
         _address: &DeviceAddress,
-    ) -> Result<Vec<ServerEnvelope>, MessageStoreError> {
+    ) -> Result<Vec<ValidServerEnvelope>, MessageStoreError> {
         todo!()
     }
 
-    async fn delete_messages(
+    async fn clear_message_queue(
         &mut self,
         _address: &DeviceAddress,
-    ) -> Result<Vec<ServerEnvelope>, MessageStoreError> {
+    ) -> Result<(), MessageStoreError> {
         todo!()
     }
 }

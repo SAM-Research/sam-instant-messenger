@@ -1,43 +1,55 @@
+use std::collections::HashMap;
+
 use async_trait::async_trait;
-use sam_common::{address::DeviceAddress, sam_message::ServerEnvelope};
+use sam_common::{address::DeviceAddress, ValidServerEnvelope};
 
 use crate::storage::{error::MessageStoreError, traits::MessageStore};
 
 #[derive(Debug)]
-pub struct InMemoryMessageStore {}
+pub struct InMemoryMessageStore {
+    messages: HashMap<DeviceAddress, Vec<ValidServerEnvelope>>,
+}
 
 #[async_trait(?Send)]
 impl MessageStore for InMemoryMessageStore {
     async fn push_message_queue(
         &mut self,
-        _messages: Vec<ServerEnvelope>,
-        _address: &DeviceAddress,
+        messages: Vec<ValidServerEnvelope>,
     ) -> Result<(), MessageStoreError> {
-        todo!()
+        messages.into_iter().for_each(|message| {
+            self.messages
+                .entry(message.destination())
+                .or_default()
+                .push(message);
+        });
+        Ok(())
     }
 
     async fn pop_msg_queue(
         &mut self,
-        _address: &DeviceAddress,
-    ) -> Result<Vec<ServerEnvelope>, MessageStoreError> {
-        todo!()
+        address: &DeviceAddress,
+    ) -> Result<Vec<ValidServerEnvelope>, MessageStoreError> {
+        Ok(self.messages.remove(address).unwrap_or_default())
     }
 
-    async fn count_messages(&self, _address: &DeviceAddress) -> Result<u32, MessageStoreError> {
-        todo!()
+    async fn count_messages(&self, address: &DeviceAddress) -> Result<usize, MessageStoreError> {
+        Ok(self.messages.get(address).map_or(0, |queue| queue.len()))
     }
 
     async fn get_messages(
         &self,
-        _address: &DeviceAddress,
-    ) -> Result<Vec<ServerEnvelope>, MessageStoreError> {
-        todo!()
+        address: &DeviceAddress,
+    ) -> Result<Vec<ValidServerEnvelope>, MessageStoreError> {
+        Ok(self.messages.get(address).cloned().unwrap_or_default())
     }
 
-    async fn delete_messages(
+    async fn clear_message_queue(
         &mut self,
-        _address: &DeviceAddress,
-    ) -> Result<Vec<ServerEnvelope>, MessageStoreError> {
-        todo!()
+        address: &DeviceAddress,
+    ) -> Result<(), MessageStoreError> {
+        if let Some(queue) = self.messages.get_mut(address) {
+            queue.clear()
+        }
+        Ok(())
     }
 }

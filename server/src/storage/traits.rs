@@ -1,7 +1,7 @@
 use async_trait::async_trait;
 use sam_common::{
     address::{AccountId, DeviceAddress},
-    sam_message::ServerEnvelope,
+    ValidServerEnvelope,
 };
 
 use super::{
@@ -46,26 +46,25 @@ pub trait DeviceStore {
 pub trait MessageStore {
     async fn push_message_queue(
         &mut self,
-        messages: Vec<ServerEnvelope>,
-        address: &DeviceAddress,
+        messages: Vec<ValidServerEnvelope>,
     ) -> Result<(), MessageStoreError>;
 
     async fn pop_msg_queue(
         &mut self,
         address: &DeviceAddress,
-    ) -> Result<Vec<ServerEnvelope>, MessageStoreError>;
+    ) -> Result<Vec<ValidServerEnvelope>, MessageStoreError>;
 
-    async fn count_messages(&self, address: &DeviceAddress) -> Result<u32, MessageStoreError>;
+    async fn count_messages(&self, address: &DeviceAddress) -> Result<usize, MessageStoreError>;
 
     async fn get_messages(
         &self,
         address: &DeviceAddress,
-    ) -> Result<Vec<ServerEnvelope>, MessageStoreError>;
+    ) -> Result<Vec<ValidServerEnvelope>, MessageStoreError>;
 
-    async fn delete_messages(
+    async fn clear_message_queue(
         &mut self,
         address: &DeviceAddress,
-    ) -> Result<Vec<ServerEnvelope>, MessageStoreError>;
+    ) -> Result<(), MessageStoreError>;
 }
 
 #[async_trait(?Send)]

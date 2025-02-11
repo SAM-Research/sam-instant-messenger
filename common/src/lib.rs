@@ -19,4 +19,6 @@ pub fn time_now() -> Timestamp {
     )
 }
 
+pub use proto::ValidServerEnvelope;
+
 include!(concat!(env!("OUT_DIR"), "/_includes.rs"));

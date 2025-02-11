@@ -8,7 +8,7 @@ use uuid::Uuid;
 
 macro_rules! define_id_type {
     ($name:ident) => {
-        #[derive(Debug, Clone, Hash, PartialEq, Eq, From, Into)]
+        #[derive(Debug, Clone, Copy, Hash, PartialEq, Eq, From, Into)]
         pub struct $name(Uuid);
 
         impl $name {
@@ -66,7 +66,7 @@ impl Display for DeviceId {
     }
 }
 
-#[derive(Debug, Display, Clone, Hash, PartialEq, Eq)]
+#[derive(Debug, Display, Clone, Copy, Hash, PartialEq, Eq)]
 #[display("{account_id}:  {device_id}")]
 pub struct DeviceAddress {
     account_id: AccountId,
@@ -81,9 +81,9 @@ impl DeviceAddress {
             device_id: DeviceId::default(),
         }
     }
-    pub fn new(uuid: Uuid, device_id: DeviceId) -> Self {
+    pub fn new(account_id: AccountId, device_id: DeviceId) -> Self {
         Self {
-            account_id: uuid.into(),
+            account_id,
             device_id,
         }
     }

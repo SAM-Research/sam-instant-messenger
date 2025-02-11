@@ -31,4 +31,5 @@ pub enum KeyStoreError {
 #[derive(Debug, Display, From, Error)]
 pub enum MessageStoreError {
     Database(BoxDynError),
+    NoMessagesInQueue,
 }
