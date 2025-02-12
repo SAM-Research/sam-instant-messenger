@@ -6,7 +6,11 @@ use libsignal_protocol::{
     SenderKeyStore, SessionStore, SignedPreKeyId, SignedPreKeyStore,
 };
 use std::fmt::Debug;
+pub mod inmem;
 pub mod sqlite;
+
+#[cfg(test)]
+pub mod tests;
 
 #[async_trait(?Send)]
 pub trait StoreConfig {
@@ -39,14 +43,14 @@ pub trait ProvidesKeyId<T> {
 }
 
 pub trait StoreType {
-    type ContactStore: ContactStore + Debug;
-    type AccountStore: AccountStore + Debug;
-    type IdentityKeyStore: IdentityKeyStore + Debug;
-    type PreKeyStore: PreKeyStore + ProvidesKeyId<PreKeyId> + Debug;
-    type SignedPreKeyStore: SignedPreKeyStore + ProvidesKeyId<SignedPreKeyId> + Debug;
-    type KyberPreKeyStore: KyberPreKeyStore + ProvidesKeyId<KyberPreKeyId> + Debug;
-    type SessionStore: SessionStore + Debug;
-    type SenderKeyStore: SenderKeyStore + Debug;
+    type ContactStore: ContactStore;
+    type AccountStore: AccountStore;
+    type IdentityKeyStore: IdentityKeyStore;
+    type PreKeyStore: PreKeyStore + ProvidesKeyId<PreKeyId>;
+    type SignedPreKeyStore: SignedPreKeyStore + ProvidesKeyId<SignedPreKeyId>;
+    type KyberPreKeyStore: KyberPreKeyStore + ProvidesKeyId<KyberPreKeyId>;
+    type SessionStore: SessionStore;
+    type SenderKeyStore: SenderKeyStore;
 }
 
 #[derive(Debug, Builder)]
