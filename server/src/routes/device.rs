@@ -11,10 +11,8 @@ use sam_common::api::device::{LinkDeviceRequest, LinkDeviceResponse, LinkDeviceT
 use crate::{
     auth::{authenticated_user::AuthenticatedUser, device::create_token},
     logic::device::{link_device, unlink_device},
-    state::{
-        traits::{device_manager::DeviceManager, state_type::StateType},
-        ServerState,
-    },
+    managers::traits::device_manager::DeviceManager,
+    state::{state_type::StateType, ServerState},
     ServerError,
 };
 
@@ -28,7 +26,7 @@ pub async fn device_provision_token_endpoint<T: StateType>(
     }
     let devices = state.devices.lock().await;
     Ok(Json(create_token(
-        devices.link_secret().await?,
+        &devices.link_secret().await?,
         auth_user.account().id(),
     )))
 }

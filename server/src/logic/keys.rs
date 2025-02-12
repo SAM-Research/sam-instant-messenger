@@ -5,13 +5,10 @@ use sam_common::api::keys::{
 use uuid::Uuid;
 
 use crate::{
-    state::{
-        traits::{
-            account_manager::AccountManager, device_manager::DeviceManager,
-            key_manager::KeyManager, state_type::StateType,
-        },
-        ServerState,
+    managers::traits::{
+        account_manager::AccountManager, device_manager::DeviceManager, key_manager::KeyManager,
     },
+    state::{state_type::StateType, ServerState},
     ServerError,
 };
 

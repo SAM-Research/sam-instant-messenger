@@ -1,8 +1,7 @@
+use crate::state::state_type::StateType;
+use crate::state::ServerState;
 use crate::{
-    auth::authenticated_user::AuthenticatedUser,
-    logic::websocket::create_websocket,
-    state::{traits::state_type::StateType, ServerState},
-    ServerError,
+    auth::authenticated_user::AuthenticatedUser, logic::websocket::create_websocket, ServerError,
 };
 use axum::extract::ws::WebSocket;
 use axum::extract::{State, WebSocketUpgrade};

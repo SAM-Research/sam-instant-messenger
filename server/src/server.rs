@@ -1,5 +1,5 @@
 use crate::routes::router;
-use crate::state::traits::state_type::StateType;
+use crate::state::state_type::StateType;
 use crate::state::ServerState;
 use axum::extract::ws::WebSocket;
 use axum_server::tls_rustls::RustlsConfig;

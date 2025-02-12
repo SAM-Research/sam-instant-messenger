@@ -5,7 +5,7 @@ use uuid::Uuid;
 
 use crate::{
     auth::authenticated_user::AuthenticatedUser,
-    state::{traits::state_type::StateType, ServerState},
+    state::{state_type::StateType, ServerState},
 };
 
 pub async fn create_websocket<T: StateType>(

@@ -8,7 +8,7 @@ use uuid::Uuid;
 use crate::{
     auth::authenticated_user::AuthenticatedUser,
     logic::keys::{get_keybundles, publish_keybundle},
-    state::{traits::state_type::StateType, ServerState},
+    state::{state_type::StateType, ServerState},
     ServerError,
 };
 

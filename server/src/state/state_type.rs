@@ -1,7 +1,7 @@
 use axum::extract::ws::Message;
 use futures_util::{Sink, Stream};
 
-use super::{
+use crate::managers::traits::{
     account_manager::AccountManager, device_manager::DeviceManager, key_manager::KeyManager,
     message_manager::MessageManager,
 };

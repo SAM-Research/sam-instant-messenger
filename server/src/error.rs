@@ -22,6 +22,10 @@ pub enum ServerError {
     SocketPollError,
     SocketClientDisconnect,
     SocketDecodeError,
+    AccountNotExist,
+    AccountExists,
+    DeviceNotExist,
+    DeviceExists,
 }
 
 impl IntoResponse for ServerError {
@@ -44,6 +48,10 @@ impl IntoResponse for ServerError {
                 panic!("SocketClientDisconnect cannot happen over HTTP")
             }
             ServerError::SocketDecodeError => panic!("SocketDecodeError cannot happen over HTTP"),
+            ServerError::AccountNotExist => todo!(),
+            ServerError::AccountExists => todo!(),
+            ServerError::DeviceNotExist => todo!(),
+            ServerError::DeviceExists => todo!(),
         }
         .into_response()
     }

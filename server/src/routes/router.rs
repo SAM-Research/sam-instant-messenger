@@ -4,7 +4,7 @@ use axum::{
     Router,
 };
 
-use crate::state::{traits::state_type::StateType, ServerState};
+use crate::state::{state_type::StateType, ServerState};
 
 use super::account::{account_register_endpoint, delete_account_endpoint};
 use super::device::{

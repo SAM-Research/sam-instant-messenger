@@ -9,7 +9,7 @@ use sam_common::api::account::{RegistrationRequest, RegistrationResponse};
 use crate::{
     auth::authenticated_user::AuthenticatedUser,
     logic::account::{create_account, delete_account},
-    state::{traits::state_type::StateType, ServerState},
+    state::{state_type::StateType, ServerState},
     ServerError,
 };
 

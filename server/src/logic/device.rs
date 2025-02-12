@@ -7,13 +7,11 @@ use uuid::Uuid;
 
 use crate::{
     auth::{device::verify_token, password::Password},
-    state::{
+    managers::{
         entities::device::Device,
-        traits::{
-            account_manager::AccountManager, device_manager::DeviceManager, state_type::StateType,
-        },
-        ServerState,
+        traits::{account_manager::AccountManager, device_manager::DeviceManager},
     },
+    state::{state_type::StateType, ServerState},
     ServerError,
 };
 
@@ -26,7 +24,7 @@ pub async fn link_device<T: StateType>(
 ) -> Result<LinkDeviceResponse, ServerError> {
     let account_id = {
         let devices = state.devices.lock().await;
-        verify_token(devices.link_secret().await?, device_link.token)?
+        verify_token(&devices.link_secret().await?, device_link.token)?
     };
 
     let account = {

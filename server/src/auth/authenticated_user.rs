@@ -5,11 +5,11 @@ use axum_extra::headers::Authorization;
 use axum_extra::TypedHeader;
 use uuid::Uuid;
 
-use crate::state::entities::account::Account;
-use crate::state::entities::device::Device;
-use crate::state::traits::account_manager::AccountManager;
-use crate::state::traits::device_manager::DeviceManager;
-use crate::state::traits::state_type::StateType;
+use crate::managers::entities::account::Account;
+use crate::managers::entities::device::Device;
+use crate::managers::traits::account_manager::AccountManager;
+use crate::managers::traits::device_manager::DeviceManager;
+use crate::state::state_type::StateType;
 use crate::state::ServerState;
 use crate::ServerError;
 
@@ -67,3 +67,6 @@ impl<T: StateType> FromRequestParts<ServerState<T>> for AuthenticatedUser {
         Ok(Self { account, device })
     }
 }
+
+#[cfg(test)]
+mod test {}

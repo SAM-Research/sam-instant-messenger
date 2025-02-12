@@ -1,7 +1,7 @@
 use sam_common::sam_message::{ClientMessage, ServerMessage};
 use uuid::Uuid;
 
-use crate::state::{traits::state_type::StateType, ServerState};
+use crate::state::{state_type::StateType, ServerState};
 
 pub async fn receive_client_message<T: StateType>(
     _state: &ServerState<T>,

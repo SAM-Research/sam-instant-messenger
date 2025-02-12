@@ -1,11 +1,10 @@
-pub mod entities;
-pub mod traits;
+pub mod state_type;
 
 use std::sync::Arc;
 
 use tokio::sync::Mutex;
 
-use traits::state_type::StateType;
+use state_type::StateType;
 
 type AMutex<T> = Arc<Mutex<T>>;
 

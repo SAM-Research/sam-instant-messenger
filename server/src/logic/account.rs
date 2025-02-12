@@ -3,14 +3,14 @@ use uuid::Uuid;
 
 use crate::{
     logic::device::create_device,
-    state::{
+    managers::{
         entities::account::Account,
         traits::{
             account_manager::AccountManager, device_manager::DeviceManager,
-            key_manager::KeyManager, message_manager::MessageManager, state_type::StateType,
+            key_manager::KeyManager, message_manager::MessageManager,
         },
-        ServerState,
     },
+    state::{state_type::StateType, ServerState},
     ServerError,
 };
 
