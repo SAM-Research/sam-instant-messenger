@@ -28,7 +28,7 @@ macro_rules! define_key {
             fn id(&self) -> u32 {
                 return self.key_id;
             }
-            fn public_key(&self) -> &Box<[u8]> {
+            fn public_key(&self) -> &[u8] {
                 return &self.public_key;
             }
         }
@@ -72,13 +72,13 @@ macro_rules! define_signed_key {
             fn id(&self) -> u32 {
                 return self.key_id;
             }
-            fn public_key(&self) -> &Box<[u8]> {
+            fn public_key(&self) -> &[u8] {
                 return &self.public_key;
             }
         }
 
         impl SignedKey for $name {
-            fn signature(&self) -> &Box<[u8]> {
+            fn signature(&self) -> &[u8] {
                 return &self.signature;
             }
         }
@@ -87,11 +87,11 @@ macro_rules! define_signed_key {
 
 pub trait Key: Sized {
     fn id(&self) -> u32;
-    fn public_key(&self) -> &Box<[u8]>;
+    fn public_key(&self) -> &[u8];
 }
 
 pub trait SignedKey: Key {
-    fn signature(&self) -> &Box<[u8]>;
+    fn signature(&self) -> &[u8];
 }
 
 define_key!(PreKey);
