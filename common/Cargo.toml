@@ -5,11 +5,16 @@ edition = "2021"
 
 [dependencies]
 derive_more = { version = "2.0.1", features = ["display", "error", "from", "into"] }
-bon = "3.3.2"
 prost = "0.13.4"
 libsignal-protocol = { git = "https://github.com/signalapp/libsignal.git", version = "0.1.0" }
-uuid = { version = "1.13.1", features = ["v4"] }
-
+tokio = { version = "1.40.0", features = ["full"] }
+futures-util = { version = "0.3.30", features = ["sink"] }
+async-trait = "0.1.83"
+base64 = "0.22.1"
+serde = { version = "1.0.210", features = ["derive"] }
+serde_with = { version = "3.11.0", features = ["base64"] }
+uuid = { version = "1.11.0", features = ["serde", "v4"] }
+bon = "3.3.2"
 
 [build-dependencies]
 prost-build = "0.13.4"

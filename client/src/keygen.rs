@@ -1,3 +1,4 @@
+use crate::signal_time_now;
 use crate::storage::{ProvidesKeyId, Store, StoreType};
 use crate::ClientError;
 use async_trait::async_trait;
@@ -7,7 +8,6 @@ use libsignal_protocol::{
     PreKeyRecord, PreKeyStore, SignedPreKeyRecord, SignedPreKeyStore,
 };
 use rand::{CryptoRng, Rng};
-use sam_common::time_now;
 
 #[derive(Debug)]
 pub struct PreKeyCollection {
@@ -67,7 +67,8 @@ impl<T: StoreType> KeyManager for Store<T> {
             .private_key()
             .calculate_signature(&signed_pre_key_pair.public_key.serialize(), csprng)?;
 
-        let record = SignedPreKeyRecord::new(id, time_now(), &signed_pre_key_pair, &signature);
+        let record =
+            SignedPreKeyRecord::new(id, signal_time_now(), &signed_pre_key_pair, &signature);
 
         self.signed_pre_key_store
             .save_signed_pre_key(id, &record)
