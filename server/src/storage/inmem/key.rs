@@ -1,26 +1,27 @@
 use std::collections::HashMap;
 
 use async_trait::async_trait;
-use sam_common::address::DeviceAddress;
-
-use crate::storage::{
-    error::KeyStoreError, traits::KeyStore, PreKeyBundle, PreKeyRecord, SignedPreKeyRecord,
+use sam_common::{
+    address::DeviceAddress,
+    api::{EcPreKey, PreKeyBundle, PublishPreKeys, SignedEcPreKey},
 };
+
+use crate::storage::{error::KeyStoreError, traits::KeyStore};
 
 #[derive(Debug)]
 pub struct InMemoryKeyStore {
-    last_resort_prekeys: HashMap<DeviceAddress, PreKeyRecord>,
-    prekeys: HashMap<DeviceAddress, Vec<PreKeyRecord>>,
-    last_resort_pq_prekeys: HashMap<DeviceAddress, SignedPreKeyRecord>,
-    pq_prekeys: HashMap<DeviceAddress, Vec<SignedPreKeyRecord>>,
-    signed_prekeys: HashMap<DeviceAddress, SignedPreKeyRecord>,
+    last_resort_prekeys: HashMap<DeviceAddress, EcPreKey>,
+    prekeys: HashMap<DeviceAddress, Vec<EcPreKey>>,
+    last_resort_pq_prekeys: HashMap<DeviceAddress, SignedEcPreKey>,
+    pq_prekeys: HashMap<DeviceAddress, Vec<SignedEcPreKey>>,
+    signed_prekeys: HashMap<DeviceAddress, SignedEcPreKey>,
 }
 
 #[async_trait(?Send)]
 impl KeyStore for InMemoryKeyStore {
     async fn store_signed_pre_key(
         &mut self,
-        spk: SignedPreKeyRecord,
+        spk: SignedEcPreKey,
         address: &DeviceAddress,
     ) -> Result<(), KeyStoreError> {
         self.signed_prekeys
@@ -29,7 +30,7 @@ impl KeyStore for InMemoryKeyStore {
     }
     async fn store_last_resort_pq_pre_key(
         &mut self,
-        pq_spk: SignedPreKeyRecord,
+        pq_spk: SignedEcPreKey,
         address: &DeviceAddress,
     ) -> Result<(), KeyStoreError> {
         self.last_resort_pq_prekeys
@@ -38,7 +39,7 @@ impl KeyStore for InMemoryKeyStore {
     }
     async fn store_last_resort_ec_pre_key(
         &mut self,
-        pk: PreKeyRecord,
+        pk: EcPreKey,
         owner: &DeviceAddress,
     ) -> Result<(), KeyStoreError> {
         self.last_resort_prekeys
@@ -47,7 +48,7 @@ impl KeyStore for InMemoryKeyStore {
     }
     async fn store_one_time_pq_pre_keys(
         &mut self,
-        otpks: Vec<SignedPreKeyRecord>,
+        otpks: Vec<SignedEcPreKey>,
         owner: &DeviceAddress,
     ) -> Result<(), KeyStoreError> {
         self.pq_prekeys.insert(owner.to_owned(), otpks);
@@ -55,7 +56,7 @@ impl KeyStore for InMemoryKeyStore {
     }
     async fn store_one_time_ec_pre_keys(
         &mut self,
-        otpks: Vec<PreKeyRecord>,
+        otpks: Vec<EcPreKey>,
         owner: &DeviceAddress,
     ) -> Result<(), KeyStoreError> {
         self.prekeys.insert(owner.to_owned(), otpks);
@@ -64,7 +65,7 @@ impl KeyStore for InMemoryKeyStore {
 
     async fn store_key_bundle(
         &mut self,
-        _data: PreKeyBundle,
+        _data: PublishPreKeys,
         _address: &DeviceAddress,
     ) -> Result<(), KeyStoreError> {
         todo!()

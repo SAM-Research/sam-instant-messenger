@@ -102,15 +102,15 @@ impl From<KyberPreKeyRecord> for PqPreKey {
 
 #[derive(Debug, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
-pub struct KeyBundleResponse {
+pub struct PreKeyBundles {
     #[serde(with = "id_key")] // TODO: Check that this is Base64'ed
     pub identity_key: IdentityKey,
-    pub bundles: Vec<KeyBundle>,
+    pub bundles: Vec<PreKeyBundle>,
 }
 
 #[derive(Debug, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
-pub struct KeyBundle {
+pub struct PreKeyBundle {
     pub device_id: u32,
     pub registration_id: u32,
     pub pre_key: Option<EcPreKey>,
@@ -120,14 +120,12 @@ pub struct KeyBundle {
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
 #[serde(rename_all = "camelCase")]
-pub struct PublishKeyBundleRequest {
+pub struct PublishPreKeys {
     pub pre_keys: Option<Vec<EcPreKey>>,
     pub signed_pre_key: Option<SignedEcPreKey>,
     pub pq_pre_keys: Option<Vec<PqPreKey>>,
     pub pq_last_resort_pre_key: Option<PqPreKey>,
 }
-
-pub type PublishKeyBundle = PublishKeyBundleRequest;
 
 pub mod id_key {
     use libsignal_protocol::IdentityKey;

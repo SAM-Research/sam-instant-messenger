@@ -10,15 +10,6 @@ pub trait PublicKey {
     fn deserialize(bytes: &[u8]) -> Self;
 }
 
-#[derive(Debug, Clone)]
-pub struct PreKeyRecord;
-
-#[derive(Debug, Clone)]
-pub struct SignedPreKeyRecord;
-
-#[derive(Debug, Clone)]
-pub struct PreKeyBundle;
-
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct IdentityKey;
 

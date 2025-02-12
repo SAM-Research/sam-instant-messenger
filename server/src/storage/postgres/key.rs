@@ -1,9 +1,10 @@
 use async_trait::async_trait;
-use sam_common::address::DeviceAddress;
-
-use crate::storage::{
-    error::KeyStoreError, traits::KeyStore, PreKeyBundle, PreKeyRecord, SignedPreKeyRecord,
+use sam_common::{
+    address::DeviceAddress,
+    api::{keys::PublishPreKeys, EcPreKey, PreKeyBundle, SignedEcPreKey},
 };
+
+use crate::storage::{error::KeyStoreError, traits::KeyStore};
 
 #[derive(Debug)]
 pub struct PostgresKeyStore {}
@@ -12,35 +13,35 @@ pub struct PostgresKeyStore {}
 impl KeyStore for PostgresKeyStore {
     async fn store_signed_pre_key(
         &mut self,
-        _spk: SignedPreKeyRecord,
+        _spk: SignedEcPreKey,
         _address: &DeviceAddress,
     ) -> Result<(), KeyStoreError> {
         todo!()
     }
     async fn store_last_resort_pq_pre_key(
         &mut self,
-        _pq_spk: SignedPreKeyRecord,
+        _pq_spk: SignedEcPreKey,
         _address: &DeviceAddress,
     ) -> Result<(), KeyStoreError> {
         todo!()
     }
     async fn store_last_resort_ec_pre_key(
         &mut self,
-        _pk: PreKeyRecord,
+        _pk: EcPreKey,
         _owner: &DeviceAddress,
     ) -> Result<(), KeyStoreError> {
         todo!()
     }
     async fn store_one_time_pq_pre_keys(
         &mut self,
-        _otpks: Vec<SignedPreKeyRecord>,
+        _otpks: Vec<SignedEcPreKey>,
         _owner: &DeviceAddress,
     ) -> Result<(), KeyStoreError> {
         todo!()
     }
     async fn store_one_time_ec_pre_keys(
         &mut self,
-        _otpks: Vec<PreKeyRecord>,
+        _otpks: Vec<EcPreKey>,
         _owner: &DeviceAddress,
     ) -> Result<(), KeyStoreError> {
         todo!()
@@ -48,7 +49,7 @@ impl KeyStore for PostgresKeyStore {
 
     async fn store_key_bundle(
         &mut self,
-        _data: PreKeyBundle,
+        _data: PublishPreKeys,
         _address: &DeviceAddress,
     ) -> Result<(), KeyStoreError> {
         todo!()

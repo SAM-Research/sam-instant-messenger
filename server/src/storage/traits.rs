@@ -1,6 +1,7 @@
 use async_trait::async_trait;
 use sam_common::{
     address::{AccountId, DeviceAddress},
+    api::{keys::PublishPreKeys, EcPreKey, PreKeyBundle, SignedEcPreKey},
     ValidServerEnvelope,
 };
 
@@ -8,7 +9,6 @@ use super::{
     account::Account,
     device::Device,
     error::{AccountStoreError, DeviceStoreError, KeyStoreError, MessageStoreError},
-    PreKeyBundle, PreKeyRecord, SignedPreKeyRecord,
 };
 
 #[async_trait(?Send)]
@@ -71,37 +71,37 @@ pub trait MessageStore {
 pub trait KeyStore {
     async fn store_signed_pre_key(
         &mut self,
-        spk: SignedPreKeyRecord,
+        spk: SignedEcPreKey,
         address: &DeviceAddress,
     ) -> Result<(), KeyStoreError>;
 
     async fn store_last_resort_pq_pre_key(
         &mut self,
-        pq_spk: SignedPreKeyRecord,
+        pq_spk: SignedEcPreKey,
         address: &DeviceAddress,
     ) -> Result<(), KeyStoreError>;
 
     async fn store_last_resort_ec_pre_key(
         &mut self,
-        pk: PreKeyRecord,
+        pk: EcPreKey,
         address: &DeviceAddress,
     ) -> Result<(), KeyStoreError>;
 
     async fn store_one_time_pq_pre_keys(
         &mut self,
-        otpks: Vec<SignedPreKeyRecord>,
+        otpks: Vec<SignedEcPreKey>,
         address: &DeviceAddress,
     ) -> Result<(), KeyStoreError>;
 
     async fn store_one_time_ec_pre_keys(
         &mut self,
-        otpks: Vec<PreKeyRecord>,
+        otpks: Vec<EcPreKey>,
         address: &DeviceAddress,
     ) -> Result<(), KeyStoreError>;
 
     async fn store_key_bundle(
         &mut self,
-        data: PreKeyBundle,
+        data: PublishPreKeys,
         address: &DeviceAddress,
     ) -> Result<(), KeyStoreError>;
 
