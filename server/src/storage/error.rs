@@ -6,30 +6,34 @@ type BoxDynError = Box<dyn StdError + 'static + Send + Sync>;
 
 #[derive(Debug, Display, Error)]
 pub enum AccountStoreError {
-    #[error(ignore)]
-    AccountIdTaken(String),
-    Database(BoxDynError),
+    AccountIdTaken(#[error(not(source))] AccountId),
     AccountNotFound(#[error(not(source))] AccountId),
+    Database(BoxDynError),
 }
 
 #[derive(Debug, Display, Error)]
 pub enum DeviceStoreError {
     AccountNotFound(#[error(not(source))] AccountId),
-    #[error(ignore)]
-    DeviceIdTaken(DeviceId),
-    #[error(ignore)]
-    DeviceNotFound(DeviceId),
+    DeviceIdTaken(#[error(not(source))] DeviceId),
+    DeviceNotFound(#[error(not(source))] DeviceId),
     Database(BoxDynError),
 }
 
 #[derive(Debug, Display, From, Error)]
 pub enum KeyStoreError {
-    Database(BoxDynError),
     AddressNotFound(#[error(not(source))] DeviceAddress),
+    Database(BoxDynError),
 }
 
 #[derive(Debug, Display, From, Error)]
 pub enum MessageStoreError {
     Database(BoxDynError),
-    NoMessagesInQueue,
+}
+
+#[derive(Debug, Display, From, Error)]
+pub enum DatabaseError {
+    Account(AccountStoreError),
+    Device(DeviceStoreError),
+    Key(KeyStoreError),
+    Message(MessageStoreError),
 }

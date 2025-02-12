@@ -17,7 +17,7 @@ impl AccountStore for InMemoryAccountStore {
             .insert(account.aci().to_owned(), account.to_owned())
             .is_some()
         {
-            return Err(AccountStoreError::AccountIdTaken(account.aci().to_string()));
+            return Err(AccountStoreError::AccountIdTaken(account.aci()));
         }
         Ok(())
     }
@@ -39,7 +39,7 @@ impl AccountStore for InMemoryAccountStore {
             .remove(service_id)
             .ok_or(AccountStoreError::AccountNotFound(service_id.to_owned()))?;
         match self.accounts.entry(service_id.to_owned()) {
-            Entry::Occupied(_) => Err(AccountStoreError::AccountIdTaken(service_id.to_string())),
+            Entry::Occupied(_) => Err(AccountStoreError::AccountIdTaken(service_id.to_owned())),
             Entry::Vacant(vacant_entry) => {
                 vacant_entry.insert(account);
                 Ok(())

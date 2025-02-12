@@ -10,8 +10,8 @@ pub struct Account {
 }
 
 impl Account {
-    pub fn aci(&self) -> &AccountId {
-        &self.aci
+    pub fn aci(&self) -> AccountId {
+        self.aci
     }
     pub fn identity_key(&self) -> &IdentityKey {
         &self.identity_key
