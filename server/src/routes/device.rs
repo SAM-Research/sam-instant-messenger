@@ -11,7 +11,10 @@ use sam_common::api::device::{LinkDeviceRequest, LinkDeviceResponse, LinkDeviceT
 use crate::{
     auth::{authenticated_user::AuthenticatedUser, device::create_token},
     logic::device::{link_device, unlink_device},
-    state::{traits::state_type::StateType, ServerState},
+    state::{
+        traits::{device_manager::DeviceManager, state_type::StateType},
+        ServerState,
+    },
     ServerError,
 };
 
@@ -23,7 +26,12 @@ pub async fn device_provision_token_endpoint<T: StateType>(
     if auth_user.device().id() != 1 {
         return Err(ServerError::DeviceProvisionUnAuth);
     }
-    Ok(create_token(&state.link_secret, auth_user.account().id())).map(Json)
+    let devices = state.devices.lock().await;
+    Ok(create_token(
+        devices.link_secret().await?,
+        auth_user.account().id(),
+    ))
+    .map(Json)
 }
 
 /// Handle device linking

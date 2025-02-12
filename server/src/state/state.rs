@@ -11,7 +11,6 @@ pub struct ServerState<T: StateType> {
     pub devices: AMutex<T::DeviceManager>,
     pub messages: AMutex<T::MessageManager>,
     pub keys: AMutex<T::KeyManager>,
-    pub link_secret: String,
 }
 
 impl<T: StateType> Clone for ServerState<T> {
@@ -21,7 +20,6 @@ impl<T: StateType> Clone for ServerState<T> {
             devices: self.devices.clone(),
             messages: self.messages.clone(),
             keys: self.keys.clone(),
-            link_secret: self.link_secret.clone(),
         }
     }
 }

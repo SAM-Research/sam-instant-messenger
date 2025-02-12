@@ -24,7 +24,10 @@ pub async fn link_device<T: StateType>(
     device_link: LinkDeviceRequest,
     password: String,
 ) -> Result<LinkDeviceResponse, ServerError> {
-    let account_id = verify_token(&state.link_secret, device_link.token)?;
+    let account_id = {
+        let devices = state.devices.lock().await;
+        verify_token(devices.link_secret().await?, device_link.token)?
+    };
 
     let account = {
         let accounts = state.accounts.lock().await;
@@ -75,7 +78,7 @@ pub async fn create_device<T: StateType>(
         .registration_id(device_info.registration_id)
         .name(device_info.name)
         .creation(time_now_u128())
-        .password(Password::generate(password))
+        .password(Password::generate(password)?)
         .build();
 
     state

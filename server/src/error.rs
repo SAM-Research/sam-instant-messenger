@@ -16,6 +16,9 @@ pub enum ServerError {
     DeviceLinkTooSlow,
     DeviceProvisionUnAuth,
     AccountIDUnParsable,
+    PasswordHashError,
+    WrongPassword,
+    AuthBasicParseError,
 }
 
 impl IntoResponse for ServerError {
@@ -30,6 +33,9 @@ impl IntoResponse for ServerError {
             ServerError::DeviceLinkTooSlow => StatusCode::INTERNAL_SERVER_ERROR,
             ServerError::DeviceProvisionUnAuth => StatusCode::INTERNAL_SERVER_ERROR,
             ServerError::AccountIDUnParsable => StatusCode::INTERNAL_SERVER_ERROR,
+            ServerError::PasswordHashError => StatusCode::INTERNAL_SERVER_ERROR,
+            ServerError::WrongPassword => StatusCode::INTERNAL_SERVER_ERROR,
+            ServerError::AuthBasicParseError => StatusCode::INTERNAL_SERVER_ERROR,
         }
         .into_response()
     }
