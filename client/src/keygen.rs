@@ -1,5 +1,5 @@
+use crate::signal_time_now;
 use crate::storage::{ProvidesKeyId, Store, StoreType};
-use crate::time_now;
 use crate::ClientError;
 use async_trait::async_trait;
 use libsignal_protocol::kem::KeyType;
@@ -67,7 +67,8 @@ impl<T: StoreType> KeyManager for Store<T> {
             .private_key()
             .calculate_signature(&signed_pre_key_pair.public_key.serialize(), csprng)?;
 
-        let record = SignedPreKeyRecord::new(id, time_now(), &signed_pre_key_pair, &signature);
+        let record =
+            SignedPreKeyRecord::new(id, signal_time_now(), &signed_pre_key_pair, &signature);
 
         self.signed_pre_key_store
             .save_signed_pre_key(id, &record)
