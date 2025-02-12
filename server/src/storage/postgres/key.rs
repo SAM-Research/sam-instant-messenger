@@ -1,7 +1,7 @@
 use async_trait::async_trait;
 use sam_common::{
-    address::DeviceAddress,
-    api::{keys::PublishPreKeys, EcPreKey, PreKeyBundle, SignedEcPreKey},
+    address::{DeviceAddress, RegistrationId},
+    api::{keys::PublishPreKeys, EcPreKey, PqPreKey, PreKeyBundle, SignedEcPreKey},
 };
 
 use crate::storage::{error::KeyStoreError, traits::KeyStore};
@@ -20,21 +20,14 @@ impl KeyStore for PostgresKeyStore {
     }
     async fn store_last_resort_pq_pre_key(
         &mut self,
-        _pq_spk: SignedEcPreKey,
+        _pq_spk: PqPreKey,
         _address: &DeviceAddress,
-    ) -> Result<(), KeyStoreError> {
-        todo!()
-    }
-    async fn store_last_resort_ec_pre_key(
-        &mut self,
-        _pk: EcPreKey,
-        _owner: &DeviceAddress,
     ) -> Result<(), KeyStoreError> {
         todo!()
     }
     async fn store_one_time_pq_pre_keys(
         &mut self,
-        _otpks: Vec<SignedEcPreKey>,
+        _otpks: Vec<PqPreKey>,
         _owner: &DeviceAddress,
     ) -> Result<(), KeyStoreError> {
         todo!()
@@ -56,7 +49,8 @@ impl KeyStore for PostgresKeyStore {
     }
 
     async fn get_key_bundle(
-        &self,
+        &mut self,
+        _registration_id: RegistrationId,
         _address: &DeviceAddress,
     ) -> Result<PreKeyBundle, KeyStoreError> {
         todo!()

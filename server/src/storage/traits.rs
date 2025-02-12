@@ -1,7 +1,7 @@
 use async_trait::async_trait;
 use sam_common::{
-    address::{AccountId, DeviceAddress},
-    api::{keys::PublishPreKeys, EcPreKey, PreKeyBundle, SignedEcPreKey},
+    address::{AccountId, DeviceAddress, RegistrationId},
+    api::{keys::PublishPreKeys, EcPreKey, PqPreKey, PreKeyBundle, SignedEcPreKey},
     ValidServerEnvelope,
 };
 
@@ -77,19 +77,13 @@ pub trait KeyStore {
 
     async fn store_last_resort_pq_pre_key(
         &mut self,
-        pq_spk: SignedEcPreKey,
-        address: &DeviceAddress,
-    ) -> Result<(), KeyStoreError>;
-
-    async fn store_last_resort_ec_pre_key(
-        &mut self,
-        pk: EcPreKey,
+        pq_spk: PqPreKey,
         address: &DeviceAddress,
     ) -> Result<(), KeyStoreError>;
 
     async fn store_one_time_pq_pre_keys(
         &mut self,
-        otpks: Vec<SignedEcPreKey>,
+        otpks: Vec<PqPreKey>,
         address: &DeviceAddress,
     ) -> Result<(), KeyStoreError>;
 
@@ -105,7 +99,11 @@ pub trait KeyStore {
         address: &DeviceAddress,
     ) -> Result<(), KeyStoreError>;
 
-    async fn get_key_bundle(&self, address: &DeviceAddress) -> Result<PreKeyBundle, KeyStoreError>;
+    async fn get_key_bundle(
+        &mut self,
+        registration_id: RegistrationId,
+        address: &DeviceAddress,
+    ) -> Result<PreKeyBundle, KeyStoreError>;
 
     async fn get_one_time_ec_pre_key_count(
         &self,

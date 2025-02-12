@@ -4,7 +4,10 @@ use std::{
 };
 
 use derive_more::{Display, From, Into};
+use rand::Rng;
 use uuid::Uuid;
+
+const REGISTRATION_ID_MAX: u32 = 16383;
 
 macro_rules! define_id_type {
     ($name:ident) => {
@@ -61,6 +64,20 @@ define_id_type!(MessageId);
 pub struct DeviceId(u32);
 
 impl Display for DeviceId {
+    fn fmt(&self, f: &mut Formatter) -> fmt::Result {
+        write!(f, "{}", self.0)
+    }
+}
+
+#[derive(Copy, Clone, Debug, Hash, Eq, PartialEq, PartialOrd, Ord, From, Into, Default)]
+pub struct RegistrationId(u32);
+
+impl RegistrationId {
+    pub fn generate<R: Rng>(csprng: &mut R) -> Self {
+        RegistrationId(csprng.gen_range(1..REGISTRATION_ID_MAX))
+    }
+}
+impl Display for RegistrationId {
     fn fmt(&self, f: &mut Formatter) -> fmt::Result {
         write!(f, "{}", self.0)
     }

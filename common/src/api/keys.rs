@@ -118,6 +118,24 @@ pub struct PreKeyBundle {
     pub signed_pre_key: SignedEcPreKey,
 }
 
+impl PreKeyBundle {
+    pub fn new(
+        device_id: impl Into<u32>,
+        registration_id: impl Into<u32>,
+        pre_key: Option<EcPreKey>,
+        pq_pre_key: PqPreKey,
+        signed_pre_key: SignedEcPreKey,
+    ) -> Self {
+        Self {
+            device_id: device_id.into(),
+            registration_id: registration_id.into(),
+            pre_key,
+            pq_pre_key,
+            signed_pre_key,
+        }
+    }
+}
+
 #[derive(Debug, Serialize, Deserialize, Clone)]
 #[serde(rename_all = "camelCase")]
 pub struct PublishPreKeys {
