@@ -1,4 +1,5 @@
 use axum::{
+    extract::ws::WebSocket,
     routing::{delete, get, post, put},
     Router,
 };
@@ -12,7 +13,7 @@ use super::device::{
 use super::keys::{keys_bundles_endpoint, publish_keys_endpoint};
 use super::websocket::websocket_endpoint;
 
-pub fn router<T: StateType>() -> Router<ServerState<T>> {
+pub fn router<T: StateType<Socket = WebSocket>>() -> Router<ServerState<T>> {
     Router::new()
         .route("/", get(|| async { "Hello From SAM Service" }))
         .route("/api/v1/account", post(account_register_endpoint))

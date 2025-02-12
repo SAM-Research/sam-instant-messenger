@@ -19,6 +19,9 @@ pub enum ServerError {
     PasswordHashError,
     WrongPassword,
     AuthBasicParseError,
+    SocketPollError,
+    SocketClientDisconnect,
+    SocketDecodeError,
 }
 
 impl IntoResponse for ServerError {
@@ -36,6 +39,11 @@ impl IntoResponse for ServerError {
             ServerError::PasswordHashError => StatusCode::INTERNAL_SERVER_ERROR,
             ServerError::WrongPassword => StatusCode::INTERNAL_SERVER_ERROR,
             ServerError::AuthBasicParseError => StatusCode::INTERNAL_SERVER_ERROR,
+            ServerError::SocketPollError => panic!("SocketPollError cannot happen over HTTP"),
+            ServerError::SocketClientDisconnect => {
+                panic!("SocketClientDisconnect cannot happen over HTTP")
+            }
+            ServerError::SocketDecodeError => panic!("SocketDecodeError cannot happen over HTTP"),
         }
         .into_response()
     }
