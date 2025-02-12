@@ -1,4 +1,4 @@
 pub mod error;
+pub mod storage;
 
-pub use error::Result;
 pub use error::ServerError;

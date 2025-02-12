@@ -1,0 +1,64 @@
+use async_trait::async_trait;
+use sam_common::{
+    address::{DeviceAddress, RegistrationId},
+    api::{keys::PublishPreKeys, EcPreKey, PqPreKey, PreKeyBundle, SignedEcPreKey},
+};
+
+use crate::storage::{error::KeyStoreError, traits::KeyStore};
+
+#[derive(Debug)]
+pub struct PostgresKeyStore {}
+
+#[async_trait(?Send)]
+impl KeyStore for PostgresKeyStore {
+    async fn store_signed_ec_pre_key(
+        &mut self,
+        _spk: SignedEcPreKey,
+        _address: &DeviceAddress,
+    ) -> Result<(), KeyStoreError> {
+        todo!()
+    }
+    async fn store_last_resort_pq_pre_key(
+        &mut self,
+        _pq_spk: PqPreKey,
+        _address: &DeviceAddress,
+    ) -> Result<(), KeyStoreError> {
+        todo!()
+    }
+    async fn store_pq_pre_keys(
+        &mut self,
+        _otpks: Vec<PqPreKey>,
+        _owner: &DeviceAddress,
+    ) -> Result<(), KeyStoreError> {
+        todo!()
+    }
+    async fn store_ec_pre_keys(
+        &mut self,
+        _otpks: Vec<EcPreKey>,
+        _owner: &DeviceAddress,
+    ) -> Result<(), KeyStoreError> {
+        todo!()
+    }
+
+    async fn store_key_bundle(
+        &mut self,
+        _data: PublishPreKeys,
+        _address: &DeviceAddress,
+    ) -> Result<(), KeyStoreError> {
+        todo!()
+    }
+
+    async fn get_key_bundle(
+        &mut self,
+        _registration_id: RegistrationId,
+        _address: &DeviceAddress,
+    ) -> Result<PreKeyBundle, KeyStoreError> {
+        todo!()
+    }
+    async fn get_ec_pre_key_count(&self, _address: &DeviceAddress) -> Result<usize, KeyStoreError> {
+        todo!()
+    }
+    async fn get_pq_pre_key_count(&self, _address: &DeviceAddress) -> Result<usize, KeyStoreError> {
+        todo!()
+    }
+}

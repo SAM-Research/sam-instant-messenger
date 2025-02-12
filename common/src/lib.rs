@@ -1,3 +1,4 @@
+pub mod address;
 pub mod api;
 pub mod error;
 mod proto;
@@ -7,5 +8,7 @@ pub use error::LibError;
 pub use error::Result;
 
 pub use time::time_now_millis;
+
+pub use proto::ValidServerEnvelope;
 
 include!(concat!(env!("OUT_DIR"), "/_includes.rs"));

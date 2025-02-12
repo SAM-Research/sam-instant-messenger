@@ -1,58 +1,177 @@
+use std::collections::HashMap;
+
+use crate::{
+    address::{AccountId, DeviceAddress, DeviceId, MessageId},
+    sam_message::{ClientEnvelope, EnvelopeType, ServerEnvelope},
+    LibError,
+};
+
+impl ClientEnvelope {
+    pub fn new(
+        r#type: EnvelopeType,
+        recipient: AccountId,
+        source: DeviceAddress,
+        content: HashMap<DeviceId, Vec<u8>>,
+    ) -> Self {
+        Self {
+            r#type: r#type.into(),
+            destination_account_id: recipient.into(),
+            source_account_id: source.account_id().into(),
+            source_device_id: source.device_id().into(),
+            content: content
+                .into_iter()
+                .map(|(id, bytes)| (id.into(), bytes))
+                .collect(),
+        }
+    }
+}
+
+impl ServerEnvelope {
+    pub fn new(
+        r#type: EnvelopeType,
+        destination: DeviceAddress,
+        source: DeviceAddress,
+        content: Vec<u8>,
+        id: MessageId,
+    ) -> Self {
+        Self {
+            r#type: r#type.into(),
+            destination_account_id: destination.account_id().into(),
+            destination_device_id: destination.device_id().into(),
+            source_account_id: source.account_id().into(),
+            source_device_id: source.device_id().into(),
+            content,
+            id: id.into(),
+        }
+    }
+    pub fn validate(self) -> Result<ValidServerEnvelope, LibError> {
+        todo!()
+    }
+}
+
+#[derive(Debug, Clone)]
+pub struct ValidServerEnvelope {
+    r#type: EnvelopeType,
+    destination: DeviceAddress,
+    source: DeviceAddress,
+    content: Vec<u8>,
+    id: MessageId,
+}
+
+impl ValidServerEnvelope {
+    pub fn new(
+        r#type: EnvelopeType,
+        destination: DeviceAddress,
+        source: DeviceAddress,
+        content: Vec<u8>,
+        id: MessageId,
+    ) -> Self {
+        Self {
+            r#type,
+            destination,
+            source,
+            content,
+            id,
+        }
+    }
+
+    pub fn r#type(&self) -> EnvelopeType {
+        self.r#type
+    }
+
+    pub fn destination(&self) -> DeviceAddress {
+        self.destination
+    }
+
+    pub fn source(&self) -> DeviceAddress {
+        self.source
+    }
+
+    pub fn content(&self) -> &Vec<u8> {
+        &self.content
+    }
+
+    pub fn id(&self) -> MessageId {
+        self.id
+    }
+}
+
 #[cfg(test)]
 mod envelope_test {
-    use crate::sam_message::{
-        ClientEnvelope, ClientMessage, EnvelopeType, MessageType, ServerEnvelope, ServerMessage,
+    use crate::{
+        address::{DeviceAddress, MessageId},
+        sam_message::{
+            ClientEnvelope, ClientMessage, EnvelopeType, MessageType, ServerEnvelope, ServerMessage,
+        },
     };
     use std::collections::HashMap;
     use uuid::Uuid;
 
     #[test]
     fn client_message_test() {
-        let ack_uuid = Uuid::new_v4().to_string();
+        let ack_uuid = MessageId::generate();
         let ack: ClientMessage = ClientMessage {
             r#type: MessageType::Ack.into(),
-            id: ack_uuid.clone(),
+            id: ack_uuid.into(),
             message: None,
         };
 
+        let id: Vec<u8> = ack_uuid.into();
         assert_eq!(ack.r#type, MessageType::Ack.into());
-        assert_eq!(ack.id, ack_uuid);
+        assert_eq!(ack.id, id);
         assert_eq!(ack.message, None);
 
         let error_uuid = Uuid::new_v4().to_string();
         let error: ClientMessage = ClientMessage {
             r#type: MessageType::Error.into(),
-            id: error_uuid.clone(),
+            id: error_uuid.clone().into(),
             message: None,
         };
 
+        let id: Vec<u8> = error_uuid.into();
         assert_eq!(error.r#type, MessageType::Error.into());
-        assert_eq!(error.id, error_uuid);
+        assert_eq!(error.id, id);
         assert_eq!(error.message, None);
 
+        let alice_address = DeviceAddress::random();
+        let bob_address = DeviceAddress::random();
+
         let message_uuid = Uuid::new_v4().to_string();
-        let envelope: ClientEnvelope = ClientEnvelope {
-            r#type: EnvelopeType::SignalMessage.into(),
-            destination: "Magnus".to_string(),
-            source: "Alex".to_string(),
-            content: HashMap::from([
-                (1, vec![10, 20, 30]),
-                (2, vec![40, 50, 60]),
-                (3, vec![70, 80, 90]),
+        let envelope: ClientEnvelope = ClientEnvelope::new(
+            EnvelopeType::SignalMessage,
+            alice_address.account_id(),
+            bob_address,
+            HashMap::from([
+                (1.into(), vec![10, 20, 30]),
+                (2.into(), vec![40, 50, 60]),
+                (3.into(), vec![70, 80, 90]),
             ]),
-        };
+        );
         let message: ClientMessage = ClientMessage {
             r#type: MessageType::Message.into(),
-            id: message_uuid.clone(),
+            id: message_uuid.clone().into(),
             message: Some(envelope.clone()),
         };
 
+        let id: Vec<u8> = message_uuid.into();
         assert_eq!(message.r#type, MessageType::Message.into());
-        assert_eq!(message.id, message_uuid);
+        assert_eq!(message.id, id);
         assert_eq!(message.message, Some(envelope.clone()));
         assert_eq!(envelope.r#type, EnvelopeType::SignalMessage.into());
-        assert_eq!(envelope.destination, "Magnus".to_string());
-        assert_eq!(envelope.source, "Alex".to_string());
+        assert_eq!(
+            alice_address.account_id(),
+            envelope
+                .destination_account_id
+                .try_into()
+                .expect("should be able to convert envelope account id to AccountId")
+        );
+        assert_eq!(
+            bob_address.account_id(),
+            envelope
+                .source_account_id
+                .try_into()
+                .expect("should be able to convert envelope account id to AccountId"),
+        );
         assert_eq!(envelope.content.get(&1), Some(&vec![10, 20, 30]));
         assert_eq!(envelope.content.get(&2), Some(&vec![40, 50, 60]));
         assert_eq!(envelope.content.get(&3), Some(&vec![70, 80, 90]));
@@ -60,49 +179,79 @@ mod envelope_test {
 
     #[test]
     fn server_message_test() {
-        let uuid = Uuid::new_v4().to_string();
+        let uuid = MessageId::generate();
         let ack: ServerMessage = ServerMessage {
             r#type: MessageType::Ack.into(),
-            id: uuid.clone(),
+            id: uuid.into(),
             message: None,
         };
 
         assert_eq!(ack.r#type, MessageType::Ack.into());
-        assert_eq!(ack.id, uuid);
+        assert_eq!(
+            uuid,
+            ack.id
+                .try_into()
+                .expect("should be able to convert envelope account id to MessageId")
+        );
         assert_eq!(ack.message, None);
 
-        let error_uuid = Uuid::new_v4().to_string();
+        let error_uuid = MessageId::generate();
         let error: ServerMessage = ServerMessage {
             r#type: MessageType::Error.into(),
-            id: error_uuid.clone(),
+            id: error_uuid.into(),
             message: None,
         };
 
         assert_eq!(error.r#type, MessageType::Error.into());
-        assert_eq!(error.id, error_uuid);
+        assert_eq!(
+            error_uuid,
+            error
+                .id
+                .try_into()
+                .expect("should be able to convert envelope account id to MessageId")
+        );
         assert_eq!(error.message, None);
 
-        let message_uuid = Uuid::new_v4().to_string();
-        let envelope: ServerEnvelope = ServerEnvelope {
-            r#type: EnvelopeType::SignalMessage.into(),
-            destination: "Magnus".to_string(),
-            source: "Alex".to_string(),
-            content: vec![10, 20, 30],
-            id: message_uuid.clone(),
-        };
+        let alice_address = DeviceAddress::random();
+        let bob_address = DeviceAddress::random();
+
+        let message_uuid = MessageId::generate();
+        let envelope: ServerEnvelope = ServerEnvelope::new(
+            EnvelopeType::SignalMessage,
+            alice_address,
+            bob_address,
+            vec![10, 20, 30],
+            message_uuid,
+        );
         let message: ServerMessage = ServerMessage {
             r#type: MessageType::Message.into(),
-            id: message_uuid.clone(),
+            id: message_uuid.into(),
             message: Some(envelope.clone()),
         };
 
+        let id: Vec<u8> = message_uuid.into();
         assert_eq!(message.r#type, MessageType::Message.into());
-        assert_eq!(message.id, message_uuid);
+        assert_eq!(message.id, id);
         assert_eq!(message.message, Some(envelope.clone()));
         assert_eq!(envelope.r#type, EnvelopeType::SignalMessage.into());
-        assert_eq!(envelope.destination, "Magnus".to_string());
-        assert_eq!(envelope.source, "Alex".to_string());
+        assert_eq!(
+            alice_address.account_id(),
+            envelope
+                .destination_account_id
+                .try_into()
+                .expect("should be able to convert envelope account id to MessageId")
+        );
+        assert_eq!(
+            envelope.destination_device_id,
+            alice_address.device_id().into()
+        );
+        assert_eq!(
+            bob_address.account_id(),
+            envelope
+                .source_account_id
+                .try_into()
+                .expect("should be able to convert envelope account id to MessageId")
+        );
         assert_eq!(envelope.content, vec![10, 20, 30]);
-        assert_eq!(envelope.id, message_uuid);
     }
 }
