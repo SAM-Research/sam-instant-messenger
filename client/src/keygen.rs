@@ -1,4 +1,5 @@
 use crate::storage::{ProvidesKeyId, Store, StoreType};
+use crate::time_now;
 use crate::ClientError;
 use async_trait::async_trait;
 use libsignal_protocol::kem::KeyType;
@@ -7,7 +8,6 @@ use libsignal_protocol::{
     PreKeyRecord, PreKeyStore, SignedPreKeyRecord, SignedPreKeyStore,
 };
 use rand::{CryptoRng, Rng};
-use sam_common::time_now;
 
 #[derive(Debug)]
 pub struct PreKeyCollection {

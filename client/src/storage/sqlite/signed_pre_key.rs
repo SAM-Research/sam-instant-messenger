@@ -126,12 +126,12 @@ impl SignedPreKeyStore for SqliteSignedPreKeyStore {
 
 #[cfg(test)]
 mod test {
+    use crate::time_now;
     use libsignal_protocol::{
         GenericSignedPreKey as _, IdentityKeyPair, KeyPair, SignedPreKeyRecord,
         SignedPreKeyStore as _,
     };
     use rand::rngs::OsRng;
-    use sam_common::time_now;
 
     use crate::storage::sqlite::{signed_pre_key::SqliteSignedPreKeyStore, sqlite_test::connect};
 

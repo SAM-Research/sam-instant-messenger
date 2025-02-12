@@ -1,8 +1,11 @@
 pub mod error;
 pub mod keygen;
 pub mod storage;
+pub mod time;
 
 pub use error::ClientError;
+
+pub use time::time_now;
 
 #[cfg(test)]
 mod test {
