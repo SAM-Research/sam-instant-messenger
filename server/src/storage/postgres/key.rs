@@ -11,7 +11,7 @@ pub struct PostgresKeyStore {}
 
 #[async_trait(?Send)]
 impl KeyStore for PostgresKeyStore {
-    async fn store_signed_pre_key(
+    async fn store_signed_ec_pre_key(
         &mut self,
         _spk: SignedEcPreKey,
         _address: &DeviceAddress,
@@ -25,14 +25,14 @@ impl KeyStore for PostgresKeyStore {
     ) -> Result<(), KeyStoreError> {
         todo!()
     }
-    async fn store_one_time_pq_pre_keys(
+    async fn store_pq_pre_keys(
         &mut self,
         _otpks: Vec<PqPreKey>,
         _owner: &DeviceAddress,
     ) -> Result<(), KeyStoreError> {
         todo!()
     }
-    async fn store_one_time_ec_pre_keys(
+    async fn store_ec_pre_keys(
         &mut self,
         _otpks: Vec<EcPreKey>,
         _owner: &DeviceAddress,
@@ -55,16 +55,10 @@ impl KeyStore for PostgresKeyStore {
     ) -> Result<PreKeyBundle, KeyStoreError> {
         todo!()
     }
-    async fn get_one_time_ec_pre_key_count(
-        &self,
-        _address: &DeviceAddress,
-    ) -> Result<usize, KeyStoreError> {
+    async fn get_ec_pre_key_count(&self, _address: &DeviceAddress) -> Result<usize, KeyStoreError> {
         todo!()
     }
-    async fn get_one_time_pq_pre_key_count(
-        &self,
-        _address: &DeviceAddress,
-    ) -> Result<usize, KeyStoreError> {
+    async fn get_pq_pre_key_count(&self, _address: &DeviceAddress) -> Result<usize, KeyStoreError> {
         todo!()
     }
 }

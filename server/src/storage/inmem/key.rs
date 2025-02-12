@@ -18,7 +18,7 @@ pub struct InMemoryKeyStore {
 
 #[async_trait(?Send)]
 impl KeyStore for InMemoryKeyStore {
-    async fn store_signed_pre_key(
+    async fn store_signed_ec_pre_key(
         &mut self,
         spk: SignedEcPreKey,
         address: &DeviceAddress,
@@ -37,7 +37,7 @@ impl KeyStore for InMemoryKeyStore {
         Ok(())
     }
 
-    async fn store_one_time_pq_pre_keys(
+    async fn store_pq_pre_keys(
         &mut self,
         otpks: Vec<PqPreKey>,
         owner: &DeviceAddress,
@@ -45,7 +45,7 @@ impl KeyStore for InMemoryKeyStore {
         self.pq_prekeys.insert(owner.to_owned(), otpks);
         Ok(())
     }
-    async fn store_one_time_ec_pre_keys(
+    async fn store_ec_pre_keys(
         &mut self,
         otpks: Vec<EcPreKey>,
         owner: &DeviceAddress,
@@ -101,20 +101,14 @@ impl KeyStore for InMemoryKeyStore {
             signed_pre_key,
         ))
     }
-    async fn get_one_time_ec_pre_key_count(
-        &self,
-        address: &DeviceAddress,
-    ) -> Result<usize, KeyStoreError> {
+    async fn get_ec_pre_key_count(&self, address: &DeviceAddress) -> Result<usize, KeyStoreError> {
         Ok(self
             .prekeys
             .get(address)
             .ok_or(KeyStoreError::AddressNotFound(address.to_owned()))?
             .len())
     }
-    async fn get_one_time_pq_pre_key_count(
-        &self,
-        address: &DeviceAddress,
-    ) -> Result<usize, KeyStoreError> {
+    async fn get_pq_pre_key_count(&self, address: &DeviceAddress) -> Result<usize, KeyStoreError> {
         Ok(self
             .prekeys
             .get(address)

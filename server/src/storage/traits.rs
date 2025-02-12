@@ -69,7 +69,7 @@ pub trait MessageStore {
 
 #[async_trait(?Send)]
 pub trait KeyStore {
-    async fn store_signed_pre_key(
+    async fn store_signed_ec_pre_key(
         &mut self,
         spk: SignedEcPreKey,
         address: &DeviceAddress,
@@ -81,13 +81,13 @@ pub trait KeyStore {
         address: &DeviceAddress,
     ) -> Result<(), KeyStoreError>;
 
-    async fn store_one_time_pq_pre_keys(
+    async fn store_pq_pre_keys(
         &mut self,
         otpks: Vec<PqPreKey>,
         address: &DeviceAddress,
     ) -> Result<(), KeyStoreError>;
 
-    async fn store_one_time_ec_pre_keys(
+    async fn store_ec_pre_keys(
         &mut self,
         otpks: Vec<EcPreKey>,
         address: &DeviceAddress,
@@ -105,13 +105,7 @@ pub trait KeyStore {
         address: &DeviceAddress,
     ) -> Result<PreKeyBundle, KeyStoreError>;
 
-    async fn get_one_time_ec_pre_key_count(
-        &self,
-        address: &DeviceAddress,
-    ) -> Result<usize, KeyStoreError>;
+    async fn get_ec_pre_key_count(&self, address: &DeviceAddress) -> Result<usize, KeyStoreError>;
 
-    async fn get_one_time_pq_pre_key_count(
-        &self,
-        address: &DeviceAddress,
-    ) -> Result<usize, KeyStoreError>;
+    async fn get_pq_pre_key_count(&self, address: &DeviceAddress) -> Result<usize, KeyStoreError>;
 }
