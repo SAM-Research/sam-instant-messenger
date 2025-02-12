@@ -27,11 +27,10 @@ pub async fn device_provision_token_endpoint<T: StateType>(
         return Err(ServerError::DeviceProvisionUnAuth);
     }
     let devices = state.devices.lock().await;
-    Ok(create_token(
+    Ok(Json(create_token(
         devices.link_secret().await?,
         auth_user.account().id(),
-    ))
-    .map(Json)
+    )))
 }
 
 /// Handle device linking

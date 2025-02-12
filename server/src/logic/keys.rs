@@ -29,11 +29,11 @@ pub async fn get_keybundle<T: StateType>(
     let pre_key = keys.get_key::<PreKey>(account_id, device_id).await.ok(); // TODO: might need some inspection to see if its a not found or actual error
 
     Ok(KeyBundle {
-        device_id: device_id.clone(),
-        registration_id: registration_id.clone(),
-        pre_key: pre_key,
-        pq_pre_key: pq_pre_key,
-        signed_pre_key: signed_pre_key,
+        device_id: *device_id,
+        registration_id: *registration_id,
+        pre_key,
+        pq_pre_key,
+        signed_pre_key,
     })
 }
 
@@ -75,14 +75,13 @@ pub async fn get_keybundles<T: StateType>(
     account_id: &Uuid,
 ) -> Result<BundleResponse, ServerError> {
     let identity_key = {
-        state
+        *state
             .accounts
             .lock()
             .await
             .get_account(account_id)
             .await?
             .identity()
-            .clone()
     };
 
     let devices = {
@@ -118,15 +117,14 @@ pub async fn publish_keybundle<T: StateType>(
     bundle: PublishKeyBundle,
 ) -> Result<(), ServerError> {
     let identity = {
-        state
+        *state
             .accounts
             .lock()
             .await
             .get_account(account_id)
             .await?
             .identity()
-            .clone()
     };
 
-    add_keybundle(&state, &identity, account_id, device_id, bundle).await
+    add_keybundle(state, &identity, account_id, device_id, bundle).await
 }

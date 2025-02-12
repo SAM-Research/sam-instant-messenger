@@ -34,5 +34,5 @@ pub async fn delete_account_endpoint<T: StateType>(
     State(state): State<ServerState<T>>,
     auth_user: AuthenticatedUser,
 ) -> Result<(), ServerError> {
-    delete_account(state, auth_user.account().id().clone()).await
+    delete_account(state, *auth_user.account().id()).await
 }

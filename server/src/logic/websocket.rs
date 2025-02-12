@@ -9,28 +9,28 @@ use crate::{
 };
 
 pub async fn create_websocket<T: StateType>(
-    state: ServerState<T>,
-    auth_user: AuthenticatedUser,
-    tx: SplitSink<T::Socket, Message>,
-    rx: SplitStream<T::Socket>,
+    _state: ServerState<T>,
+    _auth_user: AuthenticatedUser,
+    _tx: SplitSink<T::Socket, Message>,
+    _rx: SplitStream<T::Socket>,
 ) {
     todo!()
 }
 
 pub async fn websocket_faucet<T: StateType>(
-    state: ServerState<T>,
-    account_id: Uuid,
-    device_id: u32,
-    mut rx: SplitStream<T::Socket>,
+    _state: ServerState<T>,
+    _account_id: Uuid,
+    _device_id: u32,
+    _rx: SplitStream<T::Socket>,
 ) {
     todo!()
 }
 
 pub async fn websocket_sink<T: StateType>(
-    state: ServerState<T>,
-    account_id: Uuid,
-    device_id: u32,
-    tx: SplitSink<T::Socket, Message>,
+    _state: ServerState<T>,
+    _account_id: Uuid,
+    _device_id: u32,
+    _tx: SplitSink<T::Socket, Message>,
 ) {
     todo!()
 }

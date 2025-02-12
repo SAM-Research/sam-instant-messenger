@@ -37,7 +37,7 @@ pub async fn link_device<T: StateType>(
     let devices = state.devices.lock().await;
     let next_id = devices.next_device_id(&account_id).await?;
     create_device(
-        &state,
+        state,
         &account_id,
         account.identity(),
         device_link.device_activation,
@@ -85,7 +85,7 @@ pub async fn create_device<T: StateType>(
         .devices
         .lock()
         .await
-        .add_device(&account_id, device)
+        .add_device(account_id, device)
         .await?;
 
     add_keybundle(

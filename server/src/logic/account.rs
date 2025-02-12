@@ -64,6 +64,6 @@ pub async fn create_account<T: StateType>(
     )
     .await?;
     Ok(RegistrationResponse {
-        account_id: account.id().clone(),
+        account_id: *account.id(),
     })
 }
