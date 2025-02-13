@@ -11,4 +11,7 @@ dotenv = "0.15.0"
 derive_more = { version = "1.0.0", features = ["display", "error", "from"] }
 sam-common = { path = "../common" }
 libsignal-protocol = { git = "https://github.com/signalapp/libsignal.git", version = "0.1.0" }
+prost = "0.13.3"
 bincode = "1.3.3"
+rand = "0.8.5"
+uuid = { version = "1.13.1", features = ["v4"] }
