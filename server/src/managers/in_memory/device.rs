@@ -15,6 +15,16 @@ pub struct InMemoryDeviceManager {
     link_secret: String,
 }
 
+impl InMemoryDeviceManager {
+    pub fn new(link_secret: String) -> Self {
+        InMemoryDeviceManager {
+            devices: HashMap::new(),
+            account_devices: HashMap::new(),
+            link_secret,
+        }
+    }
+}
+
 #[async_trait::async_trait]
 impl DeviceManager for InMemoryDeviceManager {
     async fn get_device(&self, account_id: &Uuid, id: &u32) -> Result<Device, ServerError> {

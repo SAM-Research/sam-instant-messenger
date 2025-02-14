@@ -27,6 +27,19 @@ impl<T: StateType> Clone for ServerState<T> {
 }
 
 impl<T: StateType> ServerState<T> {
+    pub fn new(
+        account: T::AccountManager,
+        device: T::DeviceManager,
+        message: T::MessageManager,
+        key: T::KeyManager,
+    ) -> Self {
+        Self {
+            accounts: Arc::new(Mutex::new(account)),
+            devices: Arc::new(Mutex::new(device)),
+            messages: Arc::new(Mutex::new(message)),
+            keys: Arc::new(Mutex::new(key)),
+        }
+    }
     pub async fn init(&mut self) {}
     pub async fn cleanup(&mut self) {}
 }

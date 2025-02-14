@@ -13,6 +13,15 @@ pub struct InMemoryMessageManager {
     subscribers: HashMap<String, mpsc::Sender<Uuid>>,
 }
 
+impl InMemoryMessageManager {
+    pub fn new() -> Self {
+        InMemoryMessageManager {
+            messages: HashMap::new(),
+            subscribers: HashMap::new(),
+        }
+    }
+}
+
 #[async_trait::async_trait]
 impl MessageManager for InMemoryMessageManager {
     async fn insert_message(

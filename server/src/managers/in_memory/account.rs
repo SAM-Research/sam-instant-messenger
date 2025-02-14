@@ -11,6 +11,14 @@ pub struct InMemoryAccountManager {
     accounts: HashMap<Uuid, Account>,
 }
 
+impl InMemoryAccountManager {
+    pub fn new() -> Self {
+        InMemoryAccountManager {
+            accounts: HashMap::new(),
+        }
+    }
+}
+
 #[async_trait::async_trait]
 impl AccountManager for InMemoryAccountManager {
     async fn get_account(&self, id: &Uuid) -> Result<Account, ServerError> {

@@ -1,6 +1,3 @@
-use axum::extract::ws::Message;
-use futures_util::{Sink, Stream};
-
 use crate::managers::traits::{
     account_manager::AccountManager,
     device_manager::DeviceManager,
@@ -13,5 +10,4 @@ pub trait StateType: 'static {
     type DeviceManager: DeviceManager;
     type MessageManager: MessageManager;
     type KeyManager: PreKeyManager + SignedPreKeyManager + PqPreKeyManager + LastResortKeyManager;
-    type Socket: Stream<Item = Message> + Sink<Message> + Send + 'static;
 }

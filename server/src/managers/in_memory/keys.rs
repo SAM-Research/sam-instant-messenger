@@ -21,6 +21,17 @@ pub struct InMemoryKeyManager {
     last_resort_keys: HashMap<String, PostQuantumPreKey>,
 }
 
+impl InMemoryKeyManager {
+    pub fn new() -> Self {
+        InMemoryKeyManager {
+            pre_keys: HashMap::new(),
+            signed_pre_keys: HashMap::new(),
+            pq_pre_keys: HashMap::new(),
+            last_resort_keys: HashMap::new(),
+        }
+    }
+}
+
 #[async_trait::async_trait]
 impl PreKeyManager for InMemoryKeyManager {
     async fn get_pre_key(
