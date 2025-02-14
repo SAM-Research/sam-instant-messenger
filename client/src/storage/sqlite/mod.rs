@@ -8,7 +8,7 @@ use pre_key::SqlitePreKeyStore;
 use sender_key::SqliteSenderKeyStore;
 use session::SqliteSessionStore;
 use signed_pre_key::SqliteSignedPreKeyStore;
-use sqlx::{Pool, Sqlite};
+use sqlx::{sqlite::SqlitePoolOptions, Pool, Sqlite};
 
 use crate::ClientError;
 
@@ -54,6 +54,24 @@ pub type SqliteStore = Store<SqliteStoreType>;
 #[derive(Debug)]
 pub struct SqliteStoreConfig {
     database: Pool<Sqlite>,
+}
+
+impl SqliteStoreConfig {
+    pub fn new(database: Pool<Sqlite>) -> Self {
+        Self { database }
+    }
+    pub async fn in_memory() -> Self {
+        let db_url = "sqlite::memory:".to_owned();
+        let database = SqlitePoolOptions::new()
+            .connect(&db_url)
+            .await
+            .expect("Could not connect to database");
+        sqlx::migrate!("database/migrations")
+            .run(&database)
+            .await
+            .expect("should be able to run migrations");
+        Self { database }
+    }
 }
 
 type BuilderProperties = SetSessionStore<

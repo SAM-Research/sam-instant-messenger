@@ -1,9 +1,12 @@
-use super::{Store, StoreType};
+use crate::ClientError;
+
+use super::{Store, StoreConfig, StoreType};
 use account::InMemoryAccountStore;
+use async_trait::async_trait;
 use contact::InMemoryContactStore;
 use libsignal_protocol::{
-    InMemIdentityKeyStore, InMemKyberPreKeyStore, InMemPreKeyStore, InMemSenderKeyStore,
-    InMemSessionStore, InMemSignedPreKeyStore,
+    IdentityKeyPair, InMemIdentityKeyStore, InMemKyberPreKeyStore, InMemPreKeyStore,
+    InMemSenderKeyStore, InMemSessionStore, InMemSignedPreKeyStore,
 };
 
 pub mod account;
@@ -35,5 +38,30 @@ impl StoreType for InMemoryStoreType {
 
 pub type InMemoryStore = Store<InMemoryStoreType>;
 
-#[derive(Debug)]
+#[derive(Debug, Default)]
 pub struct InMemoryStoreConfig {}
+
+#[async_trait(?Send)]
+impl StoreConfig for InMemoryStoreConfig {
+    type StoreType = InMemoryStoreType;
+    async fn create_store<ID: Into<u32>>(
+        self,
+        key_pair: IdentityKeyPair,
+        registration_id: ID,
+    ) -> Result<InMemoryStore, ClientError> {
+        Ok(InMemoryStore::builder()
+            .identity_key_store(InMemIdentityKeyStore::new(key_pair, registration_id.into()))
+            .pre_key_store(InMemPreKeyStore::default())
+            .signed_pre_key_store(InMemSignedPreKeyStore::default())
+            .kyber_pre_key_store(InMemKyberPreKeyStore::default())
+            .sender_key_store(InMemSenderKeyStore::default())
+            .session_store(InMemSessionStore::default())
+            .account_store(InMemoryAccountStore::default())
+            .contact_store(InMemoryContactStore::default())
+            .build())
+    }
+
+    async fn load_store(self) -> Result<InMemoryStore, ClientError> {
+        todo!("Loading an in memory store does not make sense")
+    }
+}

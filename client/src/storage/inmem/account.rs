@@ -3,7 +3,7 @@ use libsignal_core::Aci;
 
 use crate::{storage::AccountStore, ClientError};
 
-#[derive(Debug)]
+#[derive(Debug, Default)]
 pub struct InMemoryAccountStore {}
 
 #[async_trait(?Send)]
