@@ -34,5 +34,4 @@ pub async fn main() {
         tls: None,
     };
     start_server(config).await.unwrap();
-    println!("Hello World");
 }
