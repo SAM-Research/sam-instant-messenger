@@ -1,6 +1,8 @@
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
 
+use crate::RegistrationId;
+
 use super::keys::PublishKeyBundle;
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
@@ -41,6 +43,6 @@ pub struct LinkDeviceRequest {
 #[serde(rename_all = "camelCase")]
 pub struct DeviceActivationInfo {
     pub name: String,
-    pub registration_id: u32,
+    pub registration_id: RegistrationId,
     pub key_bundle: PublishKeyBundle,
 }

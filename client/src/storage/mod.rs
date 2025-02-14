@@ -6,6 +6,7 @@ use libsignal_protocol::{
     SenderKeyStore, SessionStore, SignedPreKeyId, SignedPreKeyStore,
 };
 use std::fmt::Debug;
+pub mod error;
 pub mod sqlite;
 
 #[async_trait(?Send)]

@@ -6,7 +6,10 @@ use libsignal_protocol::{
 };
 use sqlx::{Pool, Sqlite};
 
-use crate::{storage::ProvidesKeyId, ClientError};
+use crate::{
+    storage::{error::DatabaseError, ProvidesKeyId},
+    ClientError,
+};
 
 #[derive(Debug)]
 pub struct SqliteSignedPreKeyStore {
@@ -89,7 +92,7 @@ impl SignedPreKeyStore for SqliteSignedPreKeyStore {
             }),
             Err(err) => Err(SignalProtocolError::ApplicationCallbackError(
                 "save signed pre key",
-                Box::new(ClientError::from(err)),
+                Box::new(DatabaseError::from(err)),
             )),
         }
     }
@@ -118,7 +121,7 @@ impl SignedPreKeyStore for SqliteSignedPreKeyStore {
         .map_err(|err| {
             SignalProtocolError::ApplicationCallbackError(
                 "save signed pre key",
-                Box::new(ClientError::from(err)),
+                Box::new(DatabaseError::from(err)),
             )
         })
     }

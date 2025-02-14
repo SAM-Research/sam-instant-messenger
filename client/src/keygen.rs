@@ -8,13 +8,27 @@ use libsignal_protocol::{
     PreKeyRecord, PreKeyStore, SignedPreKeyRecord, SignedPreKeyStore,
 };
 use rand::{CryptoRng, Rng};
+use sam_common::api::keys::PublishKeyBundle;
 
 #[derive(Debug)]
-pub struct PreKeyCollection {
-    pub signed_pre_key: SignedPreKeyRecord,
-    pub pq_last_resort_pre_key: KyberPreKeyRecord,
+pub struct OneTimePreKeyCollection {
     pub pre_keys: Vec<PreKeyRecord>,
     pub pq_pre_keys: Vec<KyberPreKeyRecord>,
+}
+
+impl OneTimePreKeyCollection {
+    pub fn to_bundle(
+        self,
+        signed_pre_key: SignedPreKeyRecord,
+        pq_last_resort_pre_key: KyberPreKeyRecord,
+    ) -> PublishKeyBundle {
+        PublishKeyBundle {
+            signed_pre_key: Some(signed_pre_key.into()),
+            pre_keys: Some(self.pre_keys.into_iter().map(|key| key.into()).collect()),
+            pq_pre_keys: Some(self.pq_pre_keys.into_iter().map(|key| key.into()).collect()),
+            pq_last_resort_pre_key: Some(pq_last_resort_pre_key.into()),
+        }
+    }
 }
 
 #[async_trait(?Send)]
@@ -31,10 +45,10 @@ pub trait KeyManager {
 
     async fn generate_kyber_pre_key(&mut self) -> Result<KyberPreKeyRecord, ClientError>;
 
-    async fn generate_key_bundle<R: Rng + CryptoRng>(
+    async fn generate_one_time_pre_keys<R: Rng + CryptoRng>(
         &mut self,
         csprng: &mut R,
-    ) -> Result<PreKeyCollection, ClientError>;
+    ) -> Result<OneTimePreKeyCollection, ClientError>;
 }
 
 #[async_trait(?Send)]
@@ -94,10 +108,10 @@ impl<T: StoreType> KeyManager for Store<T> {
         Ok(record)
     }
 
-    async fn generate_key_bundle<R>(
+    async fn generate_one_time_pre_keys<R>(
         &mut self,
         mut csprng: &mut R,
-    ) -> Result<PreKeyCollection, ClientError>
+    ) -> Result<OneTimePreKeyCollection, ClientError>
     where
         R: Rng + CryptoRng,
     {
@@ -110,14 +124,9 @@ impl<T: StoreType> KeyManager for Store<T> {
             pq_pre_keys.push(self.generate_kyber_pre_key().await?);
         }
 
-        let signed_pre_key = self.generate_signed_pre_key(&mut csprng).await?;
-        let pq_last_resort_pre_key = self.generate_kyber_pre_key().await?;
-
-        Ok(PreKeyCollection {
+        Ok(OneTimePreKeyCollection {
             pre_keys,
-            signed_pre_key,
             pq_pre_keys,
-            pq_last_resort_pre_key,
         })
     }
 }
