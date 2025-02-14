@@ -26,6 +26,11 @@ pub enum ServerError {
     AccountExists,
     DeviceNotExist,
     DeviceExists,
+    KeyNotExist,
+    EnvelopeExists,
+    EnvelopeNotExists,
+    MessageSubscriberExists,
+    MessageSubscriberNotExists,
 }
 
 impl IntoResponse for ServerError {
@@ -52,6 +57,11 @@ impl IntoResponse for ServerError {
             ServerError::AccountExists => todo!(),
             ServerError::DeviceNotExist => todo!(),
             ServerError::DeviceExists => todo!(),
+            ServerError::KeyNotExist => todo!(),
+            ServerError::EnvelopeExists => todo!(),
+            ServerError::EnvelopeNotExists => todo!(),
+            ServerError::MessageSubscriberExists => todo!(),
+            ServerError::MessageSubscriberNotExists => todo!(),
         }
         .into_response()
     }

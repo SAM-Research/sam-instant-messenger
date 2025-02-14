@@ -1,51 +1,239 @@
+use std::collections::HashMap;
+
 use libsignal_protocol::IdentityKey;
-use sam_common::api::keys::{Key, SignedKey};
+use sam_common::api::keys::{Key, PostQuantumPreKey, PreKey, SignedPreKey};
 use uuid::Uuid;
 
-use crate::{managers::traits::key_manager::KeyManager, ServerError};
+use crate::{
+    auth::keys::verify_key,
+    managers::traits::key_manager::{
+        LastResortKeyManager, PqPreKeyManager, PreKeyManager, SignedPreKeyManager,
+    },
+    ServerError,
+};
 
-pub struct InMemoryKeyManager {}
+use super::device_key;
+
+pub struct InMemoryKeyManager {
+    pre_keys: HashMap<String, Vec<PreKey>>,
+    signed_pre_keys: HashMap<String, SignedPreKey>,
+    pq_pre_keys: HashMap<String, Vec<PostQuantumPreKey>>,
+    last_resort_keys: HashMap<String, PostQuantumPreKey>,
+}
 
 #[async_trait::async_trait]
-impl KeyManager for InMemoryKeyManager {
-    async fn get_key<T: Key>(&self, account_id: &Uuid, device_id: &u32) -> Result<T, ServerError> {
-        // Implement the method logic here
-        unimplemented!()
+impl PreKeyManager for InMemoryKeyManager {
+    async fn get_pre_key(
+        &self,
+        account_id: &Uuid,
+        device_id: &u32,
+    ) -> Result<Option<PreKey>, ServerError> {
+        let key = device_key(&account_id, device_id.clone());
+
+        Ok(self
+            .pre_keys
+            .get(&key)
+            .and_then(|keys| keys.first())
+            .map(|key| key.clone()))
     }
 
-    async fn add_key<T: Key>(
+    async fn get_pre_keys(
+        &self,
+        account_id: &Uuid,
+        device_id: &u32,
+    ) -> Result<Vec<u32>, ServerError> {
+        let key = device_key(&account_id, device_id.clone());
+
+        self.pre_keys
+            .get(&key)
+            .and_then(|keys| Some(keys.iter().map(|k| k.id()).collect::<Vec<u32>>()))
+            .ok_or(ServerError::AccountNotExist)
+    }
+
+    async fn add_pre_key(
         &mut self,
         account_id: &Uuid,
         device_id: &u32,
-        key: T,
+        key: PreKey,
     ) -> Result<(), ServerError> {
-        // Implement the method logic here
-        unimplemented!()
+        let dkey = device_key(&account_id, device_id.clone());
+
+        self.pre_keys
+            .get_mut(&dkey)
+            .map(|keys| keys.push(key))
+            .ok_or(ServerError::AccountNotExist)
     }
 
-    async fn add_signed_key<T: SignedKey>(
+    async fn remove_pre_key(
+        &mut self,
+        account_id: &Uuid,
+        device_id: &u32,
+        id: u32,
+    ) -> Result<(), ServerError> {
+        let dkey = device_key(&account_id, device_id.clone());
+
+        self.pre_keys
+            .get_mut(&dkey)
+            .and_then(|keys| {
+                keys.iter()
+                    .position(|k| k.id() == id)
+                    .map(|index| (keys, index))
+                    .and_then(|(keys, index)| Some(keys.remove(index)))
+            })
+            .ok_or(ServerError::KeyNotExist)
+            .map(|_| ())
+    }
+}
+
+#[async_trait::async_trait]
+impl SignedPreKeyManager for InMemoryKeyManager {
+    async fn get_signed_pre_key(
+        &self,
+        account_id: &Uuid,
+        device_id: &u32,
+    ) -> Result<SignedPreKey, ServerError> {
+        let key = device_key(&account_id, device_id.clone());
+
+        self.signed_pre_keys
+            .get(&key)
+            .map(|k| k.clone())
+            .ok_or(ServerError::AccountNotExist)
+    }
+
+    async fn set_signed_pre_key(
         &mut self,
         account_id: &Uuid,
         device_id: &u32,
         identity: &IdentityKey,
-        key: T,
+        key: SignedPreKey,
     ) -> Result<(), ServerError> {
-        // Implement the method logic here
-        unimplemented!()
+        let dkey = device_key(&account_id, device_id.clone());
+
+        verify_key(identity, &key)?;
+
+        let _ = self.signed_pre_keys.insert(dkey, key);
+        Ok(())
     }
 
-    async fn remove_key<T>(
+    async fn remove_signed_pre_key(
         &mut self,
         account_id: &Uuid,
         device_id: &u32,
-        key: &T,
     ) -> Result<(), ServerError> {
-        // Implement the method logic here
-        unimplemented!()
+        let key = device_key(&account_id, device_id.clone());
+
+        self.signed_pre_keys
+            .remove(&key)
+            .ok_or(ServerError::KeyNotExist)
+            .map(|_| ())
+    }
+}
+
+#[async_trait::async_trait]
+impl PqPreKeyManager for InMemoryKeyManager {
+    async fn get_pq_pre_key(
+        &self,
+        account_id: &Uuid,
+        device_id: &u32,
+    ) -> Result<Option<PostQuantumPreKey>, ServerError> {
+        let key = device_key(&account_id, device_id.clone());
+
+        Ok(self
+            .pq_pre_keys
+            .get(&key)
+            .and_then(|keys| keys.first())
+            .map(|key| key.clone()))
     }
 
-    async fn remove_account_keys(&mut self, account_id: &Uuid) -> Result<(), ServerError> {
-        // Implement the method logic here
-        unimplemented!()
+    async fn get_pq_pre_keys(
+        &self,
+        account_id: &Uuid,
+        device_id: &u32,
+    ) -> Result<Vec<u32>, ServerError> {
+        let key = device_key(&account_id, device_id.clone());
+
+        self.pq_pre_keys
+            .get(&key)
+            .and_then(|keys| Some(keys.iter().map(|k| k.id()).collect::<Vec<u32>>()))
+            .ok_or(ServerError::AccountNotExist)
+    }
+
+    async fn add_pq_pre_key(
+        &mut self,
+        account_id: &Uuid,
+        device_id: &u32,
+        identity: &IdentityKey,
+        key: PostQuantumPreKey,
+    ) -> Result<(), ServerError> {
+        let dkey = device_key(&account_id, device_id.clone());
+
+        verify_key(identity, &key)?;
+
+        self.pq_pre_keys
+            .get_mut(&dkey)
+            .map(|keys| keys.push(key))
+            .ok_or(ServerError::AccountNotExist)
+    }
+
+    async fn remove_pq_pre_key(
+        &mut self,
+        account_id: &Uuid,
+        device_id: &u32,
+        id: u32,
+    ) -> Result<(), ServerError> {
+        let dkey = device_key(&account_id, device_id.clone());
+
+        self.pq_pre_keys
+            .get_mut(&dkey)
+            .and_then(|keys| {
+                keys.iter()
+                    .position(|k| k.id() == id)
+                    .map(|index| (keys, index))
+                    .and_then(|(keys, index)| Some(keys.remove(index)))
+            })
+            .ok_or(ServerError::KeyNotExist)
+            .map(|_| ())
+    }
+}
+
+#[async_trait::async_trait]
+impl LastResortKeyManager for InMemoryKeyManager {
+    async fn get_last_resort_key(
+        &self,
+        account_id: &Uuid,
+        device_id: &u32,
+    ) -> Result<PostQuantumPreKey, ServerError> {
+        let key = device_key(&account_id, device_id.clone());
+
+        self.last_resort_keys
+            .get(&key)
+            .map(|k| k.clone())
+            .ok_or(ServerError::KeyNotExist)
+    }
+    async fn set_last_resort_key(
+        &mut self,
+        account_id: &Uuid,
+        device_id: &u32,
+        identity: &IdentityKey,
+        key: PostQuantumPreKey,
+    ) -> Result<(), ServerError> {
+        let dkey = device_key(&account_id, device_id.clone());
+
+        verify_key(identity, &key)?;
+
+        let _ = self.last_resort_keys.insert(dkey, key);
+        Ok(())
+    }
+    async fn remove_last_resort_key(
+        &mut self,
+        account_id: &Uuid,
+        device_id: &u32,
+    ) -> Result<(), ServerError> {
+        let key = device_key(&account_id, device_id.clone());
+
+        self.signed_pre_keys
+            .remove(&key)
+            .ok_or(ServerError::KeyNotExist)
+            .map(|_| ())
     }
 }

@@ -6,8 +6,12 @@ use crate::{
     managers::{
         entities::account::Account,
         traits::{
-            account_manager::AccountManager, device_manager::DeviceManager,
-            key_manager::KeyManager, message_manager::MessageManager,
+            account_manager::AccountManager,
+            device_manager::DeviceManager,
+            key_manager::{
+                LastResortKeyManager, PqPreKeyManager, PreKeyManager, SignedPreKeyManager,
+            },
+            message_manager::MessageManager,
         },
     },
     state::{state_type::StateType, ServerState},
@@ -20,18 +24,27 @@ pub async fn delete_account<T: StateType>(
 ) -> Result<(), ServerError> {
     {
         let mut keys = state.keys.lock().await;
-        keys.remove_account_keys(&account_id).await?;
-    }
-
-    {
         let mut messages = state.messages.lock().await;
         let mut devices = state.devices.lock().await;
         for device_id in devices.get_devices(&account_id).await? {
             for msg_id in messages.get_messages(&account_id, &device_id).await? {
                 messages
-                    .remove_message(&account_id, &device_id, msg_id)
+                    .remove_message(&account_id, &device_id, &msg_id)
                     .await?;
             }
+
+            for id in keys.get_pre_keys(&account_id, &device_id).await? {
+                keys.remove_pre_key(&account_id, &device_id, id).await?
+            }
+
+            keys.remove_signed_pre_key(&account_id, &device_id).await?;
+
+            for id in keys.get_pq_pre_keys(&account_id, &device_id).await? {
+                keys.remove_pq_pre_key(&account_id, &device_id, id).await?
+            }
+
+            keys.remove_last_resort_key(&account_id, &device_id).await?;
+
             devices.remove_device(&account_id, device_id).await?;
         }
     }

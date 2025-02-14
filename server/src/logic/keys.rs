@@ -1,12 +1,12 @@
 use libsignal_protocol::IdentityKey;
-use sam_common::api::keys::{
-    BundleResponse, KeyBundle, PostQuantumPreKey, PreKey, PublishKeyBundle, SignedPreKey,
-};
+use sam_common::api::keys::{BundleResponse, Key, KeyBundle, PublishKeyBundle};
 use uuid::Uuid;
 
 use crate::{
     managers::traits::{
-        account_manager::AccountManager, device_manager::DeviceManager, key_manager::KeyManager,
+        account_manager::AccountManager,
+        device_manager::DeviceManager,
+        key_manager::{LastResortKeyManager, PqPreKeyManager, PreKeyManager, SignedPreKeyManager},
     },
     state::{state_type::StateType, ServerState},
     ServerError,
@@ -18,12 +18,28 @@ pub async fn get_keybundle<T: StateType>(
     registration_id: &u32,
     device_id: &u32,
 ) -> Result<KeyBundle, ServerError> {
-    let keys = state.keys.lock().await;
-    let pq_pre_key = keys
-        .get_key::<PostQuantumPreKey>(account_id, device_id)
-        .await?;
-    let signed_pre_key = keys.get_key::<SignedPreKey>(account_id, device_id).await?;
-    let pre_key = keys.get_key::<PreKey>(account_id, device_id).await.ok(); // TODO: might need some inspection to see if its a not found or actual error
+    let mut keys = state.keys.lock().await;
+
+    let pre_key = keys.get_pre_key(account_id, device_id).await?; // TODO: might need some inspection to see if its a not found or actual error
+    let pq_pre_key = keys.get_pq_pre_key(account_id, device_id).await?;
+    let signed_pre_key = keys.get_signed_pre_key(account_id, device_id).await?;
+
+    let pre_key = match pre_key {
+        Some(key) => {
+            keys.remove_pre_key(account_id, device_id, key.id()).await?;
+            Some(key)
+        }
+        None => None,
+    };
+
+    let pq_pre_key = match pq_pre_key {
+        Some(key) => {
+            keys.remove_pq_pre_key(account_id, device_id, key.id())
+                .await?;
+            key
+        }
+        None => keys.get_last_resort_key(account_id, device_id).await?,
+    };
 
     Ok(KeyBundle {
         device_id: *device_id,
@@ -44,24 +60,24 @@ pub async fn add_keybundle<T: StateType>(
     let mut keys = state.keys.lock().await;
     if let Some(pre_keys) = key_bundle.pre_keys {
         for pre_key in pre_keys {
-            keys.add_key(account_id, device_id, pre_key).await?;
+            keys.add_pre_key(account_id, device_id, pre_key).await?;
         }
     }
 
     if let Some(key) = key_bundle.signed_pre_key {
-        keys.add_signed_key(account_id, device_id, identity, key)
+        keys.set_signed_pre_key(account_id, device_id, identity, key)
             .await?;
     }
 
     if let Some(pre_keys) = key_bundle.pq_pre_keys {
         for pre_key in pre_keys {
-            keys.add_signed_key(account_id, device_id, identity, pre_key)
+            keys.add_pq_pre_key(account_id, device_id, identity, pre_key)
                 .await?;
         }
     }
 
     if let Some(key) = key_bundle.pq_last_resort_pre_key {
-        keys.add_signed_key(account_id, device_id, identity, key)
+        keys.set_last_resort_key(account_id, device_id, identity, key)
             .await?
     }
     Ok(())

@@ -7,26 +7,22 @@ use crate::{
     ServerError,
 };
 
+use super::device_key;
+
 pub struct InMemoryDeviceManager {
     devices: HashMap<String, Device>,
     account_devices: HashMap<Uuid, HashSet<String>>,
     link_secret: String,
 }
 
-impl InMemoryDeviceManager {
-    fn key(accunt_id: &Uuid, id: u32) -> String {
-        format!("{}.{}", accunt_id, id)
-    }
-}
-
 #[async_trait::async_trait]
 impl DeviceManager for InMemoryDeviceManager {
     async fn get_device(&self, account_id: &Uuid, id: &u32) -> Result<Device, ServerError> {
-        let key = InMemoryDeviceManager::key(account_id, id.clone());
+        let key = device_key(account_id, *id);
         self.devices
             .get(&key)
             .ok_or(ServerError::DeviceNotExist)
-            .map(|d| d.clone())
+            .cloned()
     }
 
     async fn get_devices(&self, account_id: &Uuid) -> Result<Vec<u32>, ServerError> {
@@ -62,15 +58,14 @@ impl DeviceManager for InMemoryDeviceManager {
     }
 
     async fn add_device(&mut self, account_id: &Uuid, device: Device) -> Result<(), ServerError> {
-        let key = InMemoryDeviceManager::key(account_id, device.id());
+        let key = device_key(account_id, device.id());
 
         if self.devices.contains_key(&key) {
             return Err(ServerError::DeviceExists);
         }
 
         if !self.account_devices.contains_key(account_id) {
-            self.account_devices
-                .insert(account_id.clone(), HashSet::new());
+            self.account_devices.insert(*account_id, HashSet::new());
         }
 
         self.devices.insert(key.clone(), device);
@@ -86,7 +81,7 @@ impl DeviceManager for InMemoryDeviceManager {
         account_id: &Uuid,
         device_id: u32,
     ) -> Result<(), ServerError> {
-        let key = InMemoryDeviceManager::key(account_id, device_id);
+        let key = device_key(account_id, device_id);
 
         if let Some(x) = self.account_devices.get_mut(account_id) {
             x.remove(&key);

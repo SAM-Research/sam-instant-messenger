@@ -16,15 +16,14 @@ impl AccountManager for InMemoryAccountManager {
     async fn get_account(&self, id: &Uuid) -> Result<Account, ServerError> {
         self.accounts
             .get(id)
-            .ok_or(ServerError::AccountNotExist)
-            .map(|a| a.clone())
+            .ok_or(ServerError::AccountNotExist).cloned()
     }
 
     async fn add_account(&mut self, account: &Account) -> Result<(), ServerError> {
         if self.accounts.contains_key(account.id()) {
             return Err(ServerError::AccountExists);
         }
-        self.accounts.insert(account.id().clone(), account.clone());
+        self.accounts.insert(*account.id(), account.clone());
         Ok(())
     }
 
