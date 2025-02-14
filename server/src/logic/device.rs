@@ -1,7 +1,7 @@
 use libsignal_protocol::IdentityKey;
 use sam_common::{
     api::device::{DeviceActivationInfo, LinkDeviceRequest, LinkDeviceResponse},
-    time_now_u128,
+    time_now_millis,
 };
 use uuid::Uuid;
 
@@ -75,7 +75,7 @@ pub async fn create_device<T: StateType>(
         .id(device_id)
         .registration_id(device_info.registration_id)
         .name(device_info.name)
-        .creation(time_now_u128())
+        .creation(time_now_millis())
         .password(Password::generate(password)?)
         .build();
 

@@ -1,7 +1,7 @@
 use std::collections::HashMap;
 
 use libsignal_protocol::IdentityKey;
-use sam_common::api::keys::{Key, PostQuantumPreKey, PreKey, SignedPreKey};
+use sam_common::api::keys::{EcPreKey, Key, PqPreKey, SignedEcPreKey};
 use uuid::Uuid;
 
 use crate::{
@@ -15,10 +15,10 @@ use crate::{
 use super::device_key;
 
 pub struct InMemoryKeyManager {
-    pre_keys: HashMap<String, Vec<PreKey>>,
-    signed_pre_keys: HashMap<String, SignedPreKey>,
-    pq_pre_keys: HashMap<String, Vec<PostQuantumPreKey>>,
-    last_resort_keys: HashMap<String, PostQuantumPreKey>,
+    pre_keys: HashMap<String, Vec<EcPreKey>>,
+    signed_pre_keys: HashMap<String, SignedEcPreKey>,
+    pq_pre_keys: HashMap<String, Vec<PqPreKey>>,
+    last_resort_keys: HashMap<String, PqPreKey>,
 }
 
 impl InMemoryKeyManager {
@@ -38,7 +38,7 @@ impl PreKeyManager for InMemoryKeyManager {
         &self,
         account_id: &Uuid,
         device_id: &u32,
-    ) -> Result<Option<PreKey>, ServerError> {
+    ) -> Result<Option<EcPreKey>, ServerError> {
         let key = device_key(account_id, *device_id);
 
         Ok(self
@@ -65,7 +65,7 @@ impl PreKeyManager for InMemoryKeyManager {
         &mut self,
         account_id: &Uuid,
         device_id: &u32,
-        key: PreKey,
+        key: EcPreKey,
     ) -> Result<(), ServerError> {
         let dkey = device_key(account_id, *device_id);
 
@@ -102,7 +102,7 @@ impl SignedPreKeyManager for InMemoryKeyManager {
         &self,
         account_id: &Uuid,
         device_id: &u32,
-    ) -> Result<SignedPreKey, ServerError> {
+    ) -> Result<SignedEcPreKey, ServerError> {
         let key = device_key(account_id, *device_id);
 
         self.signed_pre_keys
@@ -116,7 +116,7 @@ impl SignedPreKeyManager for InMemoryKeyManager {
         account_id: &Uuid,
         device_id: &u32,
         identity: &IdentityKey,
-        key: SignedPreKey,
+        key: SignedEcPreKey,
     ) -> Result<(), ServerError> {
         let dkey = device_key(account_id, *device_id);
 
@@ -146,7 +146,7 @@ impl PqPreKeyManager for InMemoryKeyManager {
         &self,
         account_id: &Uuid,
         device_id: &u32,
-    ) -> Result<Option<PostQuantumPreKey>, ServerError> {
+    ) -> Result<Option<PqPreKey>, ServerError> {
         let key = device_key(account_id, *device_id);
 
         Ok(self
@@ -174,7 +174,7 @@ impl PqPreKeyManager for InMemoryKeyManager {
         account_id: &Uuid,
         device_id: &u32,
         identity: &IdentityKey,
-        key: PostQuantumPreKey,
+        key: PqPreKey,
     ) -> Result<(), ServerError> {
         let dkey = device_key(account_id, *device_id);
 
@@ -213,7 +213,7 @@ impl LastResortKeyManager for InMemoryKeyManager {
         &self,
         account_id: &Uuid,
         device_id: &u32,
-    ) -> Result<PostQuantumPreKey, ServerError> {
+    ) -> Result<PqPreKey, ServerError> {
         let key = device_key(account_id, *device_id);
 
         self.last_resort_keys
@@ -226,7 +226,7 @@ impl LastResortKeyManager for InMemoryKeyManager {
         account_id: &Uuid,
         device_id: &u32,
         identity: &IdentityKey,
-        key: PostQuantumPreKey,
+        key: PqPreKey,
     ) -> Result<(), ServerError> {
         let dkey = device_key(account_id, *device_id);
 

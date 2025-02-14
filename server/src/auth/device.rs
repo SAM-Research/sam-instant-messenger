@@ -5,7 +5,7 @@ use base64::{
     Engine,
 };
 use hkdf::hmac::{Hmac, Mac};
-use sam_common::{api::device::LinkDeviceToken, time_now_u128};
+use sam_common::{api::device::LinkDeviceToken, time_now_millis};
 use sha2::{Digest, Sha256};
 use uuid::Uuid;
 
@@ -43,7 +43,7 @@ pub fn verify_token(secret: &str, token: LinkDeviceToken) -> Result<Uuid, Server
             .parse()
             .map_err(|_| ServerError::DeviceTokenMalformed)?,
     );
-    let time_now = Duration::from_millis(time_now_u128() as u64);
+    let time_now = Duration::from_millis(time_now_millis() as u64);
     let elapsed = time_now - time_then;
     if elapsed.as_secs() > 600 {
         return Err(ServerError::DeviceLinkTooSlow);
@@ -52,7 +52,7 @@ pub fn verify_token(secret: &str, token: LinkDeviceToken) -> Result<Uuid, Server
 }
 
 fn encode_claims(account_id: &Uuid) -> String {
-    format!("{}.{}", account_id, time_now_u128())
+    format!("{}.{}", account_id, time_now_millis())
 }
 
 fn decode_claims(claims: &str) -> Result<(&str, &str), ServerError> {

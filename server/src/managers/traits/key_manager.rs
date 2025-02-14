@@ -1,5 +1,5 @@
 use libsignal_protocol::IdentityKey;
-use sam_common::api::keys::{PostQuantumPreKey, PreKey, SignedPreKey};
+use sam_common::api::keys::{EcPreKey, PqPreKey, SignedEcPreKey};
 use uuid::Uuid;
 
 use crate::ServerError;
@@ -10,7 +10,7 @@ pub trait PreKeyManager: Send {
         &self,
         account_id: &Uuid,
         device_id: &u32,
-    ) -> Result<Option<PreKey>, ServerError>;
+    ) -> Result<Option<EcPreKey>, ServerError>;
     async fn get_pre_keys(
         &self,
         account_id: &Uuid,
@@ -20,7 +20,7 @@ pub trait PreKeyManager: Send {
         &mut self,
         account_id: &Uuid,
         device_id: &u32,
-        key: PreKey,
+        key: EcPreKey,
     ) -> Result<(), ServerError>;
     async fn remove_pre_key(
         &mut self,
@@ -36,13 +36,13 @@ pub trait SignedPreKeyManager {
         &self,
         account_id: &Uuid,
         device_id: &u32,
-    ) -> Result<SignedPreKey, ServerError>;
+    ) -> Result<SignedEcPreKey, ServerError>;
     async fn set_signed_pre_key(
         &mut self,
         account_id: &Uuid,
         device_id: &u32,
         identity: &IdentityKey,
-        key: SignedPreKey,
+        key: SignedEcPreKey,
     ) -> Result<(), ServerError>;
     async fn remove_signed_pre_key(
         &mut self,
@@ -57,7 +57,7 @@ pub trait PqPreKeyManager {
         &self,
         account_id: &Uuid,
         device_id: &u32,
-    ) -> Result<Option<PostQuantumPreKey>, ServerError>;
+    ) -> Result<Option<PqPreKey>, ServerError>;
     async fn get_pq_pre_keys(
         &self,
         account_id: &Uuid,
@@ -68,7 +68,7 @@ pub trait PqPreKeyManager {
         account_id: &Uuid,
         device_id: &u32,
         identity: &IdentityKey,
-        key: PostQuantumPreKey,
+        key: PqPreKey,
     ) -> Result<(), ServerError>;
     async fn remove_pq_pre_key(
         &mut self,
@@ -84,13 +84,13 @@ pub trait LastResortKeyManager {
         &self,
         account_id: &Uuid,
         device_id: &u32,
-    ) -> Result<PostQuantumPreKey, ServerError>;
+    ) -> Result<PqPreKey, ServerError>;
     async fn set_last_resort_key(
         &mut self,
         account_id: &Uuid,
         device_id: &u32,
         identity: &IdentityKey,
-        key: PostQuantumPreKey,
+        key: PqPreKey,
     ) -> Result<(), ServerError>;
     async fn remove_last_resort_key(
         &mut self,

@@ -15,15 +15,6 @@ macro_rules! define_key {
             pub public_key: Box<[u8]>,
         }
 
-        impl From<PreKeyRecord> for $name {
-            fn from(value: PreKeyRecord) -> Self {
-                $name {
-                    key_id: value.id().expect("Can get ID").into(),
-                    public_key: value.public_key().expect("Can get public_key").serialize(),
-                }
-            }
-        }
-
         impl Key for $name {
             fn id(&self) -> u32 {
                 return self.key_id;
@@ -43,29 +34,9 @@ macro_rules! define_signed_key {
         pub struct $name {
             pub key_id: u32,
             #[serde_as(as = "Base64")]
-            pub public_key: Box<[u8]>, // TODO: Make this a PublicKey and implement Serialize
+            pub public_key: Box<[u8]>,
             #[serde_as(as = "Base64")]
-            pub signature: Box<[u8]>, // TODO: Make this a PublicKey and implement Serialize
-        }
-
-        impl From<SignedPreKeyRecord> for $name {
-            fn from(value: SignedPreKeyRecord) -> Self {
-                $name {
-                    key_id: value.id().expect("Can get ID").into(),
-                    public_key: value.public_key().expect("Can get public_key").serialize(),
-                    signature: value.signature().expect("Can get signature").into(),
-                }
-            }
-        }
-
-        impl From<KyberPreKeyRecord> for $name {
-            fn from(value: KyberPreKeyRecord) -> Self {
-                $name {
-                    key_id: value.id().expect("Can get ID").into(),
-                    public_key: value.public_key().expect("Can get public_key").serialize(),
-                    signature: value.signature().expect("Can get signature").into(),
-                }
-            }
+            pub signature: Box<[u8]>,
         }
 
         impl Key for $name {
@@ -94,14 +65,45 @@ pub trait SignedKey: Key {
     fn signature(&self) -> &[u8];
 }
 
-define_key!(PreKey);
-define_signed_key!(SignedPreKey);
-define_signed_key!(PostQuantumPreKey);
+define_key!(EcPreKey);
+
+impl From<PreKeyRecord> for EcPreKey {
+    fn from(value: PreKeyRecord) -> Self {
+        Self {
+            key_id: value.id().expect("Can get ID").into(),
+            public_key: value.public_key().expect("Can get public_key").serialize(),
+        }
+    }
+}
+
+define_signed_key!(SignedEcPreKey);
+
+impl From<SignedPreKeyRecord> for SignedEcPreKey {
+    fn from(value: SignedPreKeyRecord) -> Self {
+        Self {
+            key_id: value.id().expect("Can get ID").into(),
+            public_key: value.public_key().expect("Can get public_key").serialize(),
+            signature: value.signature().expect("Can get signature").into(),
+        }
+    }
+}
+
+define_signed_key!(PqPreKey);
+
+impl From<KyberPreKeyRecord> for PqPreKey {
+    fn from(value: KyberPreKeyRecord) -> Self {
+        Self {
+            key_id: value.id().expect("Can get ID").into(),
+            public_key: value.public_key().expect("Can get public_key").serialize(),
+            signature: value.signature().expect("Can get signature").into(),
+        }
+    }
+}
 
 #[derive(Debug, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
-pub struct BundleResponse {
-    #[serde(with = "id_key")]
+pub struct KeyBundleResponse {
+    #[serde(with = "id_key")] // TODO: Check that this is Base64'ed
     pub identity_key: IdentityKey,
     pub bundles: Vec<KeyBundle>,
 }
@@ -111,18 +113,18 @@ pub struct BundleResponse {
 pub struct KeyBundle {
     pub device_id: u32,
     pub registration_id: u32,
-    pub pre_key: Option<PreKey>,
-    pub pq_pre_key: PostQuantumPreKey,
-    pub signed_pre_key: SignedPreKey,
+    pub pre_key: Option<EcPreKey>,
+    pub pq_pre_key: PqPreKey,
+    pub signed_pre_key: SignedEcPreKey,
 }
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
 #[serde(rename_all = "camelCase")]
 pub struct PublishKeyBundleRequest {
-    pub pre_keys: Option<Vec<PreKey>>,
-    pub signed_pre_key: Option<SignedPreKey>,
-    pub pq_pre_keys: Option<Vec<PostQuantumPreKey>>,
-    pub pq_last_resort_pre_key: Option<PostQuantumPreKey>,
+    pub pre_keys: Option<Vec<EcPreKey>>,
+    pub signed_pre_key: Option<SignedEcPreKey>,
+    pub pq_pre_keys: Option<Vec<PqPreKey>>,
+    pub pq_last_resort_pre_key: Option<PqPreKey>,
 }
 
 pub type PublishKeyBundle = PublishKeyBundleRequest;

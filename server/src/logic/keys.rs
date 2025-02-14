@@ -1,5 +1,5 @@
 use libsignal_protocol::IdentityKey;
-use sam_common::api::keys::{BundleResponse, Key, KeyBundle, PublishKeyBundle};
+use sam_common::api::keys::{Key, KeyBundle, KeyBundleResponse, PublishKeyBundle};
 use uuid::Uuid;
 
 use crate::{
@@ -86,7 +86,7 @@ pub async fn add_keybundle<T: StateType>(
 pub async fn get_keybundles<T: StateType>(
     state: &ServerState<T>,
     account_id: &Uuid,
-) -> Result<BundleResponse, ServerError> {
+) -> Result<KeyBundleResponse, ServerError> {
     let identity_key = {
         *state
             .accounts
@@ -117,7 +117,7 @@ pub async fn get_keybundles<T: StateType>(
         bundle_vec
     };
 
-    Ok(BundleResponse {
+    Ok(KeyBundleResponse {
         identity_key,
         bundles,
     })

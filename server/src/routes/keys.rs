@@ -2,7 +2,7 @@ use axum::{
     extract::{Path, State},
     Json,
 };
-use sam_common::api::keys::{BundleResponse, PublishKeyBundleRequest};
+use sam_common::api::keys::{KeyBundleResponse, PublishKeyBundleRequest};
 use uuid::Uuid;
 
 use crate::{
@@ -16,7 +16,7 @@ use crate::{
 pub async fn keys_bundles_endpoint<T: StateType>(
     Path(account_id): Path<Uuid>,
     State(state): State<ServerState<T>>,
-) -> Result<Json<BundleResponse>, ServerError> {
+) -> Result<Json<KeyBundleResponse>, ServerError> {
     get_keybundles(&state, &account_id).await.map(Json)
 }
 
