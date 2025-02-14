@@ -33,7 +33,8 @@ impl PreKeyManager for InMemoryKeyManager {
         Ok(self
             .pre_keys
             .get(&key)
-            .and_then(|keys| keys.first()).cloned())
+            .and_then(|keys| keys.first())
+            .cloned())
     }
 
     async fn get_pre_keys(
@@ -44,7 +45,8 @@ impl PreKeyManager for InMemoryKeyManager {
         let key = device_key(account_id, *device_id);
 
         self.pre_keys
-            .get(&key).map(|keys| keys.iter().map(|k| k.id()).collect::<Vec<u32>>())
+            .get(&key)
+            .map(|keys| keys.iter().map(|k| k.id()).collect::<Vec<u32>>())
             .ok_or(ServerError::AccountNotExist)
     }
 
@@ -75,7 +77,8 @@ impl PreKeyManager for InMemoryKeyManager {
             .and_then(|keys| {
                 keys.iter()
                     .position(|k| k.id() == id)
-                    .map(|index| (keys, index)).map(|(keys, index)| keys.remove(index))
+                    .map(|index| (keys, index))
+                    .map(|(keys, index)| keys.remove(index))
             })
             .ok_or(ServerError::KeyNotExist)
             .map(|_| ())
@@ -92,7 +95,8 @@ impl SignedPreKeyManager for InMemoryKeyManager {
         let key = device_key(account_id, *device_id);
 
         self.signed_pre_keys
-            .get(&key).cloned()
+            .get(&key)
+            .cloned()
             .ok_or(ServerError::AccountNotExist)
     }
 
@@ -137,7 +141,8 @@ impl PqPreKeyManager for InMemoryKeyManager {
         Ok(self
             .pq_pre_keys
             .get(&key)
-            .and_then(|keys| keys.first()).cloned())
+            .and_then(|keys| keys.first())
+            .cloned())
     }
 
     async fn get_pq_pre_keys(
@@ -148,7 +153,8 @@ impl PqPreKeyManager for InMemoryKeyManager {
         let key = device_key(account_id, *device_id);
 
         self.pq_pre_keys
-            .get(&key).map(|keys| keys.iter().map(|k| k.id()).collect::<Vec<u32>>())
+            .get(&key)
+            .map(|keys| keys.iter().map(|k| k.id()).collect::<Vec<u32>>())
             .ok_or(ServerError::AccountNotExist)
     }
 
@@ -182,7 +188,8 @@ impl PqPreKeyManager for InMemoryKeyManager {
             .and_then(|keys| {
                 keys.iter()
                     .position(|k| k.id() == id)
-                    .map(|index| (keys, index)).map(|(keys, index)| keys.remove(index))
+                    .map(|index| (keys, index))
+                    .map(|(keys, index)| keys.remove(index))
             })
             .ok_or(ServerError::KeyNotExist)
             .map(|_| ())
@@ -199,7 +206,8 @@ impl LastResortKeyManager for InMemoryKeyManager {
         let key = device_key(account_id, *device_id);
 
         self.last_resort_keys
-            .get(&key).cloned()
+            .get(&key)
+            .cloned()
             .ok_or(ServerError::KeyNotExist)
     }
     async fn set_last_resort_key(

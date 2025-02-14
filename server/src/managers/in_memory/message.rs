@@ -52,7 +52,8 @@ impl MessageManager for InMemoryMessageManager {
 
         match self.messages.get(&key) {
             Some(msgs) => msgs
-                .get(message_id).cloned()
+                .get(message_id)
+                .cloned()
                 .ok_or(ServerError::EnvelopeNotExists),
             None => Err(ServerError::AccountNotExist),
         }

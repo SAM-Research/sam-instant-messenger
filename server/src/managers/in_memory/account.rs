@@ -16,7 +16,8 @@ impl AccountManager for InMemoryAccountManager {
     async fn get_account(&self, id: &Uuid) -> Result<Account, ServerError> {
         self.accounts
             .get(id)
-            .ok_or(ServerError::AccountNotExist).cloned()
+            .ok_or(ServerError::AccountNotExist)
+            .cloned()
     }
 
     async fn add_account(&mut self, account: &Account) -> Result<(), ServerError> {
