@@ -28,13 +28,12 @@ impl PreKeyManager for InMemoryKeyManager {
         account_id: &Uuid,
         device_id: &u32,
     ) -> Result<Option<PreKey>, ServerError> {
-        let key = device_key(&account_id, device_id.clone());
+        let key = device_key(account_id, *device_id);
 
         Ok(self
             .pre_keys
             .get(&key)
-            .and_then(|keys| keys.first())
-            .map(|key| key.clone()))
+            .and_then(|keys| keys.first()).cloned())
     }
 
     async fn get_pre_keys(
@@ -42,11 +41,10 @@ impl PreKeyManager for InMemoryKeyManager {
         account_id: &Uuid,
         device_id: &u32,
     ) -> Result<Vec<u32>, ServerError> {
-        let key = device_key(&account_id, device_id.clone());
+        let key = device_key(account_id, *device_id);
 
         self.pre_keys
-            .get(&key)
-            .and_then(|keys| Some(keys.iter().map(|k| k.id()).collect::<Vec<u32>>()))
+            .get(&key).map(|keys| keys.iter().map(|k| k.id()).collect::<Vec<u32>>())
             .ok_or(ServerError::AccountNotExist)
     }
 
@@ -56,7 +54,7 @@ impl PreKeyManager for InMemoryKeyManager {
         device_id: &u32,
         key: PreKey,
     ) -> Result<(), ServerError> {
-        let dkey = device_key(&account_id, device_id.clone());
+        let dkey = device_key(account_id, *device_id);
 
         self.pre_keys
             .get_mut(&dkey)
@@ -70,15 +68,14 @@ impl PreKeyManager for InMemoryKeyManager {
         device_id: &u32,
         id: u32,
     ) -> Result<(), ServerError> {
-        let dkey = device_key(&account_id, device_id.clone());
+        let dkey = device_key(account_id, *device_id);
 
         self.pre_keys
             .get_mut(&dkey)
             .and_then(|keys| {
                 keys.iter()
                     .position(|k| k.id() == id)
-                    .map(|index| (keys, index))
-                    .and_then(|(keys, index)| Some(keys.remove(index)))
+                    .map(|index| (keys, index)).map(|(keys, index)| keys.remove(index))
             })
             .ok_or(ServerError::KeyNotExist)
             .map(|_| ())
@@ -92,11 +89,10 @@ impl SignedPreKeyManager for InMemoryKeyManager {
         account_id: &Uuid,
         device_id: &u32,
     ) -> Result<SignedPreKey, ServerError> {
-        let key = device_key(&account_id, device_id.clone());
+        let key = device_key(account_id, *device_id);
 
         self.signed_pre_keys
-            .get(&key)
-            .map(|k| k.clone())
+            .get(&key).cloned()
             .ok_or(ServerError::AccountNotExist)
     }
 
@@ -107,7 +103,7 @@ impl SignedPreKeyManager for InMemoryKeyManager {
         identity: &IdentityKey,
         key: SignedPreKey,
     ) -> Result<(), ServerError> {
-        let dkey = device_key(&account_id, device_id.clone());
+        let dkey = device_key(account_id, *device_id);
 
         verify_key(identity, &key)?;
 
@@ -120,7 +116,7 @@ impl SignedPreKeyManager for InMemoryKeyManager {
         account_id: &Uuid,
         device_id: &u32,
     ) -> Result<(), ServerError> {
-        let key = device_key(&account_id, device_id.clone());
+        let key = device_key(account_id, *device_id);
 
         self.signed_pre_keys
             .remove(&key)
@@ -136,13 +132,12 @@ impl PqPreKeyManager for InMemoryKeyManager {
         account_id: &Uuid,
         device_id: &u32,
     ) -> Result<Option<PostQuantumPreKey>, ServerError> {
-        let key = device_key(&account_id, device_id.clone());
+        let key = device_key(account_id, *device_id);
 
         Ok(self
             .pq_pre_keys
             .get(&key)
-            .and_then(|keys| keys.first())
-            .map(|key| key.clone()))
+            .and_then(|keys| keys.first()).cloned())
     }
 
     async fn get_pq_pre_keys(
@@ -150,11 +145,10 @@ impl PqPreKeyManager for InMemoryKeyManager {
         account_id: &Uuid,
         device_id: &u32,
     ) -> Result<Vec<u32>, ServerError> {
-        let key = device_key(&account_id, device_id.clone());
+        let key = device_key(account_id, *device_id);
 
         self.pq_pre_keys
-            .get(&key)
-            .and_then(|keys| Some(keys.iter().map(|k| k.id()).collect::<Vec<u32>>()))
+            .get(&key).map(|keys| keys.iter().map(|k| k.id()).collect::<Vec<u32>>())
             .ok_or(ServerError::AccountNotExist)
     }
 
@@ -165,7 +159,7 @@ impl PqPreKeyManager for InMemoryKeyManager {
         identity: &IdentityKey,
         key: PostQuantumPreKey,
     ) -> Result<(), ServerError> {
-        let dkey = device_key(&account_id, device_id.clone());
+        let dkey = device_key(account_id, *device_id);
 
         verify_key(identity, &key)?;
 
@@ -181,15 +175,14 @@ impl PqPreKeyManager for InMemoryKeyManager {
         device_id: &u32,
         id: u32,
     ) -> Result<(), ServerError> {
-        let dkey = device_key(&account_id, device_id.clone());
+        let dkey = device_key(account_id, *device_id);
 
         self.pq_pre_keys
             .get_mut(&dkey)
             .and_then(|keys| {
                 keys.iter()
                     .position(|k| k.id() == id)
-                    .map(|index| (keys, index))
-                    .and_then(|(keys, index)| Some(keys.remove(index)))
+                    .map(|index| (keys, index)).map(|(keys, index)| keys.remove(index))
             })
             .ok_or(ServerError::KeyNotExist)
             .map(|_| ())
@@ -203,11 +196,10 @@ impl LastResortKeyManager for InMemoryKeyManager {
         account_id: &Uuid,
         device_id: &u32,
     ) -> Result<PostQuantumPreKey, ServerError> {
-        let key = device_key(&account_id, device_id.clone());
+        let key = device_key(account_id, *device_id);
 
         self.last_resort_keys
-            .get(&key)
-            .map(|k| k.clone())
+            .get(&key).cloned()
             .ok_or(ServerError::KeyNotExist)
     }
     async fn set_last_resort_key(
@@ -217,7 +209,7 @@ impl LastResortKeyManager for InMemoryKeyManager {
         identity: &IdentityKey,
         key: PostQuantumPreKey,
     ) -> Result<(), ServerError> {
-        let dkey = device_key(&account_id, device_id.clone());
+        let dkey = device_key(account_id, *device_id);
 
         verify_key(identity, &key)?;
 
@@ -229,7 +221,7 @@ impl LastResortKeyManager for InMemoryKeyManager {
         account_id: &Uuid,
         device_id: &u32,
     ) -> Result<(), ServerError> {
-        let key = device_key(&account_id, device_id.clone());
+        let key = device_key(account_id, *device_id);
 
         self.signed_pre_keys
             .remove(&key)
