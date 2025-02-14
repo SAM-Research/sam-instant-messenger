@@ -23,9 +23,8 @@ fn generate_password<R: Rng>(rng: &mut R) -> String {
 }
 
 pub async fn register_client<
-    E: Into<ClientError>,
     S: StoreConfig,
-    H: SignalApiClient<Error = E>,
+    H: SignalApiClient<Error = impl Into<ClientError>>,
     R: CryptoRng + Rng,
 >(
     storage_config: S,
@@ -59,7 +58,7 @@ pub async fn register_client<
     };
 
     let response = http_client
-        .register_client(&password, registration_request)
+        .register_client(password.to_owned(), registration_request)
         .await
         .map_err(Into::into)?;
 

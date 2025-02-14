@@ -10,7 +10,7 @@ pub trait SignalApiClient {
     /// Verifying the session is not implemented.
     async fn register_client(
         &self,
-        password: &String,
+        password: String,
         registration_request: RegistrationRequest,
     ) -> Result<RegistrationResponse, Self::Error>;
 
@@ -30,7 +30,7 @@ impl SignalApiClient for HttpClient {
 
     async fn register_client(
         &self,
-        _password: &String,
+        _password: String,
         _registration_request: RegistrationRequest,
     ) -> Result<RegistrationResponse, Self::Error> {
         todo!()
