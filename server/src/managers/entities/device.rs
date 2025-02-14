@@ -29,12 +29,4 @@ impl Device {
     pub fn password(&self) -> &Password {
         &self.password
     }
-
-    pub fn set_name(&mut self, name: String) {
-        self.name = name;
-    }
-
-    pub fn set_password(&mut self, password: Password) {
-        self.password = password;
-    }
 }

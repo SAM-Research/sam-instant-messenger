@@ -80,3 +80,77 @@ pub async fn create_account<T: StateType>(
         account_id: *account.id(),
     })
 }
+
+#[cfg(test)]
+mod test {
+    use libsignal_protocol::{IdentityKey, KeyPair};
+    use rand::rngs::OsRng;
+    use sam_common::api::{
+        device::DeviceActivationInfo, keys::PublishKeyBundle, RegistrationRequest,
+    };
+
+    use crate::{
+        logic::account::create_account,
+        managers::traits::{account_manager::AccountManager, device_manager::DeviceManager},
+        state::ServerState,
+    };
+
+    static LINK_SECRET: &str = "test";
+
+    #[tokio::test]
+    async fn test_create_account() {
+        let state = ServerState::in_memory_default(LINK_SECRET.to_string());
+
+        let mut rng = OsRng;
+        let pair = KeyPair::generate(&mut rng);
+        let id = IdentityKey::new(pair.public_key);
+
+        // TODO: We need some test utility to create these structs, maybe in the common module?
+        let reg = RegistrationRequest {
+            identity_key: id,
+            device_activation: DeviceActivationInfo {
+                name: "Alice Phone".to_string(),
+                registration_id: 1u32,
+                key_bundle: PublishKeyBundle {
+                    // TODO: how to keys?
+                    pre_keys: None,
+                    signed_pre_key: None,
+                    pq_pre_keys: None,
+                    pq_last_resort_pre_key: None,
+                },
+            },
+        };
+
+        let alice_id = create_account(&state, reg, "RealAlice".to_string(), "bob<3".to_string())
+            .await
+            .map(|r| r.account_id)
+            .expect("Alice can create account");
+
+        let account = state
+            .accounts
+            .lock()
+            .await
+            .get_account(&alice_id)
+            .await
+            .expect("Alice has an account");
+
+        assert!(*account.id() == alice_id);
+        assert!(*account.identity() == id);
+        assert!(account.username() == "RealAlice");
+
+        let device = state
+            .devices
+            .lock()
+            .await
+            .get_device(&alice_id, &1)
+            .await
+            .expect("Alice has primary device");
+
+        assert!(device.registration_id() == 1);
+        assert!(device.name() == "Alice Phone");
+        device
+            .password()
+            .verify("bob<3".to_string())
+            .expect("Alice loves bob");
+    }
+}
