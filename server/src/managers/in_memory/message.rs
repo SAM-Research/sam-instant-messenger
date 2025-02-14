@@ -13,6 +13,12 @@ pub struct InMemoryMessageManager {
     subscribers: HashMap<String, mpsc::Sender<Uuid>>,
 }
 
+impl Default for InMemoryMessageManager {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl InMemoryMessageManager {
     pub fn new() -> Self {
         InMemoryMessageManager {

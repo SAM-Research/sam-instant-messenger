@@ -21,6 +21,12 @@ pub struct InMemoryKeyManager {
     last_resort_keys: HashMap<String, PqPreKey>,
 }
 
+impl Default for InMemoryKeyManager {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl InMemoryKeyManager {
     pub fn new() -> Self {
         InMemoryKeyManager {

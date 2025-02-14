@@ -11,6 +11,12 @@ pub struct InMemoryAccountManager {
     accounts: HashMap<Uuid, Account>,
 }
 
+impl Default for InMemoryAccountManager {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl InMemoryAccountManager {
     pub fn new() -> Self {
         InMemoryAccountManager {

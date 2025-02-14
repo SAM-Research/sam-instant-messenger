@@ -27,7 +27,7 @@ pub async fn main() {
     );
 
     let config = ServerConfig {
-        state: state,
+        state,
         addr: "127.0.0.1:8080"
             .parse()
             .expect("Unable to parse socket address"),
