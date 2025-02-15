@@ -1,9 +1,9 @@
+use crate::signal_time_now;
 use crate::storage::tests::{in_mem, sqlite};
 use libsignal_protocol::{
     GenericSignedPreKey as _, IdentityKeyPair, KeyPair, SignedPreKeyRecord, SignedPreKeyStore as _,
 };
 use rand::rngs::OsRng;
-use sam_common::time_now;
 
 macro_rules! test_signed_pre_key_store {
     ( [ $( ($struct:ty, $factory:expr) ),* ]) => {
@@ -22,7 +22,7 @@ macro_rules! test_signed_pre_key_store {
                         .expect("should be able to sign pre key record");
 
                     let signed_pre_key_record =
-                        SignedPreKeyRecord::new(0.into(), time_now(), &signed_pre_key_pair, &signature);
+                        SignedPreKeyRecord::new(0.into(), signal_time_now(), &signed_pre_key_pair, &signature);
 
                     signed_pre_key_store
                         .save_signed_pre_key(signed_pre_key_record.id().unwrap(), &signed_pre_key_record)
