@@ -167,7 +167,7 @@ impl IdentityKeyStore for SqliteIdentityKeyStore {
                             Box::new(err),
                         )
                     })?;
-                Ok(false)
+                Ok(true)
             }
             None => {
                 self.insert_identity(address, identity)
@@ -178,7 +178,7 @@ impl IdentityKeyStore for SqliteIdentityKeyStore {
                             Box::new(err),
                         )
                     })?;
-                Ok(true)
+                Ok(false)
             }
         }
     }

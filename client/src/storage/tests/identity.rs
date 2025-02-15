@@ -1,4 +1,4 @@
-use crate::storage::sqlite::{identity::SqliteIdentityKeyStore, sqlite_test::connect};
+use crate::storage::sqlite::{connect_to_in_memory, identity::SqliteIdentityKeyStore};
 use libsignal_protocol::{
     Direction, IdentityKeyPair, IdentityKeyStore, InMemIdentityKeyStore, ProtocolAddress,
 };
@@ -48,7 +48,7 @@ macro_rules! test_identity_key_store {
                     let bob_address = ProtocolAddress::new("bob".to_owned(), 0.into());
                     let bob_key_pair = IdentityKeyPair::generate(&mut OsRng);
 
-                    assert!(identity_key_store
+                    assert!(!identity_key_store
                         .save_identity(&bob_address, bob_key_pair.identity_key())
                         .await
                         .expect("should be able to save an identity key"));
@@ -70,7 +70,7 @@ macro_rules! test_identity_key_store {
                     let bob_address = ProtocolAddress::new("bob".to_owned(), 0.into());
                     let bob_key_pair = IdentityKeyPair::generate(&mut OsRng);
 
-                    assert!(identity_key_store
+                    assert!(!identity_key_store
                         .save_identity(&bob_address, bob_key_pair.identity_key())
                         .await
                         .expect("should store can save an identity key"));
@@ -97,12 +97,12 @@ macro_rules! test_identity_key_store {
                     let bob_address = ProtocolAddress::new("bob".to_owned(), 0.into());
                     let bob_key_pair = IdentityKeyPair::generate(&mut OsRng);
 
-                    assert!(identity_key_store
+                    assert!(!identity_key_store
                         .save_identity(&bob_address, bob_key_pair.identity_key())
                         .await
                         .expect("can attempt to store identity key"));
 
-                    assert!(!identity_key_store
+                    assert!(identity_key_store
                         .save_identity(&bob_address, alice_key_pair.identity_key())
                         .await
                         .expect("can attempt to store identity key"));
@@ -185,7 +185,7 @@ macro_rules! test_identity_key_store {
 }
 
 async fn sqlite(key_pair: IdentityKeyPair) -> SqliteIdentityKeyStore {
-    let database = connect().await;
+    let database = connect_to_in_memory().await;
     SqliteIdentityKeyStore::create(database, key_pair, 0u32)
         .await
         .unwrap()

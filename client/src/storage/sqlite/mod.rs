@@ -56,20 +56,26 @@ pub struct SqliteStoreConfig {
     database: Pool<Sqlite>,
 }
 
+pub async fn connect_to_in_memory() -> Pool<Sqlite> {
+    let db_url = "sqlite::memory:".to_owned();
+    let pool = SqlitePoolOptions::new()
+        .connect(&db_url)
+        .await
+        .expect("Could not connect to database");
+    sqlx::migrate!("database/migrations")
+        .run(&pool)
+        .await
+        .expect("should be able to run migrations");
+
+    pool
+}
+
 impl SqliteStoreConfig {
     pub fn new(database: Pool<Sqlite>) -> Self {
         Self { database }
     }
     pub async fn in_memory() -> Self {
-        let db_url = "sqlite::memory:".to_owned();
-        let database = SqlitePoolOptions::new()
-            .connect(&db_url)
-            .await
-            .expect("Could not connect to database");
-        sqlx::migrate!("database/migrations")
-            .run(&database)
-            .await
-            .expect("should be able to run migrations");
+        let database = connect_to_in_memory().await;
         Self { database }
     }
 }
@@ -115,35 +121,5 @@ impl StoreConfig for SqliteStoreConfig {
         Ok(pre_build_store(self.database.clone())
             .identity_key_store(SqliteIdentityKeyStore::load(self.database.clone()).await?)
             .build())
-    }
-}
-
-#[cfg(test)]
-pub mod sqlite_test {
-    use libsignal_protocol::{IdentityKeyPair, ProtocolAddress};
-    use rand::rngs::OsRng;
-    use sqlx::{sqlite::SqlitePoolOptions, SqlitePool};
-
-    pub async fn connect() -> SqlitePool {
-        let db_url = "sqlite::memory:".to_owned();
-        let pool = SqlitePoolOptions::new()
-            .connect(&db_url)
-            .await
-            .expect("Could not connect to database");
-        sqlx::migrate!("database/migrations")
-            .run(&pool)
-            .await
-            .expect("should be able to run migrations");
-
-        pool
-    }
-    pub fn alice_address() -> ProtocolAddress {
-        ProtocolAddress::new("alice".to_owned(), 0.into())
-    }
-    pub fn bob_address() -> ProtocolAddress {
-        ProtocolAddress::new("bob".to_owned(), 0.into())
-    }
-    pub fn key_pair() -> IdentityKeyPair {
-        IdentityKeyPair::generate(&mut OsRng)
     }
 }
