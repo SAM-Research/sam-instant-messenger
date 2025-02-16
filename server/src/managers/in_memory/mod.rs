@@ -7,6 +7,10 @@ pub mod account;
 pub mod device;
 pub mod keys;
 pub mod message;
+
+#[cfg(test)]
+pub mod test_utils;
+
 use account::InMemoryAccountManager;
 
 use crate::state::{state_type::StateType, ServerState};

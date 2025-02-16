@@ -75,6 +75,10 @@ impl PreKeyManager for InMemoryKeyManager {
     ) -> Result<(), ServerError> {
         let dkey = device_key(account_id, *device_id);
 
+        if !self.pre_keys.contains_key(&dkey) {
+            let _ = self.pre_keys.insert(dkey.clone(), Vec::new());
+        }
+
         self.pre_keys
             .get_mut(&dkey)
             .map(|keys| keys.push(key))
@@ -97,8 +101,14 @@ impl PreKeyManager for InMemoryKeyManager {
                     .map(|index| (keys, index))
                     .map(|(keys, index)| keys.remove(index))
             })
-            .ok_or(ServerError::KeyNotExist)
-            .map(|_| ())
+            .ok_or(ServerError::KeyNotExist)?;
+
+        if let Some(keys) = self.pre_keys.get(&dkey) {
+            if keys.is_empty() {
+                self.pre_keys.remove(&dkey);
+            }
+        }
+        Ok(())
     }
 }
 
@@ -186,6 +196,10 @@ impl PqPreKeyManager for InMemoryKeyManager {
 
         verify_key(identity, &key)?;
 
+        if !self.pq_pre_keys.contains_key(&dkey) {
+            let _ = self.pq_pre_keys.insert(dkey.clone(), Vec::new());
+        }
+
         self.pq_pre_keys
             .get_mut(&dkey)
             .map(|keys| keys.push(key))
@@ -208,8 +222,14 @@ impl PqPreKeyManager for InMemoryKeyManager {
                     .map(|index| (keys, index))
                     .map(|(keys, index)| keys.remove(index))
             })
-            .ok_or(ServerError::KeyNotExist)
-            .map(|_| ())
+            .ok_or(ServerError::KeyNotExist)?;
+
+        if let Some(keys) = self.pq_pre_keys.get(&dkey) {
+            if keys.is_empty() {
+                self.pq_pre_keys.remove(&dkey);
+            }
+        }
+        Ok(())
     }
 }
 
@@ -248,7 +268,7 @@ impl LastResortKeyManager for InMemoryKeyManager {
     ) -> Result<(), ServerError> {
         let key = device_key(account_id, *device_id);
 
-        self.signed_pre_keys
+        self.last_resort_keys
             .remove(&key)
             .ok_or(ServerError::KeyNotExist)
             .map(|_| ())

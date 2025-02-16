@@ -69,4 +69,84 @@ impl<T: StateType> FromRequestParts<ServerState<T>> for AuthenticatedUser {
 }
 
 #[cfg(test)]
-mod test {}
+mod test {
+    use crate::{
+        auth::{authenticated_user::AuthenticatedUser, password::Password},
+        managers::{
+            entities::{account::Account, device::Device},
+            in_memory::test_utils::LINK_SECRET,
+            traits::{account_manager::AccountManager, device_manager::DeviceManager},
+        },
+        state::ServerState,
+    };
+    use axum::{
+        body::Body,
+        extract::{FromRequest, FromRequestParts, Request},
+        http::{header::AUTHORIZATION, request::Parts},
+    };
+    use base64::{engine::general_purpose::STANDARD, Engine as _};
+    use libsignal_protocol::IdentityKeyPair;
+    use rand::rngs::OsRng;
+    use uuid::Uuid;
+
+    #[tokio::test]
+    async fn test_from_request_parts() {
+        let state = ServerState::in_memory_default(LINK_SECRET.to_string());
+
+        let account_id = Uuid::new_v4();
+        let account_pwd = "thebestetpassword3".to_string();
+        let device_id = 1u32;
+
+        let auth_header = format!(
+            "Basic {}",
+            STANDARD.encode(format!("{account_id}.{device_id}:{account_pwd}"))
+        );
+
+        let mut rng = OsRng;
+        let pair = IdentityKeyPair::generate(&mut rng);
+
+        let account = Account::builder()
+            .id(account_id)
+            .identity(pair.identity_key().clone())
+            .username("abc3".to_string())
+            .build();
+
+        state
+            .accounts
+            .lock()
+            .await
+            .add_account(&account)
+            .await
+            .expect("Can add account");
+
+        let device = Device::builder()
+            .id(device_id)
+            .name("a".to_string())
+            .password(Password::generate(account_pwd).expect("abc3 can create password"))
+            .creation(0)
+            .registration_id(1)
+            .build();
+
+        let account_id = account.id();
+        state
+            .devices
+            .lock()
+            .await
+            .add_device(account_id, device)
+            .await
+            .expect("Alice can add device");
+
+        let request = Request::builder()
+            .header(AUTHORIZATION, auth_header)
+            .body(Body::empty())
+            .unwrap();
+
+        let mut parts = Parts::from_request(request, &state).await.unwrap();
+
+        let result = AuthenticatedUser::from_request_parts(&mut parts, &state).await;
+
+        assert!(
+            result.is_ok_and(|au| au.account().id() == account_id && au.device().id() == device_id)
+        )
+    }
+}
