@@ -87,12 +87,12 @@ pub async fn create_account<T: StateType>(
 mod test {
     use libsignal_protocol::IdentityKeyPair;
     use rand::rngs::OsRng;
-    use sam_common::api::Key;
+    use sam_common::api::{device::DeviceActivationInfo, Key, RegistrationRequest};
 
     use crate::{
         logic::{
             account::{create_account, delete_account},
-            test_utils::create_registration,
+            test_utils::create_publish_key_bundle,
         },
         managers::{
             in_memory::test_utils::LINK_SECRET,
@@ -114,16 +114,21 @@ mod test {
         let mut rng = OsRng;
         let pair = IdentityKeyPair::generate(&mut rng);
         let id = pair.identity_key();
-        let reg = create_registration(
-            "Alice Phone",
-            1,
-            Some(vec![0]),
-            Some(1),
-            Some(vec![33]),
-            Some(2),
-            &pair,
-            rng,
-        );
+        let reg = RegistrationRequest {
+            identity_key: *pair.identity_key(),
+            device_activation: DeviceActivationInfo {
+                name: "Alice Phone".to_string(),
+                registration_id: 1,
+                key_bundle: create_publish_key_bundle(
+                    Some(vec![0]),
+                    Some(1),
+                    Some(vec![33]),
+                    Some(2),
+                    &pair,
+                    rng,
+                ),
+            },
+        };
 
         let alice_id = create_account(&state, reg, "RealAlice".to_string(), "bob<3".to_string())
             .await
@@ -181,23 +186,28 @@ mod test {
 
         let mut rng = OsRng;
         let pair = IdentityKeyPair::generate(&mut rng);
-        let reg = create_registration(
-            "Alice Phone",
-            1,
-            Some(vec![0]),
-            Some(1),
-            Some(vec![33]),
-            Some(2),
-            &pair,
-            rng,
-        );
+        let reg = RegistrationRequest {
+            identity_key: *pair.identity_key(),
+            device_activation: DeviceActivationInfo {
+                name: "Alice Phone".to_string(),
+                registration_id: 1,
+                key_bundle: create_publish_key_bundle(
+                    Some(vec![0]),
+                    Some(1),
+                    Some(vec![33]),
+                    Some(2),
+                    &pair,
+                    rng,
+                ),
+            },
+        };
 
         let alice_id = create_account(&state, reg, "RealAlice".to_string(), "bob<3".to_string())
             .await
             .map(|r| r.account_id)
             .expect("Alice can create account");
 
-        delete_account(&state, alice_id.clone())
+        delete_account(&state, alice_id)
             .await
             .expect("Alice can delete account");
 

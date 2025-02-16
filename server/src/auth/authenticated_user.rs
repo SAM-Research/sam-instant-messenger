@@ -107,7 +107,7 @@ mod test {
 
         let account = Account::builder()
             .id(account_id)
-            .identity(pair.identity_key().clone())
+            .identity(*pair.identity_key())
             .username("abc3".to_string())
             .build();
 

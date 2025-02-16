@@ -265,7 +265,7 @@ mod test {
 
         let account = Account::builder()
             .id(Uuid::new_v4())
-            .identity(pair.identity_key().clone())
+            .identity(*pair.identity_key())
             .username("Alice".to_string())
             .build();
 
@@ -329,7 +329,7 @@ mod test {
 
         let account = Account::builder()
             .id(Uuid::new_v4())
-            .identity(pair.identity_key().clone())
+            .identity(*pair.identity_key())
             .username("Alice".to_string())
             .build();
 

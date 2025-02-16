@@ -121,14 +121,14 @@ pub async fn create_device<T: StateType>(
 mod test {
     use libsignal_protocol::IdentityKeyPair;
     use rand::rngs::OsRng;
-    use sam_common::api::Key;
+    use sam_common::api::{device::DeviceActivationInfo, Key, RegistrationRequest};
     use uuid::Uuid;
 
     use crate::{
         logic::{
             account::create_account,
             device::{create_device, create_device_token, link_device, unlink_device},
-            test_utils::{create_device_info, create_device_link, create_registration},
+            test_utils::{create_device_link, create_publish_key_bundle},
         },
         managers::{
             in_memory::test_utils::LINK_SECRET,
@@ -149,16 +149,18 @@ mod test {
         let mut rng = OsRng;
         let pair = IdentityKeyPair::generate(&mut rng);
 
-        let device_info = create_device_info(
-            "a",
-            1,
-            Some(vec![0]),
-            Some(1),
-            Some(vec![33]),
-            Some(2),
-            &pair,
-            rng,
-        );
+        let device_info = DeviceActivationInfo {
+            name: "a".to_string(),
+            registration_id: 1,
+            key_bundle: create_publish_key_bundle(
+                Some(vec![0]),
+                Some(1),
+                Some(vec![33]),
+                Some(2),
+                &pair,
+                rng,
+            ),
+        };
 
         let account_id = Uuid::new_v4();
         let account_pwd = "huntermotherboard7".to_string();
@@ -217,7 +219,11 @@ mod test {
         let mut rng = OsRng;
         let pair = IdentityKeyPair::generate(&mut rng);
 
-        let device_info = create_device_info("a", 1, None, None, None, None, &pair, rng);
+        let device_info = DeviceActivationInfo {
+            name: "a".to_string(),
+            registration_id: 1,
+            key_bundle: create_publish_key_bundle(None, None, None, None, &pair, rng),
+        };
 
         let account_id = Uuid::new_v4();
         let account_pwd = "huntermotherboard7".to_string();
@@ -258,7 +264,21 @@ mod test {
 
         let mut rng = OsRng;
         let pair = IdentityKeyPair::generate(&mut rng);
-        let reg = create_registration("a", 1, None, None, None, None, &pair, rng);
+        let reg = RegistrationRequest {
+            identity_key: *pair.identity_key(),
+            device_activation: DeviceActivationInfo {
+                name: "Alice Phone".to_string(),
+                registration_id: 1,
+                key_bundle: create_publish_key_bundle(
+                    Some(vec![0]),
+                    Some(1),
+                    Some(vec![33]),
+                    Some(2),
+                    &pair,
+                    rng,
+                ),
+            },
+        };
 
         let alice_id = create_account(&state, reg, "RealAlice".to_string(), "bob<3".to_string())
             .await
@@ -271,8 +291,8 @@ mod test {
 
         let device_pwd = "charlie<3".to_string();
 
-        let device_link =
-            create_device_link("Alice Laptop", 2, None, None, None, None, token, &pair, rng);
+        let key_bundle = create_publish_key_bundle(None, None, None, None, &pair, rng);
+        let device_link = create_device_link(token, "Alice Laptop", 2, key_bundle);
 
         let res = link_device(&state, device_link, device_pwd)
             .await
