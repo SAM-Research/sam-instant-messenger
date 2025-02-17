@@ -11,7 +11,7 @@ use uuid::Uuid;
 
 use crate::ServerError;
 
-pub fn create_token(secret: &str, account_id: &Uuid) -> LinkDeviceToken {
+pub fn create_token(secret: &str, account_id: Uuid) -> LinkDeviceToken {
     let claims = encode_claims(account_id);
     let signature = create_signature(secret, &claims);
 
@@ -51,7 +51,7 @@ pub fn verify_token(secret: &str, token: LinkDeviceToken) -> Result<Uuid, Server
     Ok(account_id)
 }
 
-fn encode_claims(account_id: &Uuid) -> String {
+fn encode_claims(account_id: Uuid) -> String {
     format!("{}.{}", account_id, time_now_millis())
 }
 

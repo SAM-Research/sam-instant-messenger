@@ -27,9 +27,9 @@ impl InMemoryAccountManager {
 
 #[async_trait::async_trait]
 impl AccountManager for InMemoryAccountManager {
-    async fn get_account(&self, id: &Uuid) -> Result<Account, ServerError> {
+    async fn get_account(&self, id: Uuid) -> Result<Account, ServerError> {
         self.accounts
-            .get(id)
+            .get(&id)
             .ok_or(ServerError::AccountNotExist)
             .cloned()
     }

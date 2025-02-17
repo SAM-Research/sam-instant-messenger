@@ -17,7 +17,7 @@ pub async fn keys_bundles_endpoint<T: StateType>(
     Path(account_id): Path<Uuid>,
     State(state): State<ServerState<T>>,
 ) -> Result<Json<KeyBundleResponse>, ServerError> {
-    get_keybundles(&state, &account_id).await.map(Json)
+    get_keybundles(&state, account_id).await.map(Json)
 }
 
 /// Handle publish of new key bundles
@@ -28,8 +28,8 @@ pub async fn publish_keys_endpoint<T: StateType>(
 ) -> Result<(), ServerError> {
     publish_keybundle(
         &state,
-        auth_user.account().id(),
-        &auth_user.device().id(),
+        *auth_user.account().id(),
+        auth_user.device().id().clone(),
         req,
     )
     .await

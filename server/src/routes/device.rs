@@ -24,7 +24,7 @@ pub async fn device_provision_token_endpoint<T: StateType>(
     if auth_user.device().id() != 1 {
         return Err(ServerError::DeviceProvisionUnAuth);
     }
-    create_device_token(&state, auth_user.account().id())
+    create_device_token(&state, *auth_user.account().id())
         .await
         .map(Json)
 }
@@ -46,5 +46,5 @@ pub async fn delete_device_endpoint<T: StateType>(
     Path(device_id): Path<u32>,
     auth_user: AuthenticatedUser,
 ) -> Result<(), ServerError> {
-    unlink_device(&state, auth_user.account().id(), device_id).await
+    unlink_device(&state, *auth_user.account().id(), device_id).await
 }

@@ -27,27 +27,27 @@ pub async fn delete_account<T: StateType>(
         let mut messages = state.messages.lock().await;
         let mut devices = state.devices.lock().await;
 
-        for device_id in devices.get_devices(&account_id).await? {
-            if let Ok(msgs) = messages.get_messages(&account_id, &device_id).await {
+        for device_id in devices.get_devices(account_id).await? {
+            if let Ok(msgs) = messages.get_message_ids(account_id, device_id).await {
                 for msg_id in msgs {
                     messages
-                        .remove_message(&account_id, &device_id, &msg_id)
+                        .remove_message(account_id, device_id, msg_id)
                         .await?;
                 }
             }
 
-            for id in keys.get_pre_keys(&account_id, &device_id).await? {
-                keys.remove_pre_key(&account_id, &device_id, id).await?
+            for id in keys.get_pre_key_ids(account_id, device_id).await? {
+                keys.remove_pre_key(account_id, device_id, id).await?
             }
-            keys.remove_signed_pre_key(&account_id, &device_id).await?;
+            keys.remove_signed_pre_key(account_id, device_id).await?;
 
-            for id in keys.get_pq_pre_keys(&account_id, &device_id).await? {
-                keys.remove_pq_pre_key(&account_id, &device_id, id).await?
+            for id in keys.get_pq_pre_key_ids(account_id, device_id).await? {
+                keys.remove_pq_pre_key(account_id, device_id, id).await?
             }
 
-            keys.remove_last_resort_key(&account_id, &device_id).await?;
+            keys.remove_last_resort_key(account_id, device_id).await?;
 
-            devices.remove_device(&account_id, device_id).await?;
+            devices.remove_device(account_id, device_id).await?;
         }
     }
 
@@ -71,7 +71,7 @@ pub async fn create_account<T: StateType>(
 
     create_device(
         state,
-        account.id(),
+        *account.id(),
         account.identity(),
         registration.device_activation,
         1,
@@ -140,7 +140,7 @@ mod test {
             .accounts
             .lock()
             .await
-            .get_account(&alice_id)
+            .get_account(alice_id)
             .await
             .expect("Alice has an account");
 
@@ -153,7 +153,7 @@ mod test {
             .devices
             .lock()
             .await
-            .get_device(&alice_id, &1)
+            .get_device(alice_id, 1)
             .await
             .expect("Alice has primary device");
 
@@ -167,14 +167,14 @@ mod test {
         // check if keys are inserted
         let keys = state.keys.lock().await;
 
-        let ec_key_ids = keys.get_pre_keys(&alice_id, &1).await.unwrap();
-        let signed_ec_id = keys.get_signed_pre_key(&alice_id, &1).await.unwrap().id();
+        let ec_key_ids = keys.get_pre_key_ids(alice_id, 1).await.unwrap();
+        let signed_ec_id = keys.get_signed_pre_key(alice_id, 1).await.unwrap().id();
 
         assert!(ec_key_ids == vec![0]);
         assert!(signed_ec_id == 1);
 
-        let pq_key_ids = keys.get_pq_pre_keys(&alice_id, &1).await.unwrap();
-        let last_resort_id = keys.get_last_resort_key(&alice_id, &1).await.unwrap().id();
+        let pq_key_ids = keys.get_pq_pre_key_ids(alice_id, 1).await.unwrap();
+        let last_resort_id = keys.get_last_resort_key(alice_id, 1).await.unwrap().id();
 
         assert!(pq_key_ids == vec![33]);
         assert!(last_resort_id == 2);
@@ -215,42 +215,42 @@ mod test {
             .accounts
             .lock()
             .await
-            .get_account(&alice_id)
+            .get_account(alice_id)
             .await
             .is_err());
         assert!(state
             .devices
             .lock()
             .await
-            .get_device(&alice_id, &1)
+            .get_device(alice_id, 1)
             .await
             .is_err());
         assert!(state
             .keys
             .lock()
             .await
-            .get_last_resort_key(&alice_id, &1)
+            .get_last_resort_key(alice_id, 1)
             .await
             .is_err());
         assert!(state
             .keys
             .lock()
             .await
-            .get_signed_pre_key(&alice_id, &1)
+            .get_signed_pre_key(alice_id, 1)
             .await
             .is_err());
         assert!(state
             .keys
             .lock()
             .await
-            .get_pre_keys(&alice_id, &1)
+            .get_pre_key_ids(alice_id, 1)
             .await
             .is_err());
         assert!(state
             .keys
             .lock()
             .await
-            .get_pq_pre_keys(&alice_id, &1)
+            .get_pq_pre_key_ids(alice_id, 1)
             .await
             .is_err());
     }

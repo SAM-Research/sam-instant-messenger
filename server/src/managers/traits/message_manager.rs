@@ -7,32 +7,32 @@ use uuid::Uuid;
 pub trait MessageManager: Send {
     async fn insert_message(
         &mut self,
-        account_id: &Uuid,
-        device_id: &u32,
-        message_id: &Uuid,
+        account_id: Uuid,
+        device_id: u32,
+        message_id: Uuid,
         message: ServerEnvelope,
     ) -> Result<(), ServerError>;
     async fn get_message(
         &self,
-        account_id: &Uuid,
-        device_id: &u32,
-        message_id: &Uuid,
+        account_id: Uuid,
+        device_id: u32,
+        message_id: Uuid,
     ) -> Result<ServerEnvelope, ServerError>;
     async fn remove_message(
         &mut self,
-        account_id: &Uuid,
-        device_id: &u32,
-        message_id: &Uuid,
+        account_id: Uuid,
+        device_id: u32,
+        message_id: Uuid,
     ) -> Result<(), ServerError>;
-    async fn get_messages(
+    async fn get_message_ids(
         &self,
-        account_id: &Uuid,
-        device_id: &u32,
+        account_id: Uuid,
+        device_id: u32,
     ) -> Result<Vec<Uuid>, ServerError>;
     async fn subscribe(
         &mut self,
-        account_id: &Uuid,
-        device_id: &u32,
+        account_id: Uuid,
+        device_id: u32,
     ) -> Result<Receiver<Uuid>, ServerError>;
-    async fn unsubscribe(&mut self, account_id: &Uuid, device_id: &u32) -> Result<(), ServerError>;
+    async fn unsubscribe(&mut self, account_id: Uuid, device_id: u32) -> Result<(), ServerError>;
 }

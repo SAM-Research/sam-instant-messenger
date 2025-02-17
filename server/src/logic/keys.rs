@@ -14,9 +14,9 @@ use crate::{
 
 pub async fn get_keybundle<T: StateType>(
     state: &ServerState<T>,
-    account_id: &Uuid,
-    registration_id: &u32,
-    device_id: &u32,
+    account_id: Uuid,
+    registration_id: u32,
+    device_id: u32,
 ) -> Result<KeyBundle, ServerError> {
     let mut keys = state.keys.lock().await;
 
@@ -42,8 +42,8 @@ pub async fn get_keybundle<T: StateType>(
     };
 
     Ok(KeyBundle {
-        device_id: *device_id,
-        registration_id: *registration_id,
+        device_id: device_id,
+        registration_id: registration_id,
         pre_key,
         pq_pre_key,
         signed_pre_key,
@@ -53,8 +53,8 @@ pub async fn get_keybundle<T: StateType>(
 pub async fn add_keybundle<T: StateType>(
     state: &ServerState<T>,
     identity: &IdentityKey,
-    account_id: &uuid::Uuid,
-    device_id: &u32,
+    account_id: Uuid,
+    device_id: u32,
     key_bundle: PublishKeyBundle,
 ) -> Result<(), ServerError> {
     let mut keys = state.keys.lock().await;
@@ -84,7 +84,7 @@ pub async fn add_keybundle<T: StateType>(
 
 pub async fn get_keybundles<T: StateType>(
     state: &ServerState<T>,
-    account_id: &Uuid,
+    account_id: Uuid,
 ) -> Result<KeyBundleResponse, ServerError> {
     let identity_key = {
         *state
@@ -100,7 +100,7 @@ pub async fn get_keybundles<T: StateType>(
         let devices = state.devices.lock().await;
         let mut device_vec = vec![];
         for id in devices.get_devices(account_id).await? {
-            let device = devices.get_device(account_id, &id).await?;
+            let device = devices.get_device(account_id, id).await?;
             device_vec.push(device);
         }
         device_vec
@@ -110,7 +110,7 @@ pub async fn get_keybundles<T: StateType>(
         let mut bundle_vec = vec![];
         for device in devices {
             bundle_vec.push(
-                get_keybundle(state, account_id, &device.registration_id(), &device.id()).await?,
+                get_keybundle(state, account_id, device.registration_id(), device.id()).await?,
             );
         }
         bundle_vec
@@ -124,8 +124,8 @@ pub async fn get_keybundles<T: StateType>(
 
 pub async fn publish_keybundle<T: StateType>(
     state: &ServerState<T>,
-    account_id: &Uuid,
-    device_id: &u32,
+    account_id: Uuid,
+    device_id: u32,
     bundle: PublishKeyBundle,
 ) -> Result<(), ServerError> {
     let identity = {
@@ -185,35 +185,35 @@ mod test {
             rng,
         );
 
-        add_keybundle(&state, pair.identity_key(), &account_id, &1, key_bundle)
+        add_keybundle(&state, pair.identity_key(), account_id, 1, key_bundle)
             .await
             .expect("User can create key bundle");
         assert!(state
             .keys
             .lock()
             .await
-            .get_last_resort_key(&account_id, &1)
+            .get_last_resort_key(account_id, 1)
             .await
             .is_ok());
         assert!(state
             .keys
             .lock()
             .await
-            .get_signed_pre_key(&account_id, &1)
+            .get_signed_pre_key(account_id, 1)
             .await
             .is_ok());
         assert!(state
             .keys
             .lock()
             .await
-            .get_pre_keys(&account_id, &1)
+            .get_pre_key_ids(account_id, 1)
             .await
             .is_ok());
         assert!(state
             .keys
             .lock()
             .await
-            .get_pq_pre_keys(&account_id, &1)
+            .get_pq_pre_key_ids(account_id, 1)
             .await
             .is_ok());
     }
@@ -235,12 +235,12 @@ mod test {
             rng,
         );
 
-        add_keybundle(&state, pair.identity_key(), &account_id, &1, key_bundle)
+        add_keybundle(&state, pair.identity_key(), account_id, 1, key_bundle)
             .await
             .expect("User can create key bundle");
 
         // testing if we get keys
-        let bundle = get_keybundle(&state, &account_id, &1, &1)
+        let bundle = get_keybundle(&state, account_id, 1, 1)
             .await
             .expect("User have uploaded bundles");
 
@@ -251,7 +251,7 @@ mod test {
         assert!(bundle.pq_pre_key.id() == 1);
 
         // testing if we get last resort key
-        let bundle = get_keybundle(&state, &account_id, &1, &1)
+        let bundle = get_keybundle(&state, account_id, 1, 1)
             .await
             .expect("User have uploaded bundles");
         assert!(bundle.pq_pre_key.id() == 33)
@@ -286,8 +286,8 @@ mod test {
             rng,
         );
 
-        let account_id = account.id();
-        publish_keybundle(&state, account_id, &1, key_bundle)
+        let account_id = *account.id();
+        publish_keybundle(&state, account_id, 1, key_bundle)
             .await
             .expect("Alice can publish bundle");
 
@@ -295,28 +295,28 @@ mod test {
             .keys
             .lock()
             .await
-            .get_last_resort_key(account_id, &1)
+            .get_last_resort_key(account_id, 1)
             .await
             .is_ok());
         assert!(state
             .keys
             .lock()
             .await
-            .get_signed_pre_key(account_id, &1)
+            .get_signed_pre_key(account_id, 1)
             .await
             .is_ok());
         assert!(state
             .keys
             .lock()
             .await
-            .get_pre_keys(account_id, &1)
+            .get_pre_key_ids(account_id, 1)
             .await
             .is_ok());
         assert!(state
             .keys
             .lock()
             .await
-            .get_pq_pre_keys(account_id, &1)
+            .get_pq_pre_key_ids(account_id, 1)
             .await
             .is_ok());
     }
@@ -349,12 +349,12 @@ mod test {
             .registration_id(1)
             .build();
 
-        let account_id = account.id();
+        let account_id = *account.id();
         state
             .devices
             .lock()
             .await
-            .add_device(account_id, device)
+            .add_device(account_id, &device)
             .await
             .expect("Alice can add device");
 
@@ -367,7 +367,7 @@ mod test {
             rng,
         );
 
-        publish_keybundle(&state, account_id, &1, key_bundle)
+        publish_keybundle(&state, account_id, 1, key_bundle)
             .await
             .expect("Alice can publish bundle");
 

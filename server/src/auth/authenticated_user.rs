@@ -53,13 +53,13 @@ impl<T: StateType> FromRequestParts<ServerState<T>> for AuthenticatedUser {
             .parse()
             .map_err(|_| ServerError::AuthBasicParseError)?;
 
-        let account = { state.accounts.lock().await.get_account(&account_id).await? };
+        let account = { state.accounts.lock().await.get_account(account_id).await? };
         let device = {
             state
                 .devices
                 .lock()
                 .await
-                .get_device(&account_id, &device_id)
+                .get_device(account_id, device_id)
                 .await?
         };
 
@@ -127,12 +127,12 @@ mod test {
             .registration_id(1)
             .build();
 
-        let account_id = account.id();
+        let account_id = *account.id();
         state
             .devices
             .lock()
             .await
-            .add_device(account_id, device)
+            .add_device(account_id, &device)
             .await
             .expect("Alice can add device");
 
@@ -145,8 +145,7 @@ mod test {
 
         let result = AuthenticatedUser::from_request_parts(&mut parts, &state).await;
 
-        assert!(
-            result.is_ok_and(|au| au.account().id() == account_id && au.device().id() == device_id)
-        )
+        assert!(result
+            .is_ok_and(|au| *au.account().id() == account_id && au.device().id() == device_id))
     }
 }
