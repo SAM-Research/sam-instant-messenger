@@ -1,20 +1,22 @@
+use sam_common::address::{DeviceId, RegistrationId};
+
 use crate::auth::password::Password;
 
 #[derive(Clone, bon::Builder, PartialEq, Eq)]
 pub struct Device {
-    registration_id: u32,
-    id: u32,
+    registration_id: RegistrationId,
+    id: DeviceId,
     name: String,
     creation: u128,
     password: Password,
 }
 
 impl Device {
-    pub fn registration_id(&self) -> u32 {
+    pub fn registration_id(&self) -> RegistrationId {
         self.registration_id
     }
 
-    pub fn id(&self) -> u32 {
+    pub fn id(&self) -> DeviceId {
         self.id
     }
 

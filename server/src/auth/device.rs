@@ -1,17 +1,16 @@
-use std::time::Duration;
+use std::{str::FromStr, time::Duration};
 
 use base64::{
     prelude::{BASE64_STANDARD_NO_PAD, BASE64_URL_SAFE},
     Engine,
 };
 use hkdf::hmac::{Hmac, Mac};
-use sam_common::{api::device::LinkDeviceToken, time_now_millis};
+use sam_common::{address::AccountId, api::device::LinkDeviceToken, time_now_millis};
 use sha2::{Digest, Sha256};
-use uuid::Uuid;
 
 use crate::ServerError;
 
-pub fn create_token(secret: &str, account_id: &Uuid) -> LinkDeviceToken {
+pub fn create_token(secret: &str, account_id: AccountId) -> LinkDeviceToken {
     let claims = encode_claims(account_id);
     let signature = create_signature(secret, &claims);
 
@@ -20,7 +19,7 @@ pub fn create_token(secret: &str, account_id: &Uuid) -> LinkDeviceToken {
     LinkDeviceToken::new(id, token)
 }
 
-pub fn verify_token(secret: &str, token: LinkDeviceToken) -> Result<Uuid, ServerError> {
+pub fn verify_token(secret: &str, token: LinkDeviceToken) -> Result<AccountId, ServerError> {
     let (claims, b64_signature) = token
         .token()
         .split_once(":")
@@ -36,7 +35,8 @@ pub fn verify_token(secret: &str, token: LinkDeviceToken) -> Result<Uuid, Server
     }
 
     let (account_id, timestamp) = decode_claims(claims)?;
-    let account_id = Uuid::parse_str(account_id).map_err(|_| ServerError::DeviceTokenMalformed)?;
+    let account_id =
+        AccountId::from_str(account_id).map_err(|_| ServerError::DeviceTokenMalformed)?;
 
     let time_then = Duration::from_millis(
         timestamp
@@ -51,7 +51,7 @@ pub fn verify_token(secret: &str, token: LinkDeviceToken) -> Result<Uuid, Server
     Ok(account_id)
 }
 
-fn encode_claims(account_id: &Uuid) -> String {
+fn encode_claims(account_id: AccountId) -> String {
     format!("{}.{}", account_id, time_now_millis())
 }
 

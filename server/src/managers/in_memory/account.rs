@@ -1,6 +1,6 @@
 use std::collections::HashMap;
 
-use uuid::Uuid;
+use sam_common::address::AccountId;
 
 use crate::{
     managers::{entities::account::Account, traits::account_manager::AccountManager},
@@ -8,7 +8,7 @@ use crate::{
 };
 
 pub struct InMemoryAccountManager {
-    accounts: HashMap<Uuid, Account>,
+    accounts: HashMap<AccountId, Account>,
 }
 
 impl Default for InMemoryAccountManager {
@@ -27,22 +27,22 @@ impl InMemoryAccountManager {
 
 #[async_trait::async_trait]
 impl AccountManager for InMemoryAccountManager {
-    async fn get_account(&self, id: &Uuid) -> Result<Account, ServerError> {
+    async fn get_account(&self, id: AccountId) -> Result<Account, ServerError> {
         self.accounts
-            .get(id)
+            .get(&id)
             .ok_or(ServerError::AccountNotExist)
             .cloned()
     }
 
     async fn add_account(&mut self, account: &Account) -> Result<(), ServerError> {
-        if self.accounts.contains_key(account.id()) {
+        if self.accounts.contains_key(&account.id()) {
             return Err(ServerError::AccountExists);
         }
-        self.accounts.insert(*account.id(), account.clone());
+        self.accounts.insert(account.id(), account.clone());
         Ok(())
     }
 
-    async fn remove_account(&mut self, account_id: Uuid) -> Result<(), ServerError> {
+    async fn remove_account(&mut self, account_id: AccountId) -> Result<(), ServerError> {
         self.accounts
             .remove(&account_id)
             .ok_or(ServerError::AccountNotExist)

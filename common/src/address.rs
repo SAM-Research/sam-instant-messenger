@@ -1,7 +1,10 @@
 use std::{
     fmt::{self, Display, Formatter},
     str::FromStr,
+    u32,
 };
+
+use serde::{Deserialize, Serialize};
 
 use derive_more::{Display, From, Into};
 use rand::Rng;
@@ -11,7 +14,7 @@ const REGISTRATION_ID_MAX: u32 = 16383;
 
 macro_rules! define_id_type {
     ($name:ident) => {
-        #[derive(Debug, Clone, Copy, Hash, PartialEq, Eq, From, Into)]
+        #[derive(Debug, Clone, Copy, Hash, PartialEq, Eq, From, Into, Serialize, Deserialize)]
         pub struct $name(Uuid);
 
         impl $name {
@@ -60,7 +63,21 @@ macro_rules! define_id_type {
 define_id_type!(AccountId);
 define_id_type!(MessageId);
 
-#[derive(Copy, Clone, Debug, Hash, Eq, PartialEq, PartialOrd, Ord, From, Into, Default)]
+#[derive(
+    Copy,
+    Clone,
+    Debug,
+    Hash,
+    Eq,
+    PartialEq,
+    PartialOrd,
+    Ord,
+    From,
+    Into,
+    Default,
+    Serialize,
+    Deserialize,
+)]
 pub struct DeviceId(u32);
 
 impl Display for DeviceId {
@@ -69,7 +86,29 @@ impl Display for DeviceId {
     }
 }
 
-#[derive(Copy, Clone, Debug, Hash, Eq, PartialEq, PartialOrd, Ord, From, Into, Default)]
+impl FromStr for DeviceId {
+    type Err = <u32 as FromStr>::Err;
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        Ok(Self(s.parse()?))
+    }
+}
+
+#[derive(
+    Copy,
+    Clone,
+    Debug,
+    Hash,
+    Eq,
+    PartialEq,
+    PartialOrd,
+    Ord,
+    From,
+    Into,
+    Default,
+    Serialize,
+    Deserialize,
+)]
 pub struct RegistrationId(u32);
 
 impl RegistrationId {

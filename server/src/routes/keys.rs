@@ -2,8 +2,10 @@ use axum::{
     extract::{Path, State},
     Json,
 };
-use sam_common::api::keys::{PreKeyBundles, PublishPreKeys};
-use uuid::Uuid;
+use sam_common::{
+    address::AccountId,
+    api::keys::{PreKeyBundles, PublishPreKeys},
+};
 
 use crate::{
     auth::authenticated_user::AuthenticatedUser,
@@ -14,10 +16,10 @@ use crate::{
 
 /// Returns key bundles for users devices
 pub async fn keys_bundles_endpoint<T: StateType>(
-    Path(account_id): Path<Uuid>,
+    Path(account_id): Path<AccountId>,
     State(state): State<ServerState<T>>,
 ) -> Result<Json<PreKeyBundles>, ServerError> {
-    get_keybundles(&state, &account_id).await.map(Json)
+    get_keybundles(&state, account_id).await.map(Json)
 }
 
 /// Handle publish of new key bundles
@@ -29,7 +31,7 @@ pub async fn publish_keys_endpoint<T: StateType>(
     publish_keybundle(
         &state,
         auth_user.account().id(),
-        &auth_user.device().id(),
+        auth_user.device().id(),
         req,
     )
     .await

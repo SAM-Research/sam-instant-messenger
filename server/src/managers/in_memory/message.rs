@@ -1,16 +1,16 @@
 use std::collections::HashMap;
 
-use sam_common::sam_message::ServerEnvelope;
+use sam_common::{
+    address::{AccountId, DeviceAddress, DeviceId, MessageId},
+    sam_message::ServerEnvelope,
+};
 use tokio::sync::mpsc;
-use uuid::Uuid;
 
 use crate::{managers::traits::message_manager::MessageManager, ServerError};
 
-use super::device_key;
-
 pub struct InMemoryMessageManager {
-    messages: HashMap<String, HashMap<Uuid, ServerEnvelope>>,
-    subscribers: HashMap<String, mpsc::Sender<Uuid>>,
+    messages: HashMap<DeviceAddress, HashMap<MessageId, ServerEnvelope>>,
+    subscribers: HashMap<DeviceAddress, mpsc::Sender<MessageId>>,
 }
 
 impl Default for InMemoryMessageManager {
@@ -32,12 +32,12 @@ impl InMemoryMessageManager {
 impl MessageManager for InMemoryMessageManager {
     async fn insert_message(
         &mut self,
-        account_id: &Uuid,
-        device_id: &u32,
-        message_id: &Uuid,
+        account_id: AccountId,
+        device_id: DeviceId,
+        message_id: MessageId,
         message: ServerEnvelope,
     ) -> Result<(), ServerError> {
-        let key = device_key(account_id, *device_id);
+        let key = DeviceAddress::new(account_id, device_id);
 
         if !self.messages.contains_key(&key) {
             self.messages.insert(key.clone(), HashMap::new());
@@ -47,27 +47,27 @@ impl MessageManager for InMemoryMessageManager {
 
         if msgs
             .as_ref()
-            .is_some_and(|map| map.contains_key(message_id))
+            .is_some_and(|map| map.contains_key(&message_id))
         {
             return Err(ServerError::EnvelopeExists);
         };
 
-        let _ = msgs.and_then(|map| map.insert(*message_id, message));
+        let _ = msgs.and_then(|map| map.insert(message_id, message));
 
         Ok(())
     }
 
     async fn get_message(
         &self,
-        account_id: &Uuid,
-        device_id: &u32,
-        message_id: &Uuid,
+        account_id: AccountId,
+        device_id: DeviceId,
+        message_id: MessageId,
     ) -> Result<ServerEnvelope, ServerError> {
-        let key = device_key(account_id, *device_id);
+        let key = DeviceAddress::new(account_id, device_id);
 
         match self.messages.get(&key) {
             Some(msgs) => msgs
-                .get(message_id)
+                .get(&message_id)
                 .cloned()
                 .ok_or(ServerError::EnvelopeNotExists),
             None => Err(ServerError::AccountNotExist),
@@ -76,15 +76,15 @@ impl MessageManager for InMemoryMessageManager {
 
     async fn remove_message(
         &mut self,
-        account_id: &Uuid,
-        device_id: &u32,
-        message_id: &Uuid,
+        account_id: AccountId,
+        device_id: DeviceId,
+        message_id: MessageId,
     ) -> Result<(), ServerError> {
-        let key = device_key(account_id, *device_id);
+        let key = DeviceAddress::new(account_id, device_id);
 
         match self.messages.get_mut(&key) {
             Some(msgs) => msgs
-                .remove(message_id)
+                .remove(&message_id)
                 .ok_or(ServerError::EnvelopeNotExists)
                 .map(|_| ()),
             None => Err(ServerError::AccountNotExist),
@@ -93,23 +93,23 @@ impl MessageManager for InMemoryMessageManager {
 
     async fn get_messages(
         &self,
-        account_id: &Uuid,
-        device_id: &u32,
-    ) -> Result<Vec<Uuid>, ServerError> {
-        let key = device_key(account_id, *device_id);
+        account_id: AccountId,
+        device_id: DeviceId,
+    ) -> Result<Vec<MessageId>, ServerError> {
+        let key = DeviceAddress::new(account_id, device_id);
 
         self.messages
             .get(&key)
             .ok_or(ServerError::AccountNotExist)
-            .map(|msgs| msgs.keys().cloned().collect::<Vec<Uuid>>())
+            .map(|msgs| msgs.keys().cloned().collect::<Vec<MessageId>>())
     }
 
     async fn subscribe(
         &mut self,
-        account_id: &Uuid,
-        device_id: &u32,
-    ) -> Result<mpsc::Receiver<Uuid>, ServerError> {
-        let key = device_key(account_id, *device_id);
+        account_id: AccountId,
+        device_id: DeviceId,
+    ) -> Result<mpsc::Receiver<MessageId>, ServerError> {
+        let key = DeviceAddress::new(account_id, device_id);
         let (sender, receiver) = mpsc::channel(10);
 
         if self.subscribers.contains_key(&key) {
@@ -120,8 +120,12 @@ impl MessageManager for InMemoryMessageManager {
         Ok(receiver)
     }
 
-    async fn unsubscribe(&mut self, account_id: &Uuid, device_id: &u32) -> Result<(), ServerError> {
-        let key = device_key(account_id, *device_id);
+    async fn unsubscribe(
+        &mut self,
+        account_id: AccountId,
+        device_id: DeviceId,
+    ) -> Result<(), ServerError> {
+        let key = DeviceAddress::new(account_id, device_id);
 
         if self.subscribers.contains_key(&key) {
             return Err(ServerError::MessageSubscriberNotExists);

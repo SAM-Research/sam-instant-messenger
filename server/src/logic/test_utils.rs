@@ -4,6 +4,7 @@ use libsignal_protocol::{
 };
 use rand::rngs::OsRng;
 use sam_common::{
+    address::RegistrationId,
     api::{
         device::DeviceActivationInfo, keys::PublishPreKeys, EcPreKey, LinkDeviceRequest,
         LinkDeviceToken, PqPreKey, SignedEcPreKey,
@@ -14,7 +15,7 @@ use sam_common::{
 pub fn create_device_link(
     token: LinkDeviceToken,
     name: &str,
-    registration_id: u32,
+    registration_id: RegistrationId,
     key_bundle: PublishPreKeys,
 ) -> LinkDeviceRequest {
     LinkDeviceRequest {

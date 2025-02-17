@@ -1,16 +1,16 @@
 use libsignal_protocol::IdentityKey;
-use uuid::Uuid;
+use sam_common::address::AccountId;
 
 #[derive(Clone, bon::Builder)]
 pub struct Account {
-    id: Uuid,
+    id: AccountId,
     username: String,
     identity: IdentityKey,
 }
 
 impl Account {
-    pub fn id(&self) -> &Uuid {
-        &self.id
+    pub fn id(&self) -> AccountId {
+        self.id
     }
 
     pub fn username(&self) -> &str {

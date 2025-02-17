@@ -1,6 +1,7 @@
 use libsignal_protocol::IdentityKey;
 use serde::{Deserialize, Serialize};
-use uuid::Uuid;
+
+use crate::address::AccountId;
 
 use super::{device::DeviceActivationInfo, keys::id_key};
 
@@ -15,5 +16,5 @@ pub struct RegistrationRequest {
 #[derive(Serialize, Deserialize, Clone)]
 #[serde(rename_all = "camelCase")]
 pub struct RegistrationResponse {
-    pub account_id: Uuid,
+    pub account_id: AccountId,
 }
