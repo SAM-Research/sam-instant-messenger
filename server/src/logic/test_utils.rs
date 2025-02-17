@@ -5,7 +5,7 @@ use libsignal_protocol::{
 use rand::rngs::OsRng;
 use sam_common::{
     api::{
-        device::DeviceActivationInfo, keys::PublishKeyBundle, EcPreKey, LinkDeviceRequest,
+        device::DeviceActivationInfo, keys::PublishPreKeys, EcPreKey, LinkDeviceRequest,
         LinkDeviceToken, PqPreKey, SignedEcPreKey,
     },
     time_now_millis,
@@ -15,7 +15,7 @@ pub fn create_device_link(
     token: LinkDeviceToken,
     name: &str,
     registration_id: u32,
-    key_bundle: PublishKeyBundle,
+    key_bundle: PublishPreKeys,
 ) -> LinkDeviceRequest {
     LinkDeviceRequest {
         token,
@@ -35,7 +35,7 @@ pub fn create_publish_key_bundle(
 
     pair: &IdentityKeyPair,
     rng: OsRng,
-) -> PublishKeyBundle {
+) -> PublishPreKeys {
     let pre_keys = pre_key_ids.map(|keys| {
         keys.iter()
             .map(|id| ec_pre_key(*id, rng))
@@ -51,7 +51,7 @@ pub fn create_publish_key_bundle(
     });
     let pq_last_resort_pre_key = pq_last_resort_pre_key_id.map(|id| pq_pre_key(id, pair));
 
-    PublishKeyBundle {
+    PublishPreKeys {
         pre_keys,
         signed_pre_key,
         pq_pre_keys,

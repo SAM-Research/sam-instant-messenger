@@ -1,5 +1,5 @@
 use libsignal_protocol::IdentityKey;
-use sam_common::api::keys::{Key, KeyBundle, KeyBundleResponse, PublishKeyBundle};
+use sam_common::api::keys::{Key, PreKeyBundle, PreKeyBundles, PublishPreKeys};
 use uuid::Uuid;
 
 use crate::{
@@ -17,7 +17,7 @@ pub async fn get_keybundle<T: StateType>(
     account_id: &Uuid,
     registration_id: &u32,
     device_id: &u32,
-) -> Result<KeyBundle, ServerError> {
+) -> Result<PreKeyBundle, ServerError> {
     let mut keys = state.keys.lock().await;
 
     let pre_key = keys.get_pre_key(account_id, device_id).await?;
@@ -41,7 +41,7 @@ pub async fn get_keybundle<T: StateType>(
         None => keys.get_last_resort_key(account_id, device_id).await?,
     };
 
-    Ok(KeyBundle {
+    Ok(PreKeyBundle {
         device_id: *device_id,
         registration_id: *registration_id,
         pre_key,
@@ -55,7 +55,7 @@ pub async fn add_keybundle<T: StateType>(
     identity: &IdentityKey,
     account_id: &uuid::Uuid,
     device_id: &u32,
-    key_bundle: PublishKeyBundle,
+    key_bundle: PublishPreKeys,
 ) -> Result<(), ServerError> {
     let mut keys = state.keys.lock().await;
     if let Some(pre_keys) = key_bundle.pre_keys {
@@ -85,7 +85,7 @@ pub async fn add_keybundle<T: StateType>(
 pub async fn get_keybundles<T: StateType>(
     state: &ServerState<T>,
     account_id: &Uuid,
-) -> Result<KeyBundleResponse, ServerError> {
+) -> Result<PreKeyBundles, ServerError> {
     let identity_key = {
         *state
             .accounts
@@ -116,7 +116,7 @@ pub async fn get_keybundles<T: StateType>(
         bundle_vec
     };
 
-    Ok(KeyBundleResponse {
+    Ok(PreKeyBundles {
         identity_key,
         bundles,
     })
@@ -126,7 +126,7 @@ pub async fn publish_keybundle<T: StateType>(
     state: &ServerState<T>,
     account_id: &Uuid,
     device_id: &u32,
-    bundle: PublishKeyBundle,
+    bundle: PublishPreKeys,
 ) -> Result<(), ServerError> {
     let identity = {
         *state

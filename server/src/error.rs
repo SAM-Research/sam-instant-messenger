@@ -2,7 +2,7 @@ use axum::{http::StatusCode, response::IntoResponse};
 use derive_more::derive::{Display, Error};
 use sam_common::LibError;
 
-pub type Result<T> = std::result::Result<T, ServerError>;
+use crate::storage::error::DatabaseError;
 
 #[derive(Debug, Display, Error)]
 pub enum ServerError {
@@ -31,6 +31,7 @@ pub enum ServerError {
     EnvelopeNotExists,
     MessageSubscriberExists,
     MessageSubscriberNotExists,
+    Database(DatabaseError),
 }
 
 impl IntoResponse for ServerError {
@@ -62,6 +63,7 @@ impl IntoResponse for ServerError {
             ServerError::EnvelopeNotExists => todo!(),
             ServerError::MessageSubscriberExists => todo!(),
             ServerError::MessageSubscriberNotExists => todo!(),
+            ServerError::Database(_) => todo!(),
         }
         .into_response()
     }
