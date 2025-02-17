@@ -1,14 +1,14 @@
 use axum::{http::StatusCode, response::IntoResponse};
 use derive_more::derive::{Display, Error};
+use libsignal_protocol::SignalProtocolError;
 use sam_common::LibError;
-
-use crate::storage::error::DatabaseError;
 
 #[derive(Debug, Display, Error)]
 pub enum ServerError {
     #[error(ignore)]
     Custom(String),
     Lib(LibError),
+    SignalProtocol(SignalProtocolError),
     KeyVerification,
     DeviceTokenMalformed,
     DeviceSignatureDecodeError,
@@ -31,7 +31,6 @@ pub enum ServerError {
     EnvelopeNotExists,
     MessageSubscriberExists,
     MessageSubscriberNotExists,
-    Database(DatabaseError),
 }
 
 impl IntoResponse for ServerError {
@@ -63,7 +62,7 @@ impl IntoResponse for ServerError {
             ServerError::EnvelopeNotExists => todo!(),
             ServerError::MessageSubscriberExists => todo!(),
             ServerError::MessageSubscriberNotExists => todo!(),
-            ServerError::Database(_) => todo!(),
+            ServerError::SignalProtocol(_) => todo!(),
         }
         .into_response()
     }
