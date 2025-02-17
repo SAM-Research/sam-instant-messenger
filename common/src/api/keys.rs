@@ -56,7 +56,7 @@ macro_rules! define_signed_key {
     };
 }
 
-pub trait Key {
+pub trait Key: Sized + Send {
     fn id(&self) -> u32;
     fn public_key(&self) -> &[u8];
 }
