@@ -31,6 +31,9 @@ pub enum ServerError {
     WebSocketDecodeError,
     WebSocketDisconnected,
     WebSocketSendError,
+    MessageAlreadyPending,
+    MessageNotPending,
+    EnvelopeMalformed,
 }
 
 impl IntoResponse for ServerError {
@@ -60,6 +63,9 @@ impl IntoResponse for ServerError {
             ServerError::WebSocketDecodeError => todo!(),
             ServerError::WebSocketDisconnected => todo!(),
             ServerError::WebSocketSendError => todo!(),
+            ServerError::MessageAlreadyPending => todo!(),
+            ServerError::MessageNotPending => todo!(),
+            ServerError::EnvelopeMalformed => todo!(),
         }
         .into_response()
     }

@@ -1,4 +1,7 @@
-use std::{collections::HashMap, sync::Arc};
+use std::{
+    collections::{HashMap, HashSet},
+    sync::Arc,
+};
 
 use sam_common::sam_message::ServerEnvelope;
 use tokio::sync::{mpsc, Mutex};
@@ -12,6 +15,7 @@ use super::device_key;
 pub struct InMemoryMessageManager {
     messages: Arc<Mutex<HashMap<String, HashMap<Uuid, ServerEnvelope>>>>,
     subscribers: Arc<Mutex<HashMap<String, mpsc::Sender<Uuid>>>>,
+    pending_messages: Arc<Mutex<HashSet<String>>>,
 }
 
 impl Default for InMemoryMessageManager {
@@ -25,18 +29,19 @@ impl InMemoryMessageManager {
         InMemoryMessageManager {
             messages: Arc::new(Mutex::new(HashMap::new())),
             subscribers: Arc::new(Mutex::new(HashMap::new())),
+            pending_messages: Arc::new(Mutex::new(HashSet::new())),
         }
     }
 }
 
 #[async_trait::async_trait]
 impl MessageManager for InMemoryMessageManager {
-    async fn insert_message(
+    async fn insert_envelope(
         &mut self,
         account_id: Uuid,
         device_id: u32,
-        message_id: Uuid,
-        message: ServerEnvelope,
+        envelope_id: Uuid,
+        envelope: ServerEnvelope,
     ) -> Result<(), ServerError> {
         let key = device_key(account_id, device_id);
 
@@ -52,51 +57,51 @@ impl MessageManager for InMemoryMessageManager {
 
         if msgs
             .as_ref()
-            .is_some_and(|map| map.contains_key(&message_id))
+            .is_some_and(|map| map.contains_key(&envelope_id))
         {
             return Err(ServerError::EnvelopeExists);
         };
 
-        let _ = msgs.and_then(|map| map.insert(message_id, message));
+        let _ = msgs.and_then(|map| map.insert(envelope_id, envelope));
 
         Ok(())
     }
 
-    async fn get_message(
+    async fn get_envelope(
         &self,
         account_id: Uuid,
         device_id: u32,
-        message_id: Uuid,
+        envelope_id: Uuid,
     ) -> Result<ServerEnvelope, ServerError> {
         let key = device_key(account_id, device_id);
 
         match self.messages.lock().await.get(&key) {
             Some(msgs) => msgs
-                .get(&message_id)
+                .get(&envelope_id)
                 .cloned()
                 .ok_or(ServerError::EnvelopeNotExists),
             None => Err(ServerError::AccountNotExist),
         }
     }
 
-    async fn remove_message(
+    async fn remove_envelope(
         &mut self,
         account_id: Uuid,
         device_id: u32,
-        message_id: Uuid,
+        envelope_id: Uuid,
     ) -> Result<(), ServerError> {
         let key = device_key(account_id, device_id);
 
         match self.messages.lock().await.get_mut(&key) {
             Some(msgs) => msgs
-                .remove(&message_id)
+                .remove(&envelope_id)
                 .ok_or(ServerError::EnvelopeNotExists)
                 .map(|_| ()),
             None => Err(ServerError::AccountNotExist),
         }
     }
 
-    async fn get_message_ids(
+    async fn get_envelope_ids(
         &self,
         account_id: Uuid,
         device_id: u32,
@@ -136,4 +141,38 @@ impl MessageManager for InMemoryMessageManager {
 
         self.subscribers.lock().await.remove(&key);
     }
+
+    async fn add_pending_message(
+        &mut self,
+        account_id: Uuid,
+        device_id: u32,
+        message_id: Uuid,
+    ) -> Result<(), ServerError> {
+        let key = message_key(account_id, device_id, message_id);
+
+        if self.pending_messages.lock().await.contains(&key) {
+            return Err(ServerError::MessageAlreadyPending);
+        }
+        self.pending_messages.lock().await.insert(key);
+        Ok(())
+    }
+
+    async fn remove_pending_message(
+        &mut self,
+        account_id: Uuid,
+        device_id: u32,
+        message_id: Uuid,
+    ) -> Result<(), ServerError> {
+        let key = message_key(account_id, device_id, message_id);
+
+        if !self.pending_messages.lock().await.contains(&key) {
+            return Err(ServerError::MessageNotPending);
+        }
+        self.pending_messages.lock().await.remove(&key);
+        Ok(())
+    }
+}
+
+fn message_key(account_id: Uuid, device_id: u32, message_id: Uuid) -> String {
+    format!("{}.{}", device_key(account_id, device_id), message_id)
 }

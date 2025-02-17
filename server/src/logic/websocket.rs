@@ -30,7 +30,7 @@ macro_rules! closing_err {
 pub async fn websocket_message_receiver<T: StateType>(
     mut state: ServerState<T>,
     mut receiver: SplitStream<WebSocket>,
-    message_producer: Sender<Result<ServerMessage, ServerError>>,
+    message_producer: Sender<Result<Option<ServerMessage>, ServerError>>,
     auth_user: AuthenticatedUser,
 ) {
     while let Some(Ok(msg)) = receiver.next().await {
@@ -47,7 +47,7 @@ pub async fn websocket_message_receiver<T: StateType>(
         };
 
         let msg_res = match decode_res {
-            Ok(msg) => handle_client_message(&mut state, msg).await,
+            Ok(msg) => handle_client_message(&mut state, &auth_user, msg).await,
             Err(_) => Err(ServerError::WebSocketDecodeError),
         };
 
@@ -61,12 +61,12 @@ pub async fn websocket_message_receiver<T: StateType>(
 pub async fn websocket_message_sender<T: StateType>(
     mut state: ServerState<T>,
     mut sender: SplitSink<WebSocket, Message>,
-    mut message_consumer: Receiver<Result<ServerMessage, ServerError>>,
+    mut message_consumer: Receiver<Result<Option<ServerMessage>, ServerError>>,
     auth_user: AuthenticatedUser,
 ) {
     while let Some(msg_res) = message_consumer.recv().await {
         let send_res = match msg_res {
-            Ok(msg) => sender
+            Ok(Some(msg)) => sender
                 .send(Message::Binary(msg.encode_to_vec()))
                 .await
                 .map_err(|_| ServerError::WebSocketSendError),
@@ -84,6 +84,7 @@ pub async fn websocket_message_sender<T: StateType>(
                     Err(x) => Err(x),
                 }
             }
+            Ok(None) => continue,
         };
 
         match send_res {
@@ -104,17 +105,17 @@ pub async fn websocket_message_sender<T: StateType>(
 pub async fn websocket_dispatcher<T: StateType>(
     mut state: ServerState<T>,
     mut dispatch: Receiver<Uuid>,
-    message_producer: Sender<Result<ServerMessage, ServerError>>,
+    message_producer: Sender<Result<Option<ServerMessage>, ServerError>>,
     auth_user: AuthenticatedUser,
 ) {
     while let Some(msg_id) = dispatch.recv().await {
         let msg_res = state
             .messages
-            .get_message(*auth_user.account().id(), auth_user.device().id(), msg_id)
+            .get_envelope(*auth_user.account().id(), auth_user.device().id(), msg_id)
             .await;
 
         let msg_res = match msg_res {
-            Ok(envelope) => handle_server_envelope(&mut state, envelope).await,
+            Ok(envelope) => handle_server_envelope(&mut state, &auth_user, envelope).await,
             Err(e) => Err(e),
         };
 

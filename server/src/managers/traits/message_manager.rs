@@ -5,26 +5,26 @@ use uuid::Uuid;
 
 #[async_trait::async_trait]
 pub trait MessageManager: Send + Sync + Clone {
-    async fn insert_message(
+    async fn insert_envelope(
         &mut self,
         account_id: Uuid,
         device_id: u32,
-        message_id: Uuid,
-        message: ServerEnvelope,
+        envelope_id: Uuid,
+        envelope: ServerEnvelope,
     ) -> Result<(), ServerError>;
-    async fn get_message(
+    async fn get_envelope(
         &self,
         account_id: Uuid,
         device_id: u32,
-        message_id: Uuid,
+        envelope_id: Uuid,
     ) -> Result<ServerEnvelope, ServerError>;
-    async fn remove_message(
+    async fn remove_envelope(
         &mut self,
         account_id: Uuid,
         device_id: u32,
-        message_id: Uuid,
+        envelope_id: Uuid,
     ) -> Result<(), ServerError>;
-    async fn get_message_ids(
+    async fn get_envelope_ids(
         &self,
         account_id: Uuid,
         device_id: u32,
@@ -35,4 +35,16 @@ pub trait MessageManager: Send + Sync + Clone {
         device_id: u32,
     ) -> Result<Receiver<Uuid>, ServerError>;
     async fn unsubscribe(&mut self, account_id: Uuid, device_id: u32);
+    async fn add_pending_message(
+        &mut self,
+        account_id: Uuid,
+        device_id: u32,
+        message_id: Uuid,
+    ) -> Result<(), ServerError>;
+    async fn remove_pending_message(
+        &mut self,
+        account_id: Uuid,
+        device_id: u32,
+        message_id: Uuid,
+    ) -> Result<(), ServerError>;
 }
