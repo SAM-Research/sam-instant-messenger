@@ -83,7 +83,11 @@ impl DeviceManager for InMemoryDeviceManager {
             return Err(ServerError::DeviceExists);
         }
 
-        self.account_devices.lock().await.entry(account_id).or_insert_with(HashSet::new);
+        self.account_devices
+            .lock()
+            .await
+            .entry(account_id)
+            .or_insert_with(HashSet::new);
 
         self.devices
             .lock()
