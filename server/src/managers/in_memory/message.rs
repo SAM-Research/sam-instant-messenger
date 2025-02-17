@@ -40,9 +40,7 @@ impl MessageManager for InMemoryMessageManager {
     ) -> Result<(), ServerError> {
         let key = DeviceAddress::new(account_id, device_id);
 
-        if !self.messages.contains_key(&key) {
-            self.messages.insert(key.clone(), HashMap::new());
-        }
+        self.messages.entry(key).or_default();
 
         let msgs = self.messages.get_mut(&key);
 

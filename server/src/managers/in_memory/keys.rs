@@ -1,4 +1,7 @@
-use std::{collections::HashMap, sync::Arc};
+use std::{
+    collections::{hash_map::Entry, HashMap},
+    sync::Arc,
+};
 
 use crate::{
     auth::keys::verify_key,
@@ -95,8 +98,8 @@ impl PreKeyManager for InMemoryKeyManager {
     ) -> Result<(), ServerError> {
         let dkey = DeviceAddress::new(account_id, device_id);
 
-        if !self.pre_keys.lock().await.contains_key(&dkey) {
-            let _ = self.pre_keys.lock().await.insert(dkey.clone(), Vec::new());
+        if let Entry::Vacant(e) = self.pre_keys.lock().await.entry(dkey) {
+            e.insert(Vec::new());
         }
 
         self.pre_keys
@@ -245,12 +248,8 @@ impl PqPreKeyManager for InMemoryKeyManager {
 
         verify_key(identity, &key)?;
 
-        if !self.pq_pre_keys.lock().await.contains_key(&dkey) {
-            let _ = self
-                .pq_pre_keys
-                .lock()
-                .await
-                .insert(dkey.clone(), Vec::new());
+        if let Entry::Vacant(e) = self.pq_pre_keys.lock().await.entry(dkey) {
+            e.insert(Vec::new());
         }
 
         self.pq_pre_keys

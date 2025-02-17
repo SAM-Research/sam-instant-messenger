@@ -91,10 +91,7 @@ impl DeviceManager for InMemoryDeviceManager {
             .entry(account_id)
             .or_insert_with(HashSet::new);
 
-        self.devices
-            .lock()
-            .await
-            .insert(key.clone(), device.clone());
+        self.devices.lock().await.insert(key, device.clone());
 
         if let Some(x) = self.account_devices.lock().await.get_mut(&account_id) {
             x.insert(key);
