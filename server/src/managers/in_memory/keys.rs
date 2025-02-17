@@ -1,10 +1,4 @@
-use std::collections::HashMap;
-
-use libsignal_protocol::IdentityKey;
-use sam_common::{
-    address::{AccountId, DeviceAddress, DeviceId},
-    api::keys::{EcPreKey, Key, PqPreKey, SignedEcPreKey},
-};
+use std::{collections::HashMap, sync::Arc};
 
 use crate::{
     auth::keys::verify_key,
@@ -13,12 +7,19 @@ use crate::{
     },
     ServerError,
 };
+use libsignal_protocol::IdentityKey;
+use sam_common::{
+    address::{AccountId, DeviceAddress, DeviceId},
+    api::keys::{EcPreKey, Key, PqPreKey, SignedEcPreKey},
+};
+use tokio::sync::Mutex;
 
+#[derive(Clone)]
 pub struct InMemoryKeyManager {
-    pre_keys: HashMap<DeviceAddress, Vec<EcPreKey>>,
-    signed_pre_keys: HashMap<DeviceAddress, SignedEcPreKey>,
-    pq_pre_keys: HashMap<DeviceAddress, Vec<PqPreKey>>,
-    last_resort_keys: HashMap<DeviceAddress, PqPreKey>,
+    pre_keys: Arc<Mutex<HashMap<DeviceAddress, Vec<EcPreKey>>>>,
+    signed_pre_keys: Arc<Mutex<HashMap<DeviceAddress, SignedEcPreKey>>>,
+    pq_pre_keys: Arc<Mutex<HashMap<DeviceAddress, Vec<PqPreKey>>>>,
+    last_resort_keys: Arc<Mutex<HashMap<DeviceAddress, PqPreKey>>>,
 }
 
 impl Default for InMemoryKeyManager {
@@ -30,10 +31,10 @@ impl Default for InMemoryKeyManager {
 impl InMemoryKeyManager {
     pub fn new() -> Self {
         InMemoryKeyManager {
-            pre_keys: HashMap::new(),
-            signed_pre_keys: HashMap::new(),
-            pq_pre_keys: HashMap::new(),
-            last_resort_keys: HashMap::new(),
+            pre_keys: Arc::new(Mutex::new(HashMap::new())),
+            signed_pre_keys: Arc::new(Mutex::new(HashMap::new())),
+            pq_pre_keys: Arc::new(Mutex::new(HashMap::new())),
+            last_resort_keys: Arc::new(Mutex::new(HashMap::new())),
         }
     }
 }
@@ -49,6 +50,8 @@ impl PreKeyManager for InMemoryKeyManager {
 
         Ok(self
             .pre_keys
+            .lock()
+            .await
             .get(&key)
             .and_then(|keys| keys.first())
             .cloned())
@@ -62,6 +65,23 @@ impl PreKeyManager for InMemoryKeyManager {
         let key = DeviceAddress::new(account_id, device_id);
 
         self.pre_keys
+            .lock()
+            .await
+            .get(&key)
+            .map(|keys| keys.iter().map(|k| k.id()).collect::<Vec<u32>>())
+            .ok_or(ServerError::AccountNotExist)
+    }
+
+    async fn get_pre_key_ids(
+        &self,
+        account_id: AccountId,
+        device_id: DeviceId,
+    ) -> Result<Vec<u32>, ServerError> {
+        let key = DeviceAddress::new(account_id, device_id);
+
+        self.pre_keys
+            .lock()
+            .await
             .get(&key)
             .map(|keys| keys.iter().map(|k| k.id()).collect::<Vec<u32>>())
             .ok_or(ServerError::AccountNotExist)
@@ -75,11 +95,13 @@ impl PreKeyManager for InMemoryKeyManager {
     ) -> Result<(), ServerError> {
         let dkey = DeviceAddress::new(account_id, device_id);
 
-        if !self.pre_keys.contains_key(&dkey) {
-            let _ = self.pre_keys.insert(dkey.clone(), Vec::new());
+        if !self.pre_keys.lock().await.contains_key(&dkey) {
+            let _ = self.pre_keys.lock().await.insert(dkey.clone(), Vec::new());
         }
 
         self.pre_keys
+            .lock()
+            .await
             .get_mut(&dkey)
             .map(|keys| keys.push(key))
             .ok_or(ServerError::AccountNotExist)
@@ -94,6 +116,8 @@ impl PreKeyManager for InMemoryKeyManager {
         let dkey = DeviceAddress::new(account_id, device_id);
 
         self.pre_keys
+            .lock()
+            .await
             .get_mut(&dkey)
             .and_then(|keys| {
                 keys.iter()
@@ -102,10 +126,12 @@ impl PreKeyManager for InMemoryKeyManager {
                     .map(|(keys, index)| keys.remove(index))
             })
             .ok_or(ServerError::KeyNotExist)?;
-
-        if let Some(keys) = self.pre_keys.get(&dkey) {
-            if keys.is_empty() {
-                self.pre_keys.remove(&dkey);
+        {
+            let mut pre_keys = self.pre_keys.lock().await;
+            if let Some(keys) = pre_keys.get(&dkey) {
+                if keys.is_empty() {
+                    pre_keys.remove(&dkey);
+                }
             }
         }
         Ok(())
@@ -122,6 +148,8 @@ impl SignedPreKeyManager for InMemoryKeyManager {
         let key = DeviceAddress::new(account_id, device_id);
 
         self.signed_pre_keys
+            .lock()
+            .await
             .get(&key)
             .cloned()
             .ok_or(ServerError::AccountNotExist)
@@ -138,7 +166,7 @@ impl SignedPreKeyManager for InMemoryKeyManager {
 
         verify_key(identity, &key)?;
 
-        let _ = self.signed_pre_keys.insert(dkey, key);
+        let _ = self.signed_pre_keys.lock().await.insert(dkey, key);
         Ok(())
     }
 
@@ -150,6 +178,8 @@ impl SignedPreKeyManager for InMemoryKeyManager {
         let key = DeviceAddress::new(account_id, device_id);
 
         self.signed_pre_keys
+            .lock()
+            .await
             .remove(&key)
             .ok_or(ServerError::KeyNotExist)
             .map(|_| ())
@@ -167,6 +197,8 @@ impl PqPreKeyManager for InMemoryKeyManager {
 
         Ok(self
             .pq_pre_keys
+            .lock()
+            .await
             .get(&key)
             .and_then(|keys| keys.first())
             .cloned())
@@ -180,6 +212,23 @@ impl PqPreKeyManager for InMemoryKeyManager {
         let key = DeviceAddress::new(account_id, device_id);
 
         self.pq_pre_keys
+            .lock()
+            .await
+            .get(&key)
+            .map(|keys| keys.iter().map(|k| k.id()).collect::<Vec<u32>>())
+            .ok_or(ServerError::AccountNotExist)
+    }
+
+    async fn get_pq_pre_key_ids(
+        &self,
+        account_id: AccountId,
+        device_id: DeviceId,
+    ) -> Result<Vec<u32>, ServerError> {
+        let key = DeviceAddress::new(account_id, device_id);
+
+        self.pq_pre_keys
+            .lock()
+            .await
             .get(&key)
             .map(|keys| keys.iter().map(|k| k.id()).collect::<Vec<u32>>())
             .ok_or(ServerError::AccountNotExist)
@@ -196,11 +245,17 @@ impl PqPreKeyManager for InMemoryKeyManager {
 
         verify_key(identity, &key)?;
 
-        if !self.pq_pre_keys.contains_key(&dkey) {
-            let _ = self.pq_pre_keys.insert(dkey.clone(), Vec::new());
+        if !self.pq_pre_keys.lock().await.contains_key(&dkey) {
+            let _ = self
+                .pq_pre_keys
+                .lock()
+                .await
+                .insert(dkey.clone(), Vec::new());
         }
 
         self.pq_pre_keys
+            .lock()
+            .await
             .get_mut(&dkey)
             .map(|keys| keys.push(key))
             .ok_or(ServerError::AccountNotExist)
@@ -215,6 +270,8 @@ impl PqPreKeyManager for InMemoryKeyManager {
         let dkey = DeviceAddress::new(account_id, device_id);
 
         self.pq_pre_keys
+            .lock()
+            .await
             .get_mut(&dkey)
             .and_then(|keys| {
                 keys.iter()
@@ -223,10 +280,12 @@ impl PqPreKeyManager for InMemoryKeyManager {
                     .map(|(keys, index)| keys.remove(index))
             })
             .ok_or(ServerError::KeyNotExist)?;
-
-        if let Some(keys) = self.pq_pre_keys.get(&dkey) {
-            if keys.is_empty() {
-                self.pq_pre_keys.remove(&dkey);
+        {
+            let mut pq_pre_keys = self.pq_pre_keys.lock().await;
+            if let Some(keys) = pq_pre_keys.get(&dkey) {
+                if keys.is_empty() {
+                    pq_pre_keys.remove(&dkey);
+                }
             }
         }
         Ok(())
@@ -243,6 +302,8 @@ impl LastResortKeyManager for InMemoryKeyManager {
         let key = DeviceAddress::new(account_id, device_id);
 
         self.last_resort_keys
+            .lock()
+            .await
             .get(&key)
             .cloned()
             .ok_or(ServerError::KeyNotExist)
@@ -258,7 +319,7 @@ impl LastResortKeyManager for InMemoryKeyManager {
 
         verify_key(identity, &key)?;
 
-        let _ = self.last_resort_keys.insert(dkey, key);
+        let _ = self.last_resort_keys.lock().await.insert(dkey, key);
         Ok(())
     }
     async fn remove_last_resort_key(
@@ -269,6 +330,8 @@ impl LastResortKeyManager for InMemoryKeyManager {
         let key = DeviceAddress::new(account_id, device_id);
 
         self.last_resort_keys
+            .lock()
+            .await
             .remove(&key)
             .ok_or(ServerError::KeyNotExist)
             .map(|_| ())

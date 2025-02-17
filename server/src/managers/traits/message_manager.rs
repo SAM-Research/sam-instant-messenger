@@ -6,7 +6,7 @@ use sam_common::{
 use tokio::sync::mpsc::Receiver;
 
 #[async_trait::async_trait]
-pub trait MessageManager: Send {
+pub trait MessageManager: Send + Sync + Clone {
     async fn insert_message(
         &mut self,
         account_id: AccountId,
@@ -26,7 +26,7 @@ pub trait MessageManager: Send {
         device_id: DeviceId,
         message_id: MessageId,
     ) -> Result<(), ServerError>;
-    async fn get_messages(
+    async fn get_message_ids(
         &self,
         account_id: AccountId,
         device_id: DeviceId,

@@ -8,6 +8,7 @@ use tokio::sync::mpsc;
 
 use crate::{managers::traits::message_manager::MessageManager, ServerError};
 
+#[derive(Clone)]
 pub struct InMemoryMessageManager {
     messages: HashMap<DeviceAddress, HashMap<MessageId, ServerEnvelope>>,
     subscribers: HashMap<DeviceAddress, mpsc::Sender<MessageId>>,
@@ -91,7 +92,7 @@ impl MessageManager for InMemoryMessageManager {
         }
     }
 
-    async fn get_messages(
+    async fn get_message_ids(
         &self,
         account_id: AccountId,
         device_id: DeviceId,

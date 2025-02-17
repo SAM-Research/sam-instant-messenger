@@ -13,7 +13,6 @@ use crate::ServerError;
 pub fn create_token(secret: &str, account_id: AccountId) -> LinkDeviceToken {
     let claims = encode_claims(account_id);
     let signature = create_signature(secret, &claims);
-
     let token = format!("{}:{}", claims, BASE64_URL_SAFE.encode(signature));
     let id = create_id(&token);
     LinkDeviceToken::new(id, token)

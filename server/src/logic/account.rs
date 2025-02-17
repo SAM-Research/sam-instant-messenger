@@ -21,44 +21,49 @@ use crate::{
 };
 
 pub async fn delete_account<T: StateType>(
-    state: &ServerState<T>,
+    state: &mut ServerState<T>,
     account_id: AccountId,
 ) -> Result<(), ServerError> {
     {
-        let mut keys = state.keys.lock().await;
-        let mut messages = state.messages.lock().await;
-        let mut devices = state.devices.lock().await;
-
-        for device_id in devices.get_devices(account_id).await? {
-            if let Ok(msgs) = messages.get_messages(account_id, device_id).await {
+        for device_id in state.devices.get_devices(account_id).await? {
+            if let Ok(msgs) = state.messages.get_message_ids(account_id, device_id).await {
                 for msg_id in msgs {
-                    messages
+                    state
+                        .messages
                         .remove_message(account_id, device_id, msg_id)
                         .await?;
                 }
             }
 
-            for id in keys.get_pre_keys(account_id, device_id).await? {
-                keys.remove_pre_key(account_id, device_id, id).await?
+            for id in state.keys.get_pre_keys(account_id, device_id).await? {
+                state.keys.remove_pre_key(account_id, device_id, id).await?
             }
-            keys.remove_signed_pre_key(account_id, device_id).await?;
+            state
+                .keys
+                .remove_signed_pre_key(account_id, device_id)
+                .await?;
 
-            for id in keys.get_pq_pre_keys(account_id, device_id).await? {
-                keys.remove_pq_pre_key(account_id, device_id, id).await?
+            for id in state.keys.get_pq_pre_keys(account_id, device_id).await? {
+                state
+                    .keys
+                    .remove_pq_pre_key(account_id, device_id, id)
+                    .await?
             }
 
-            keys.remove_last_resort_key(account_id, device_id).await?;
+            state
+                .keys
+                .remove_last_resort_key(account_id, device_id)
+                .await?;
 
-            devices.remove_device(account_id, device_id).await?;
+            state.devices.remove_device(account_id, device_id).await?;
         }
     }
 
-    let mut accounts = state.accounts.lock().await;
-    accounts.remove_account(account_id).await
+    state.accounts.remove_account(account_id).await
 }
 
 pub async fn create_account<T: StateType>(
-    state: &ServerState<T>,
+    state: &mut ServerState<T>,
     registration: RegistrationRequest,
     username: String,
     password: String,
@@ -69,7 +74,7 @@ pub async fn create_account<T: StateType>(
         .identity(registration.identity_key)
         .build();
 
-    state.accounts.lock().await.add_account(&account).await?;
+    state.accounts.add_account(&account).await?;
 
     create_device(
         state,
@@ -111,7 +116,7 @@ mod test {
 
     #[tokio::test]
     async fn test_create_account() {
-        let state = ServerState::in_memory_default(LINK_SECRET.to_string());
+        let mut state = ServerState::in_memory_default(LINK_SECRET.to_string());
 
         let mut rng = OsRng;
         let pair = IdentityKeyPair::generate(&mut rng);
@@ -132,16 +137,19 @@ mod test {
             },
         };
 
-        let alice_id = create_account(&state, reg, "RealAlice".to_string(), "bob<3".to_string())
-            .await
-            .map(|r| r.account_id)
-            .expect("Alice can create account");
+        let alice_id = create_account(
+            &mut state,
+            reg,
+            "RealAlice".to_string(),
+            "bob<3".to_string(),
+        )
+        .await
+        .map(|r| r.account_id)
+        .expect("Alice can create account");
 
         // Check if account is created
         let account = state
             .accounts
-            .lock()
-            .await
             .get_account(alice_id)
             .await
             .expect("Alice has an account");
@@ -153,8 +161,6 @@ mod test {
         // Check if device is created
         let device = state
             .devices
-            .lock()
-            .await
             .get_device(alice_id, 1.into())
             .await
             .expect("Alice has primary device");
@@ -167,10 +173,13 @@ mod test {
             .expect("Alice loves bob");
 
         // check if keys are inserted
-        let keys = state.keys.lock().await;
-
-        let ec_key_ids = keys.get_pre_keys(alice_id, 1.into()).await.unwrap();
-        let signed_ec_id = keys
+        let ec_key_ids = state
+            .keys
+            .get_pre_key_ids(alice_id, 1.into())
+            .await
+            .unwrap();
+        let signed_ec_id = state
+            .keys
             .get_signed_pre_key(alice_id, 1.into())
             .await
             .unwrap()
@@ -179,8 +188,13 @@ mod test {
         assert!(ec_key_ids == vec![0]);
         assert!(signed_ec_id == 1);
 
-        let pq_key_ids = keys.get_pq_pre_keys(alice_id, 1.into()).await.unwrap();
-        let last_resort_id = keys
+        let pq_key_ids = state
+            .keys
+            .get_pq_pre_keys(alice_id, 1.into())
+            .await
+            .unwrap();
+        let last_resort_id = state
+            .keys
             .get_last_resort_key(alice_id, 1.into())
             .await
             .unwrap()
@@ -192,7 +206,7 @@ mod test {
 
     #[tokio::test]
     async fn test_delete_account() {
-        let state = ServerState::in_memory_default(LINK_SECRET.to_string());
+        let mut state = ServerState::in_memory_default(LINK_SECRET.to_string());
 
         let mut rng = OsRng;
         let pair = IdentityKeyPair::generate(&mut rng);
@@ -212,54 +226,35 @@ mod test {
             },
         };
 
-        let alice_id = create_account(&state, reg, "RealAlice".to_string(), "bob<3".to_string())
-            .await
-            .map(|r| r.account_id)
-            .expect("Alice can create account");
+        let alice_id = create_account(
+            &mut state,
+            reg,
+            "RealAlice".to_string(),
+            "bob<3".to_string(),
+        )
+        .await
+        .map(|r| r.account_id)
+        .expect("Alice can create account");
 
-        delete_account(&state, alice_id)
+        delete_account(&mut state, alice_id)
             .await
             .expect("Alice can delete account");
 
-        assert!(state
-            .accounts
-            .lock()
-            .await
-            .get_account(alice_id)
-            .await
-            .is_err());
-        assert!(state
-            .devices
-            .lock()
-            .await
-            .get_device(alice_id, 1.into())
-            .await
-            .is_err());
+        assert!(state.accounts.get_account(alice_id).await.is_err());
+        assert!(state.devices.get_device(alice_id, 1.into()).await.is_err());
         assert!(state
             .keys
-            .lock()
-            .await
             .get_last_resort_key(alice_id, 1.into())
             .await
             .is_err());
         assert!(state
             .keys
-            .lock()
-            .await
             .get_signed_pre_key(alice_id, 1.into())
             .await
             .is_err());
+        assert!(state.keys.get_pre_keys(alice_id, 1.into()).await.is_err());
         assert!(state
             .keys
-            .lock()
-            .await
-            .get_pre_keys(alice_id, 1.into())
-            .await
-            .is_err());
-        assert!(state
-            .keys
-            .lock()
-            .await
             .get_pq_pre_keys(alice_id, 1.into())
             .await
             .is_err());

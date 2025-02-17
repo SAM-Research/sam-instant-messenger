@@ -55,15 +55,8 @@ impl<T: StateType> FromRequestParts<ServerState<T>> for AuthenticatedUser {
             .parse()
             .map_err(|_| ServerError::AuthBasicParseError)?;
 
-        let account = { state.accounts.lock().await.get_account(account_id).await? };
-        let device = {
-            state
-                .devices
-                .lock()
-                .await
-                .get_device(account_id, device_id)
-                .await?
-        };
+        let account = { state.accounts.get_account(account_id).await? };
+        let device = { state.devices.get_device(account_id, device_id).await? };
 
         device.password().verify(password)?;
         Ok(Self { account, device })
@@ -93,7 +86,7 @@ mod test {
 
     #[tokio::test]
     async fn test_from_request_parts() {
-        let state = ServerState::in_memory_default(LINK_SECRET.to_string());
+        let mut state = ServerState::in_memory_default(LINK_SECRET.to_string());
 
         let account_id = AccountId::generate();
         let account_pwd = "thebestetpassword3".to_string();
@@ -115,8 +108,6 @@ mod test {
 
         state
             .accounts
-            .lock()
-            .await
             .add_account(&account)
             .await
             .expect("Can add account");
@@ -132,8 +123,6 @@ mod test {
         let account_id = account.id();
         state
             .devices
-            .lock()
-            .await
             .add_device(account_id, device)
             .await
             .expect("Alice can add device");

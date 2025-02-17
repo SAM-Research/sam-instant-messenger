@@ -3,6 +3,8 @@ use derive_more::derive::{Display, Error};
 use libsignal_protocol::SignalProtocolError;
 use sam_common::LibError;
 
+pub type Result<T> = std::result::Result<T, ServerError>;
+
 #[derive(Debug, Display, Error)]
 pub enum ServerError {
     #[error(ignore)]

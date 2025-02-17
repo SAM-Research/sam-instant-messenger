@@ -15,20 +15,21 @@ use crate::{
 };
 
 pub async fn get_keybundle<T: StateType>(
-    state: &ServerState<T>,
+    state: &mut ServerState<T>,
     account_id: AccountId,
     registration_id: RegistrationId,
     device_id: DeviceId,
 ) -> Result<PreKeyBundle, ServerError> {
-    let mut keys = state.keys.lock().await;
-
-    let pre_key = keys.get_pre_key(account_id, device_id).await?;
-    let pq_pre_key = keys.get_pq_pre_key(account_id, device_id).await?;
-    let signed_pre_key = keys.get_signed_pre_key(account_id, device_id).await?;
+    let pre_key = state.keys.get_pre_key(account_id, device_id).await?;
+    let pq_pre_key = state.keys.get_pq_pre_key(account_id, device_id).await?;
+    let signed_pre_key = state.keys.get_signed_pre_key(account_id, device_id).await?;
 
     let pre_key = match pre_key {
         Some(key) => {
-            keys.remove_pre_key(account_id, device_id, key.id()).await?;
+            state
+                .keys
+                .remove_pre_key(account_id, device_id, key.id())
+                .await?;
             Some(key)
         }
         None => None,
@@ -36,11 +37,18 @@ pub async fn get_keybundle<T: StateType>(
 
     let pq_pre_key = match pq_pre_key {
         Some(key) => {
-            keys.remove_pq_pre_key(account_id, device_id, key.id())
+            state
+                .keys
+                .remove_pq_pre_key(account_id, device_id, key.id())
                 .await?;
             key
         }
-        None => keys.get_last_resort_key(account_id, device_id).await?,
+        None => {
+            state
+                .keys
+                .get_last_resort_key(account_id, device_id)
+                .await?
+        }
     };
 
     Ok(PreKeyBundle {
@@ -53,56 +61,55 @@ pub async fn get_keybundle<T: StateType>(
 }
 
 pub async fn add_keybundle<T: StateType>(
-    state: &ServerState<T>,
+    state: &mut ServerState<T>,
     identity: &IdentityKey,
     account_id: AccountId,
     device_id: DeviceId,
     key_bundle: PublishPreKeys,
 ) -> Result<(), ServerError> {
-    let mut keys = state.keys.lock().await;
     if let Some(pre_keys) = key_bundle.pre_keys {
         for pre_key in pre_keys {
-            keys.add_pre_key(account_id, device_id, pre_key).await?;
+            state
+                .keys
+                .add_pre_key(account_id, device_id, pre_key)
+                .await?;
         }
     }
     if let Some(key) = key_bundle.signed_pre_key {
-        keys.set_signed_pre_key(account_id, device_id, identity, key)
+        state
+            .keys
+            .set_signed_pre_key(account_id, device_id, identity, key)
             .await?;
     }
 
     if let Some(pre_keys) = key_bundle.pq_pre_keys {
         for pre_key in pre_keys {
-            keys.add_pq_pre_key(account_id, device_id, identity, pre_key)
+            state
+                .keys
+                .add_pq_pre_key(account_id, device_id, identity, pre_key)
                 .await?;
         }
     }
 
     if let Some(key) = key_bundle.pq_last_resort_pre_key {
-        keys.set_last_resort_key(account_id, device_id, identity, key)
+        state
+            .keys
+            .set_last_resort_key(account_id, device_id, identity, key)
             .await?
     }
     Ok(())
 }
 
 pub async fn get_keybundles<T: StateType>(
-    state: &ServerState<T>,
+    state: &mut ServerState<T>,
     account_id: AccountId,
 ) -> Result<PreKeyBundles, ServerError> {
-    let identity_key = {
-        *state
-            .accounts
-            .lock()
-            .await
-            .get_account(account_id)
-            .await?
-            .identity()
-    };
+    let identity_key = { *state.accounts.get_account(account_id).await?.identity() };
 
     let devices = {
-        let devices = state.devices.lock().await;
         let mut device_vec = vec![];
-        for id in devices.get_devices(account_id).await? {
-            let device = devices.get_device(account_id, id).await?;
+        for id in state.devices.get_devices(account_id).await? {
+            let device = state.devices.get_device(account_id, id).await?;
             device_vec.push(device);
         }
         device_vec
@@ -125,20 +132,12 @@ pub async fn get_keybundles<T: StateType>(
 }
 
 pub async fn publish_keybundle<T: StateType>(
-    state: &ServerState<T>,
+    state: &mut ServerState<T>,
     account_id: AccountId,
     device_id: DeviceId,
     bundle: PublishPreKeys,
 ) -> Result<(), ServerError> {
-    let identity = {
-        *state
-            .accounts
-            .lock()
-            .await
-            .get_account(account_id)
-            .await?
-            .identity()
-    };
+    let identity = { *state.accounts.get_account(account_id).await?.identity() };
 
     add_keybundle(state, &identity, account_id, device_id, bundle).await
 }
@@ -162,7 +161,7 @@ mod test {
                 account_manager::AccountManager,
                 device_manager::DeviceManager,
                 key_manager::{
-                    LastResortKeyManager, PqPreKeyManager, PreKeyManager, SignedPreKeyManager,
+                    LastResortKeyManager, PqPreKeyManager, PreKeyManager as _, SignedPreKeyManager,
                 },
             },
         },
@@ -171,7 +170,7 @@ mod test {
 
     #[tokio::test]
     async fn test_add_keybundle() {
-        let state = ServerState::in_memory_default(LINK_SECRET.to_string());
+        let mut state = ServerState::in_memory_default(LINK_SECRET.to_string());
         let mut rng = OsRng;
         let pair = IdentityKeyPair::generate(&mut rng);
 
@@ -187,7 +186,7 @@ mod test {
         );
 
         add_keybundle(
-            &state,
+            &mut state,
             pair.identity_key(),
             account_id,
             1.into(),
@@ -197,37 +196,29 @@ mod test {
         .expect("User can create key bundle");
         assert!(state
             .keys
-            .lock()
-            .await
             .get_last_resort_key(account_id, 1.into())
             .await
             .is_ok());
         assert!(state
             .keys
-            .lock()
-            .await
             .get_signed_pre_key(account_id, 1.into())
             .await
             .is_ok());
         assert!(state
             .keys
-            .lock()
-            .await
-            .get_pre_keys(account_id, 1.into())
+            .get_pre_key_ids(account_id, 1.into())
             .await
             .is_ok());
         assert!(state
             .keys
-            .lock()
-            .await
-            .get_pq_pre_keys(account_id, 1.into())
+            .get_pq_pre_key_ids(account_id, 1.into())
             .await
             .is_ok());
     }
 
     #[tokio::test]
     async fn test_get_keybundle() {
-        let state = ServerState::in_memory_default(LINK_SECRET.to_string());
+        let mut state = ServerState::in_memory_default(LINK_SECRET.to_string());
         let mut rng = OsRng;
         let pair = IdentityKeyPair::generate(&mut rng);
 
@@ -243,7 +234,7 @@ mod test {
         );
 
         add_keybundle(
-            &state,
+            &mut state,
             pair.identity_key(),
             account_id,
             1.into(),
@@ -253,7 +244,7 @@ mod test {
         .expect("User can create key bundle");
 
         // testing if we get keys
-        let bundle = get_keybundle(&state, account_id, 1.into(), 1.into())
+        let bundle = get_keybundle(&mut state, account_id, 1.into(), 1.into())
             .await
             .expect("User have uploaded bundles");
 
@@ -264,7 +255,7 @@ mod test {
         assert!(bundle.pq_pre_key.id() == 1);
 
         // testing if we get last resort key
-        let bundle = get_keybundle(&state, account_id, 1.into(), 1.into())
+        let bundle = get_keybundle(&mut state, account_id, 1.into(), 1.into())
             .await
             .expect("User have uploaded bundles");
         assert!(bundle.pq_pre_key.id() == 33)
@@ -272,7 +263,7 @@ mod test {
 
     #[tokio::test]
     async fn test_add_publish_keybundle() {
-        let state = ServerState::in_memory_default(LINK_SECRET.to_string());
+        let mut state = ServerState::in_memory_default(LINK_SECRET.to_string());
         let mut rng = OsRng;
         let pair = IdentityKeyPair::generate(&mut rng);
 
@@ -284,8 +275,6 @@ mod test {
 
         state
             .accounts
-            .lock()
-            .await
             .add_account(&account)
             .await
             .expect("Can add account");
@@ -298,45 +287,36 @@ mod test {
             &pair,
             rng,
         );
-
         let account_id = account.id();
-        publish_keybundle(&state, account_id, 1.into(), key_bundle)
+        publish_keybundle(&mut state, account_id, 1.into(), key_bundle)
             .await
             .expect("Alice can publish bundle");
 
         assert!(state
             .keys
-            .lock()
-            .await
             .get_last_resort_key(account_id, 1.into())
             .await
             .is_ok());
         assert!(state
             .keys
-            .lock()
-            .await
             .get_signed_pre_key(account_id, 1.into())
             .await
             .is_ok());
         assert!(state
             .keys
-            .lock()
-            .await
-            .get_pre_keys(account_id, 1.into())
+            .get_pre_key_ids(account_id, 1.into())
             .await
             .is_ok());
         assert!(state
             .keys
-            .lock()
-            .await
-            .get_pq_pre_keys(account_id, 1.into())
+            .get_pq_pre_key_ids(account_id, 1.into())
             .await
             .is_ok());
     }
 
     #[tokio::test]
     async fn test_get_keybundles() {
-        let state = ServerState::in_memory_default(LINK_SECRET.to_string());
+        let mut state = ServerState::in_memory_default(LINK_SECRET.to_string());
         let mut rng = OsRng;
         let pair = IdentityKeyPair::generate(&mut rng);
 
@@ -348,8 +328,6 @@ mod test {
 
         state
             .accounts
-            .lock()
-            .await
             .add_account(&account)
             .await
             .expect("Can add account");
@@ -365,8 +343,6 @@ mod test {
         let account_id = account.id();
         state
             .devices
-            .lock()
-            .await
             .add_device(account_id, device)
             .await
             .expect("Alice can add device");
@@ -380,11 +356,11 @@ mod test {
             rng,
         );
 
-        publish_keybundle(&state, account_id, 1.into(), key_bundle)
+        publish_keybundle(&mut state, account_id, 1.into(), key_bundle)
             .await
             .expect("Alice can publish bundle");
 
-        let bundles = get_keybundles(&state, account_id)
+        let bundles = get_keybundles(&mut state, account_id)
             .await
             .expect("User can get alices bundles");
 

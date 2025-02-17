@@ -14,6 +14,7 @@ use account::InMemoryAccountManager;
 
 use crate::state::{state_type::StateType, ServerState};
 
+#[derive(Clone)]
 pub struct InMemStateType;
 
 impl StateType for InMemStateType {
@@ -26,10 +27,10 @@ impl StateType for InMemStateType {
 impl ServerState<InMemStateType> {
     pub fn in_memory_default(link_secret: String) -> Self {
         ServerState::new(
-            InMemoryAccountManager::new(),
+            InMemoryAccountManager::default(),
             InMemoryDeviceManager::new(link_secret),
-            InMemoryMessageManager::new(),
-            InMemoryKeyManager::new(),
+            InMemoryMessageManager::default(),
+            InMemoryKeyManager::default(),
         )
     }
 }

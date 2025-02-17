@@ -17,19 +17,19 @@ use crate::{
 /// Returns key bundles for users devices
 pub async fn keys_bundles_endpoint<T: StateType>(
     Path(account_id): Path<AccountId>,
-    State(state): State<ServerState<T>>,
+    State(mut state): State<ServerState<T>>,
 ) -> Result<Json<PreKeyBundles>, ServerError> {
-    get_keybundles(&state, account_id).await.map(Json)
+    get_keybundles(&mut state, account_id).await.map(Json)
 }
 
 /// Handle publish of new key bundles
 pub async fn publish_keys_endpoint<T: StateType>(
-    State(state): State<ServerState<T>>,
+    State(mut state): State<ServerState<T>>,
     auth_user: AuthenticatedUser,
     Json(req): Json<PublishPreKeys>,
 ) -> Result<(), ServerError> {
     publish_keybundle(
-        &state,
+        &mut state,
         auth_user.account().id(),
         auth_user.device().id(),
         req,
