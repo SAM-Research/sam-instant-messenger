@@ -13,6 +13,7 @@ use crate::state::state_type::StateType;
 use crate::state::ServerState;
 use crate::ServerError;
 
+#[derive(Clone)]
 pub struct AuthenticatedUser {
     account: Account,
     device: Device,

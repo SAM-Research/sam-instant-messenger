@@ -19,9 +19,6 @@ pub enum ServerError {
     PasswordHashError,
     WrongPassword,
     AuthBasicParseError,
-    SocketPollError,
-    SocketClientDisconnect,
-    SocketDecodeError,
     AccountNotExist,
     AccountExists,
     DeviceNotExist,
@@ -31,6 +28,9 @@ pub enum ServerError {
     EnvelopeNotExists,
     MessageSubscriberExists,
     MessageSubscriberNotExists,
+    WebSocketDecodeError,
+    WebSocketDisconnected,
+    WebSocketSendError,
 }
 
 impl IntoResponse for ServerError {
@@ -48,11 +48,6 @@ impl IntoResponse for ServerError {
             ServerError::PasswordHashError => StatusCode::INTERNAL_SERVER_ERROR,
             ServerError::WrongPassword => StatusCode::INTERNAL_SERVER_ERROR,
             ServerError::AuthBasicParseError => StatusCode::INTERNAL_SERVER_ERROR,
-            ServerError::SocketPollError => panic!("SocketPollError cannot happen over HTTP"),
-            ServerError::SocketClientDisconnect => {
-                panic!("SocketClientDisconnect cannot happen over HTTP")
-            }
-            ServerError::SocketDecodeError => panic!("SocketDecodeError cannot happen over HTTP"),
             ServerError::AccountNotExist => todo!(),
             ServerError::AccountExists => todo!(),
             ServerError::DeviceNotExist => todo!(),
@@ -62,6 +57,9 @@ impl IntoResponse for ServerError {
             ServerError::EnvelopeNotExists => todo!(),
             ServerError::MessageSubscriberExists => todo!(),
             ServerError::MessageSubscriberNotExists => todo!(),
+            ServerError::WebSocketDecodeError => todo!(),
+            ServerError::WebSocketDisconnected => todo!(),
+            ServerError::WebSocketSendError => todo!(),
         }
         .into_response()
     }
