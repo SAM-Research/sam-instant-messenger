@@ -49,8 +49,8 @@ pub async fn get_keybundle<T: StateType>(
     };
 
     Ok(KeyBundle {
-        device_id: device_id,
-        registration_id: registration_id,
+        device_id,
+        registration_id,
         pre_key,
         pq_pre_key,
         signed_pre_key,
@@ -138,7 +138,7 @@ pub async fn publish_keybundle<T: StateType>(
     let account = state.accounts.get_account(account_id).await?;
     let identity = account.identity();
 
-    add_keybundle(state, &identity, account_id, device_id, bundle).await
+    add_keybundle(state, identity, account_id, device_id, bundle).await
 }
 
 #[cfg(test)]

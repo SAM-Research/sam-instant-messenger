@@ -29,7 +29,7 @@ pub async fn publish_keys_endpoint<T: StateType>(
     publish_keybundle(
         &mut state,
         *auth_user.account().id(),
-        auth_user.device().id().clone(),
+        auth_user.device().id(),
         req,
     )
     .await
