@@ -5,7 +5,7 @@ use uuid::Uuid;
 use crate::ServerError;
 
 #[async_trait::async_trait]
-pub trait PreKeyManager: Send {
+pub trait PreKeyManager: Send + Clone {
     async fn get_pre_key(
         &self,
         account_id: Uuid,
@@ -31,7 +31,7 @@ pub trait PreKeyManager: Send {
 }
 
 #[async_trait::async_trait]
-pub trait SignedPreKeyManager {
+pub trait SignedPreKeyManager: Send + Clone {
     async fn get_signed_pre_key(
         &self,
         account_id: Uuid,
@@ -52,7 +52,7 @@ pub trait SignedPreKeyManager {
 }
 
 #[async_trait::async_trait]
-pub trait PqPreKeyManager {
+pub trait PqPreKeyManager: Send + Clone {
     async fn get_pq_pre_key(
         &self,
         account_id: Uuid,
@@ -79,7 +79,7 @@ pub trait PqPreKeyManager {
 }
 
 #[async_trait::async_trait]
-pub trait LastResortKeyManager {
+pub trait LastResortKeyManager: Send + Sync + Clone {
     async fn get_last_resort_key(
         &self,
         account_id: Uuid,

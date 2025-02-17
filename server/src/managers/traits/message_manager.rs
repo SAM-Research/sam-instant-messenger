@@ -4,7 +4,7 @@ use tokio::sync::mpsc::Receiver;
 use uuid::Uuid;
 
 #[async_trait::async_trait]
-pub trait MessageManager: Send {
+pub trait MessageManager: Send + Sync + Clone {
     async fn insert_message(
         &mut self,
         account_id: Uuid,

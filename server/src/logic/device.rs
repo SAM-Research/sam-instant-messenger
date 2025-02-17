@@ -27,33 +27,22 @@ pub async fn create_device_token<T: StateType>(
     state: &ServerState<T>,
     account_id: Uuid,
 ) -> Result<LinkDeviceToken, ServerError> {
-    let devices = state.devices.lock().await;
-    Ok(create_token(&devices.link_secret().await?, account_id))
+    Ok(create_token(
+        &state.devices.link_secret().await?,
+        account_id,
+    ))
 }
 
 pub async fn link_device<T: StateType>(
-    state: &ServerState<T>,
+    state: &mut ServerState<T>,
     device_link: LinkDeviceRequest,
     password: String,
 ) -> Result<LinkDeviceResponse, ServerError> {
-    let account_id = {
-        let devices = state.devices.lock().await;
-        verify_token(&devices.link_secret().await?, device_link.token)?
-    };
+    let account_id = verify_token(&state.devices.link_secret().await?, device_link.token)?;
 
-    let account = {
-        let accounts = state.accounts.lock().await;
-        accounts.get_account(account_id).await?
-    };
+    let account = state.accounts.get_account(account_id).await?;
 
-    let next_id = {
-        state
-            .devices
-            .lock()
-            .await
-            .next_device_id(account_id)
-            .await?
-    };
+    let next_id = state.devices.next_device_id(account_id).await?;
 
     create_device(
         state,
@@ -72,20 +61,15 @@ pub async fn link_device<T: StateType>(
 }
 
 pub async fn unlink_device<T: StateType>(
-    state: &ServerState<T>,
+    state: &mut ServerState<T>,
     account_id: Uuid,
     device_id: u32,
 ) -> Result<(), ServerError> {
-    state
-        .devices
-        .lock()
-        .await
-        .remove_device(account_id, device_id)
-        .await
+    state.devices.remove_device(account_id, device_id).await
 }
 
 pub async fn create_device<T: StateType>(
-    state: &ServerState<T>,
+    state: &mut ServerState<T>,
     account_id: Uuid,
     identity: &IdentityKey,
     device_info: DeviceActivationInfo,
@@ -100,12 +84,7 @@ pub async fn create_device<T: StateType>(
         .password(Password::generate(password)?)
         .build();
 
-    state
-        .devices
-        .lock()
-        .await
-        .add_device(account_id, &device)
-        .await?;
+    state.devices.add_device(account_id, &device).await?;
 
     add_keybundle(
         state,
@@ -144,7 +123,7 @@ mod test {
 
     #[tokio::test]
     async fn test_create_device() {
-        let state = ServerState::in_memory_default(LINK_SECRET.to_string());
+        let mut state = ServerState::in_memory_default(LINK_SECRET.to_string());
 
         let mut rng = OsRng;
         let pair = IdentityKeyPair::generate(&mut rng);
@@ -166,7 +145,7 @@ mod test {
         let account_pwd = "huntermotherboard7".to_string();
 
         create_device(
-            &state,
+            &mut state,
             account_id,
             pair.identity_key(),
             device_info,
@@ -179,8 +158,6 @@ mod test {
         // Check if device is created
         let device = state
             .devices
-            .lock()
-            .await
             .get_device(account_id, 1)
             .await
             .expect("User has primary device");
@@ -193,16 +170,25 @@ mod test {
             .expect("Users device password is set correctly");
 
         // check if keys are inserted
-        let keys = state.keys.lock().await;
 
-        let ec_key_ids = keys.get_pre_key_ids(account_id, 1).await.unwrap();
-        let signed_ec_id = keys.get_signed_pre_key(account_id, 1).await.unwrap().id();
+        let ec_key_ids = state.keys.get_pre_key_ids(account_id, 1).await.unwrap();
+        let signed_ec_id = state
+            .keys
+            .get_signed_pre_key(account_id, 1)
+            .await
+            .unwrap()
+            .id();
 
         assert!(ec_key_ids == vec![0]);
         assert!(signed_ec_id == 1);
 
-        let pq_key_ids = keys.get_pq_pre_key_ids(account_id, 1).await.unwrap();
-        let last_resort_id = keys.get_last_resort_key(account_id, 1).await.unwrap().id();
+        let pq_key_ids = state.keys.get_pq_pre_key_ids(account_id, 1).await.unwrap();
+        let last_resort_id = state
+            .keys
+            .get_last_resort_key(account_id, 1)
+            .await
+            .unwrap()
+            .id();
 
         assert!(pq_key_ids == vec![33]);
         assert!(last_resort_id == 2);
@@ -210,7 +196,7 @@ mod test {
 
     #[tokio::test]
     async fn test_unlink_device() {
-        let state = ServerState::in_memory_default(LINK_SECRET.to_string());
+        let mut state = ServerState::in_memory_default(LINK_SECRET.to_string());
 
         let mut rng = OsRng;
         let pair = IdentityKeyPair::generate(&mut rng);
@@ -225,7 +211,7 @@ mod test {
         let account_pwd = "huntermotherboard7".to_string();
 
         create_device(
-            &state,
+            &mut state,
             account_id,
             pair.identity_key(),
             device_info,
@@ -235,17 +221,11 @@ mod test {
         .await
         .expect("Devices can be created");
 
-        unlink_device(&state, account_id, 1)
+        unlink_device(&mut state, account_id, 1)
             .await
             .expect("Device exists");
 
-        assert!(state
-            .devices
-            .lock()
-            .await
-            .get_device(account_id, 1)
-            .await
-            .is_err());
+        assert!(state.devices.get_device(account_id, 1).await.is_err());
     }
 
     #[tokio::test]
@@ -256,7 +236,7 @@ mod test {
 
     #[tokio::test]
     async fn test_link_device() {
-        let state = ServerState::in_memory_default(LINK_SECRET.to_string());
+        let mut state = ServerState::in_memory_default(LINK_SECRET.to_string());
 
         let mut rng = OsRng;
         let pair = IdentityKeyPair::generate(&mut rng);
@@ -276,10 +256,15 @@ mod test {
             },
         };
 
-        let alice_id = create_account(&state, reg, "RealAlice".to_string(), "bob<3".to_string())
-            .await
-            .map(|r| r.account_id)
-            .expect("Alice can create account");
+        let alice_id = create_account(
+            &mut state,
+            reg,
+            "RealAlice".to_string(),
+            "bob<3".to_string(),
+        )
+        .await
+        .map(|r| r.account_id)
+        .expect("Alice can create account");
 
         let token = create_device_token(&state, alice_id)
             .await
@@ -290,7 +275,7 @@ mod test {
         let key_bundle = create_publish_key_bundle(None, None, None, None, &pair, rng);
         let device_link = create_device_link(token, "Alice Laptop", 2, key_bundle);
 
-        let res = link_device(&state, device_link, device_pwd)
+        let res = link_device(&mut state, device_link, device_pwd)
             .await
             .expect("Alice can link device");
 
