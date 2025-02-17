@@ -34,5 +34,5 @@ pub trait MessageManager: Send + Sync + Clone {
         account_id: Uuid,
         device_id: u32,
     ) -> Result<Receiver<Uuid>, ServerError>;
-    async fn unsubscribe(&mut self, account_id: Uuid, device_id: u32) -> Result<(), ServerError>;
+    async fn unsubscribe(&mut self, account_id: Uuid, device_id: u32);
 }

@@ -7,19 +7,30 @@ use log::{error, info};
 use prost::{bytes::Bytes, Message as _};
 use sam_common::sam_message::{ClientMessage, ServerMessage};
 use tokio::sync::mpsc::{Receiver, Sender};
+use uuid::Uuid;
 
 use crate::{
     auth::authenticated_user::AuthenticatedUser,
+    managers::traits::message_manager::MessageManager,
     state::{state_type::StateType, ServerState},
     ServerError,
 };
 
-use super::message::handle_client_message;
+use super::message::{handle_client_message, handle_server_envelope};
 
-pub async fn handle_receiver<T: StateType>(
-    state: ServerState<T>,
+macro_rules! closing_err {
+    ($username:expr, $err:expr) => {
+        error!(
+            "User '{}' websocket encountered an error '{}' closing connection...",
+            $username, $err
+        );
+    };
+}
+
+pub async fn websocket_message_receiver<T: StateType>(
+    mut state: ServerState<T>,
     mut receiver: SplitStream<WebSocket>,
-    message_sender: Sender<Result<ServerMessage, ServerError>>,
+    message_producer: Sender<Result<ServerMessage, ServerError>>,
     auth_user: AuthenticatedUser,
 ) {
     while let Some(Ok(msg)) = receiver.next().await {
@@ -36,29 +47,31 @@ pub async fn handle_receiver<T: StateType>(
         };
 
         let msg_res = match decode_res {
-            Ok(msg) => handle_client_message(state.clone(), msg).await,
+            Ok(msg) => handle_client_message(&mut state, msg).await,
             Err(_) => Err(ServerError::WebSocketDecodeError),
         };
 
         let is_msg_res_err = msg_res.is_err();
-        if message_sender.send(msg_res).await.is_err() || is_msg_res_err {
+        if message_producer.send(msg_res).await.is_err() || is_msg_res_err {
             break;
         }
     }
 }
 
-pub async fn handle_sender(
+pub async fn websocket_message_sender<T: StateType>(
+    mut state: ServerState<T>,
     mut sender: SplitSink<WebSocket, Message>,
-    mut message_sender: Receiver<Result<ServerMessage, ServerError>>,
+    mut message_consumer: Receiver<Result<ServerMessage, ServerError>>,
     auth_user: AuthenticatedUser,
 ) {
-    while let Some(msg_res) = message_sender.recv().await {
+    while let Some(msg_res) = message_consumer.recv().await {
         let send_res = match msg_res {
             Ok(msg) => sender
                 .send(Message::Binary(msg.encode_to_vec()))
                 .await
                 .map_err(|_| ServerError::WebSocketSendError),
             Err(err) => {
+                closing_err!(auth_user.account().username(), err);
                 let res = sender
                     .send(Message::Close(Some(CloseFrame {
                         code: 1011,
@@ -76,13 +89,38 @@ pub async fn handle_sender(
         match send_res {
             Ok(_) => continue,
             Err(err) => {
-                error!(
-                    "User '{}' websocket encountered an error '{}' closing connection...",
-                    auth_user.account().username(),
-                    err
-                );
+                closing_err!(auth_user.account().username(), err);
                 break;
             }
+        }
+    }
+
+    state
+        .messages
+        .unsubscribe(*auth_user.account().id(), auth_user.device().id())
+        .await;
+}
+
+pub async fn websocket_dispatcher<T: StateType>(
+    mut state: ServerState<T>,
+    mut dispatch: Receiver<Uuid>,
+    message_producer: Sender<Result<ServerMessage, ServerError>>,
+    auth_user: AuthenticatedUser,
+) {
+    while let Some(msg_id) = dispatch.recv().await {
+        let msg_res = state
+            .messages
+            .get_message(*auth_user.account().id(), auth_user.device().id(), msg_id)
+            .await;
+
+        let msg_res = match msg_res {
+            Ok(envelope) => handle_server_envelope(&mut state, envelope).await,
+            Err(e) => Err(e),
+        };
+
+        let is_msg_res_err = msg_res.is_err();
+        if message_producer.send(msg_res).await.is_err() || is_msg_res_err {
+            break;
         }
     }
 }

@@ -127,14 +127,13 @@ impl MessageManager for InMemoryMessageManager {
         Ok(receiver)
     }
 
-    async fn unsubscribe(&mut self, account_id: Uuid, device_id: u32) -> Result<(), ServerError> {
+    async fn unsubscribe(&mut self, account_id: Uuid, device_id: u32) {
         let key = device_key(account_id, device_id);
 
         if self.subscribers.lock().await.contains_key(&key) {
-            return Err(ServerError::MessageSubscriberNotExists);
+            return;
         }
 
         self.subscribers.lock().await.remove(&key);
-        Ok(())
     }
 }
