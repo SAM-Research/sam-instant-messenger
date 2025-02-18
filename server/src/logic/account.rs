@@ -35,7 +35,7 @@ pub async fn delete_account<T: StateType>(
                 }
             }
 
-            for id in state.keys.get_pre_keys(account_id, device_id).await? {
+            for id in state.keys.get_pre_key_ids(account_id, device_id).await? {
                 state.keys.remove_pre_key(account_id, device_id, id).await?
             }
             state
@@ -43,7 +43,7 @@ pub async fn delete_account<T: StateType>(
                 .remove_signed_pre_key(account_id, device_id)
                 .await?;
 
-            for id in state.keys.get_pq_pre_keys(account_id, device_id).await? {
+            for id in state.keys.get_pq_pre_key_ids(account_id, device_id).await? {
                 state
                     .keys
                     .remove_pq_pre_key(account_id, device_id, id)
@@ -190,7 +190,7 @@ mod test {
 
         let pq_key_ids = state
             .keys
-            .get_pq_pre_keys(alice_id, 1.into())
+            .get_pq_pre_key_ids(alice_id, 1.into())
             .await
             .unwrap();
         let last_resort_id = state
@@ -252,10 +252,14 @@ mod test {
             .get_signed_pre_key(alice_id, 1.into())
             .await
             .is_err());
-        assert!(state.keys.get_pre_keys(alice_id, 1.into()).await.is_err());
         assert!(state
             .keys
-            .get_pq_pre_keys(alice_id, 1.into())
+            .get_pre_key_ids(alice_id, 1.into())
+            .await
+            .is_err());
+        assert!(state
+            .keys
+            .get_pq_pre_key_ids(alice_id, 1.into())
             .await
             .is_err());
     }

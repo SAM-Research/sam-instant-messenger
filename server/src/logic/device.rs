@@ -174,7 +174,7 @@ mod test {
         // check if keys are inserted
         let keys = state.keys;
 
-        let ec_key_ids = keys.get_pre_keys(account_id, 1.into()).await.unwrap();
+        let ec_key_ids = keys.get_pre_key_ids(account_id, 1.into()).await.unwrap();
         let signed_ec_id = keys
             .get_signed_pre_key(account_id, 1.into())
             .await
@@ -184,7 +184,7 @@ mod test {
         assert!(ec_key_ids == vec![0]);
         assert!(signed_ec_id == 1);
 
-        let pq_key_ids = keys.get_pq_pre_keys(account_id, 1.into()).await.unwrap();
+        let pq_key_ids = keys.get_pq_pre_key_ids(account_id, 1.into()).await.unwrap();
         let last_resort_id = keys
             .get_last_resort_key(account_id, 1.into())
             .await

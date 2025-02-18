@@ -60,21 +60,6 @@ impl PreKeyManager for InMemoryKeyManager {
             .cloned())
     }
 
-    async fn get_pre_keys(
-        &self,
-        account_id: AccountId,
-        device_id: DeviceId,
-    ) -> Result<Vec<u32>, ServerError> {
-        let key = DeviceAddress::new(account_id, device_id);
-
-        self.pre_keys
-            .lock()
-            .await
-            .get(&key)
-            .map(|keys| keys.iter().map(|k| k.id()).collect::<Vec<u32>>())
-            .ok_or(ServerError::AccountNotExist)
-    }
-
     async fn get_pre_key_ids(
         &self,
         account_id: AccountId,
@@ -205,21 +190,6 @@ impl PqPreKeyManager for InMemoryKeyManager {
             .get(&key)
             .and_then(|keys| keys.first())
             .cloned())
-    }
-
-    async fn get_pq_pre_keys(
-        &self,
-        account_id: AccountId,
-        device_id: DeviceId,
-    ) -> Result<Vec<u32>, ServerError> {
-        let key = DeviceAddress::new(account_id, device_id);
-
-        self.pq_pre_keys
-            .lock()
-            .await
-            .get(&key)
-            .map(|keys| keys.iter().map(|k| k.id()).collect::<Vec<u32>>())
-            .ok_or(ServerError::AccountNotExist)
     }
 
     async fn get_pq_pre_key_ids(

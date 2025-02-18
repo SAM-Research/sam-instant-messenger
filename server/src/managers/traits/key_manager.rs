@@ -13,11 +13,6 @@ pub trait PreKeyManager: Send + Sync + Clone {
         account_id: AccountId,
         device_id: DeviceId,
     ) -> Result<Option<EcPreKey>, ServerError>;
-    async fn get_pre_keys(
-        &self,
-        account_id: AccountId,
-        device_id: DeviceId,
-    ) -> Result<Vec<u32>, ServerError>;
     async fn get_pre_key_ids(
         &self,
         account_id: AccountId,
@@ -66,11 +61,6 @@ pub trait PqPreKeyManager {
         device_id: DeviceId,
     ) -> Result<Option<PqPreKey>, ServerError>;
     async fn get_pq_pre_key_ids(
-        &self,
-        account_id: AccountId,
-        device_id: DeviceId,
-    ) -> Result<Vec<u32>, ServerError>;
-    async fn get_pq_pre_keys(
         &self,
         account_id: AccountId,
         device_id: DeviceId,
