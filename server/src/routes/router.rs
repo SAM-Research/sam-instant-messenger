@@ -1,0 +1,28 @@
+use axum::{
+    routing::{delete, get, post, put},
+    Router,
+};
+
+use crate::state::{state_type::StateType, ServerState};
+
+use super::account::{account_register_endpoint, delete_account_endpoint};
+use super::device::{
+    delete_device_endpoint, device_provision_token_endpoint, link_device_endpoint,
+};
+use super::keys::{keys_bundles_endpoint, publish_keys_endpoint};
+
+pub fn router<T: StateType>() -> Router<ServerState<T>> {
+    Router::new()
+        .route("/", get(|| async { "Hello From SAM Service" }))
+        .route("/api/v1/account", post(account_register_endpoint))
+        .route("/api/v1/account", delete(delete_account_endpoint))
+        .route("/api/v1/keys/:account_id", get(keys_bundles_endpoint))
+        .route("/api/v1/keys", put(publish_keys_endpoint))
+        .route(
+            "/api/v1/devices/provision",
+            get(device_provision_token_endpoint),
+        )
+        .route("/api/v1/devices/link", post(link_device_endpoint))
+        .route("/api/v1/device/:id", delete(delete_device_endpoint))
+    // TODO: Add Websocket endpoint
+}
