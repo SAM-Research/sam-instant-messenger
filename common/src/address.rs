@@ -1,5 +1,6 @@
 use std::{
     fmt::{self, Display, Formatter},
+    ops::Deref,
     str::FromStr,
 };
 
@@ -52,6 +53,14 @@ macro_rules! define_uuid_type {
         impl Display for $name {
             fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
                 write!(f, "{}", self.0.to_string())
+            }
+        }
+
+        impl Deref for $name {
+            type Target = Uuid;
+
+            fn deref(&self) -> &Self::Target {
+                &self.0
             }
         }
     };
@@ -107,6 +116,14 @@ impl FromStr for DeviceId {
     Deserialize,
 )]
 pub struct RegistrationId(u32);
+
+impl Deref for RegistrationId {
+    type Target = u32;
+
+    fn deref(&self) -> &Self::Target {
+        &self.0
+    }
+}
 
 impl RegistrationId {
     pub fn generate<R: Rng>(csprng: &mut R) -> Self {
