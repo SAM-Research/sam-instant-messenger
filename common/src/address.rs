@@ -9,9 +9,7 @@ use derive_more::{Display, From, Into};
 use rand::Rng;
 use uuid::Uuid;
 
-const REGISTRATION_ID_MAX: u32 = 16383;
-
-macro_rules! define_id_type {
+macro_rules! define_uuid_type {
     ($name:ident) => {
         #[derive(Debug, Clone, Copy, Hash, PartialEq, Eq, From, Into, Serialize, Deserialize)]
         pub struct $name(Uuid);
@@ -59,8 +57,8 @@ macro_rules! define_id_type {
     };
 }
 
-define_id_type!(AccountId);
-define_id_type!(MessageId);
+define_uuid_type!(AccountId);
+define_uuid_type!(MessageId);
 
 #[derive(
     Copy,
@@ -112,7 +110,7 @@ pub struct RegistrationId(u32);
 
 impl RegistrationId {
     pub fn generate<R: Rng>(csprng: &mut R) -> Self {
-        RegistrationId(csprng.gen_range(1..REGISTRATION_ID_MAX))
+        RegistrationId(csprng.gen())
     }
 }
 impl Display for RegistrationId {

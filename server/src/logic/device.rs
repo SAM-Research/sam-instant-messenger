@@ -172,10 +172,14 @@ mod test {
             .expect("Users device password is set correctly");
 
         // check if keys are inserted
-        let keys = state.keys;
 
-        let ec_key_ids = keys.get_pre_key_ids(account_id, 1.into()).await.unwrap();
-        let signed_ec_id = keys
+        let ec_key_ids = state
+            .keys
+            .get_pre_key_ids(account_id, 1.into())
+            .await
+            .unwrap();
+        let signed_ec_id = state
+            .keys
             .get_signed_pre_key(account_id, 1.into())
             .await
             .unwrap()
@@ -184,8 +188,13 @@ mod test {
         assert!(ec_key_ids == vec![0]);
         assert!(signed_ec_id == 1);
 
-        let pq_key_ids = keys.get_pq_pre_key_ids(account_id, 1.into()).await.unwrap();
-        let last_resort_id = keys
+        let pq_key_ids = state
+            .keys
+            .get_pq_pre_key_ids(account_id, 1.into())
+            .await
+            .unwrap();
+        let last_resort_id = state
+            .keys
             .get_last_resort_key(account_id, 1.into())
             .await
             .unwrap()

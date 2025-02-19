@@ -44,13 +44,13 @@ impl ServerEnvelope {
             id: id.into(),
         }
     }
-    pub fn validate(self) -> Result<ValidServerEnvelope, LibError> {
+    pub fn validate(self) -> Result<ValidatedServerEnvelope, LibError> {
         todo!()
     }
 }
 
 #[derive(Debug, Clone)]
-pub struct ValidServerEnvelope {
+pub struct ValidatedServerEnvelope {
     r#type: EnvelopeType,
     destination: DeviceAddress,
     source: DeviceAddress,
@@ -58,7 +58,7 @@ pub struct ValidServerEnvelope {
     id: MessageId,
 }
 
-impl ValidServerEnvelope {
+impl ValidatedServerEnvelope {
     pub fn new(
         r#type: EnvelopeType,
         destination: DeviceAddress,
