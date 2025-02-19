@@ -1,3 +1,4 @@
+mod account;
 mod identity;
 mod kyber;
 mod pre_key;

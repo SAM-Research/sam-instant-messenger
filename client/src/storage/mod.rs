@@ -2,9 +2,10 @@ use crate::ClientError;
 use async_trait::async_trait;
 use bon::Builder;
 use libsignal_protocol::{
-    Aci, IdentityKeyPair, IdentityKeyStore, KyberPreKeyId, KyberPreKeyStore, PreKeyId, PreKeyStore,
+    IdentityKeyPair, IdentityKeyStore, KyberPreKeyId, KyberPreKeyStore, PreKeyId, PreKeyStore,
     SenderKeyStore, SessionStore, SignedPreKeyId, SignedPreKeyStore,
 };
+use sam_common::address::AccountId;
 use std::fmt::Debug;
 pub mod inmem;
 pub mod sqlite;
@@ -29,11 +30,11 @@ pub trait ContactStore {}
 
 #[async_trait(?Send)]
 pub trait AccountStore {
-    async fn set_aci(&self, aci: Aci) -> Result<(), ClientError>;
-    async fn get_aci(&self) -> Result<Aci, ClientError>;
-    async fn set_password(&self, password: String) -> Result<(), ClientError>;
+    async fn set_account_id(&mut self, account_id: AccountId) -> Result<(), ClientError>;
+    async fn get_account_id(&self) -> Result<AccountId, ClientError>;
+    async fn set_password(&mut self, password: String) -> Result<(), ClientError>;
     async fn get_password(&self) -> Result<String, ClientError>;
-    async fn set_username(&self, username: String) -> Result<(), ClientError>;
+    async fn set_username(&mut self, username: String) -> Result<(), ClientError>;
     async fn get_username(&self) -> Result<String, ClientError>;
 }
 

@@ -1,7 +1,9 @@
+use std::str::FromStr as _;
+
 use crate::{storage::AccountStore, ClientError};
 use async_trait::async_trait;
-use libsignal_protocol::Aci;
-use sqlx::{Pool, Sqlite};
+use sam_common::address::AccountId;
+use sqlx::{Error as SqlxError, Pool, Sqlite};
 
 #[derive(Debug)]
 pub struct SqliteAccountStore {
@@ -16,8 +18,8 @@ impl SqliteAccountStore {
 
 #[async_trait(?Send)]
 impl AccountStore for SqliteAccountStore {
-    async fn set_aci(&self, aci: Aci) -> Result<(), ClientError> {
-        let aci = aci.service_id_string();
+    async fn set_account_id(&mut self, aci: AccountId) -> Result<(), ClientError> {
+        let aci = aci.to_string();
         sqlx::query!(
             r#"
             DELETE FROM Aci;
@@ -32,22 +34,24 @@ impl AccountStore for SqliteAccountStore {
         .map_err(ClientError::from)
     }
 
-    async fn get_aci(&self) -> Result<Aci, ClientError> {
-        sqlx::query!(
+    async fn get_account_id(&self) -> Result<AccountId, ClientError> {
+        match sqlx::query!(
             r#"
             SELECT * FROM Aci;
             "#,
         )
         .fetch_one(&self.database)
         .await
-        .map(|rec| {
-            Aci::parse_from_service_id_string(&rec.aci)
-                .ok_or(ClientError::InvalidServiceId(rec.aci))
-        })?
-        .map_err(ClientError::from)
+        {
+            Err(SqlxError::RowNotFound) => Err(ClientError::NoAccountId),
+            Ok(rec) => {
+                AccountId::from_str(&rec.aci).map_err(|_| ClientError::InvalidServiceId(rec.aci))
+            }
+            Err(err) => Err(ClientError::from(err)),
+        }
     }
 
-    async fn set_password(&self, password: String) -> Result<(), ClientError> {
+    async fn set_password(&mut self, password: String) -> Result<(), ClientError> {
         sqlx::query!(
             r#"
             DELETE FROM Password;
@@ -63,18 +67,21 @@ impl AccountStore for SqliteAccountStore {
     }
 
     async fn get_password(&self) -> Result<String, ClientError> {
-        sqlx::query!(
+        match sqlx::query!(
             r#"
             SELECT * FROM Password;
             "#,
         )
         .fetch_one(&self.database)
         .await
-        .map(|rec| rec.password)
-        .map_err(ClientError::from)
+        {
+            Err(SqlxError::RowNotFound) => Err(ClientError::NoPassword),
+            Ok(rec) => Ok(rec.password),
+            Err(err) => Err(ClientError::from(err)),
+        }
     }
 
-    async fn set_username(&self, username: String) -> Result<(), ClientError> {
+    async fn set_username(&mut self, username: String) -> Result<(), ClientError> {
         sqlx::query!(
             r#"
             DELETE FROM Username;
@@ -90,14 +97,17 @@ impl AccountStore for SqliteAccountStore {
     }
 
     async fn get_username(&self) -> Result<String, ClientError> {
-        sqlx::query!(
+        match sqlx::query!(
             r#"
             SELECT * FROM Username;
             "#,
         )
         .fetch_one(&self.database)
         .await
-        .map(|rec| rec.username)
-        .map_err(ClientError::from)
+        {
+            Err(SqlxError::RowNotFound) => Err(ClientError::NoUsername),
+            Ok(rec) => Ok(rec.username),
+            Err(err) => Err(ClientError::from(err)),
+        }
     }
 }
