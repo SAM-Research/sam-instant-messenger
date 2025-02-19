@@ -150,10 +150,7 @@ mod test {
 
     use crate::{
         auth::password::Password,
-        logic::{
-            keys::{add_keybundle, get_keybundle, get_keybundles, publish_keybundle},
-            test_utils::create_publish_key_bundle,
-        },
+        logic::keys::{add_keybundle, get_keybundle, get_keybundles, publish_keybundle},
         managers::{
             entities::{account::Account, device::Device},
             in_memory::test_utils::LINK_SECRET,
@@ -166,6 +163,7 @@ mod test {
             },
         },
         state::ServerState,
+        test_utils::create_publish_key_bundle,
     };
 
     #[tokio::test]

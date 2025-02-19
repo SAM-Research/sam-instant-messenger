@@ -1,5 +1,6 @@
 use axum::{http::StatusCode, response::IntoResponse};
 use derive_more::derive::{Display, Error};
+use log::debug;
 use sam_common::LibError;
 
 pub type Result<T> = std::result::Result<T, ServerError>;
@@ -34,10 +35,12 @@ pub enum ServerError {
     MessageAlreadyPending,
     MessageNotPending,
     EnvelopeMalformed,
+    MessageSubscriberSendErorr,
 }
 
 impl IntoResponse for ServerError {
     fn into_response(self) -> axum::response::Response {
+        debug!("ServerError occured: {}", self);
         match self {
             ServerError::Custom(_) => StatusCode::INTERNAL_SERVER_ERROR,
             ServerError::Lib(_) => StatusCode::INTERNAL_SERVER_ERROR,
@@ -66,6 +69,7 @@ impl IntoResponse for ServerError {
             ServerError::MessageAlreadyPending => todo!(),
             ServerError::MessageNotPending => todo!(),
             ServerError::EnvelopeMalformed => todo!(),
+            ServerError::MessageSubscriberSendErorr => todo!(),
         }
         .into_response()
     }

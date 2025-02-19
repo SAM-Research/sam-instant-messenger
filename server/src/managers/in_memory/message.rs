@@ -63,7 +63,12 @@ impl MessageManager for InMemoryMessageManager {
         };
 
         let _ = msgs.and_then(|map| map.insert(envelope_id, envelope));
-
+        if let Some(sender) = self.subscribers.lock().await.get(&key) {
+            sender
+                .send(envelope_id)
+                .await
+                .map_err(|_| ServerError::MessageSubscriberSendErorr)?;
+        }
         Ok(())
     }
 

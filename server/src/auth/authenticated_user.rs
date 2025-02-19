@@ -29,7 +29,6 @@ impl AuthenticatedUser {
     }
 }
 
-#[async_trait::async_trait]
 impl<T: StateType> FromRequestParts<ServerState<T>> for AuthenticatedUser {
     type Rejection = ServerError;
 
@@ -44,7 +43,6 @@ impl<T: StateType> FromRequestParts<ServerState<T>> for AuthenticatedUser {
                     .map_err(|_| ServerError::AuthBasicParseError)?;
             (basic.username().to_string(), basic.password().to_string())
         };
-
         let (account_id, device_id) = userinfo
             .split_once(".")
             .ok_or(ServerError::AuthBasicParseError)?;

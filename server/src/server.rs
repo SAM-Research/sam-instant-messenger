@@ -24,8 +24,8 @@ async fn log_request(req: Request, next: Next) -> impl IntoResponse {
 }
 
 pub async fn start_server<T: StateType>(config: ServerConfig<T>) -> Result<(), std::io::Error> {
-    let mut state = config.state;
-    state.init().await;
+    let state = config.state;
+
     let app = router()
         .layer(from_fn(log_request))
         .with_state(state.clone());
@@ -48,6 +48,5 @@ pub async fn start_server<T: StateType>(config: ServerConfig<T>) -> Result<(), s
             .await?;
     };
 
-    state.cleanup().await;
     Ok(())
 }

@@ -4,7 +4,7 @@ use crate::{
     state::{state_type::StateType, ServerState},
     ServerError,
 };
-use log::error;
+use log::{error, warn};
 use sam_common::sam_message::{ClientEnvelope, MessageType};
 use sam_common::sam_message::{ClientMessage, ServerEnvelope, ServerMessage};
 use uuid::Uuid;
@@ -39,18 +39,31 @@ pub async fn handle_client_message<T: StateType>(
             }
         }
         MessageType::Ack => {
+            let account_id = *auth_user.account().id();
+            let device_id = auth_user.device().id();
             let pending_res = state
                 .messages
-                .remove_pending_message(
-                    *auth_user.account().id(),
-                    auth_user.device().id(),
-                    message_id,
-                )
+                .remove_pending_message(account_id, device_id, message_id)
                 .await;
-
             match pending_res {
-                Ok(_) => Ok(None),
-                Err(_) => error_message!(message.id),
+                Ok(_) => {
+                    let remove_res = state
+                        .messages
+                        .remove_envelope(account_id, device_id, message_id)
+                        .await;
+                    match remove_res {
+                        Ok(_) => Ok(None),
+                        Err(e) => Err(e),
+                    }
+                }
+                Err(e) => {
+                    warn!(
+                        "error '{}', websocket user '{}' sent an ack with unknown id",
+                        e,
+                        auth_user.account().username()
+                    );
+                    error_message!(message.id)
+                }
             }
         }
         MessageType::Error => {

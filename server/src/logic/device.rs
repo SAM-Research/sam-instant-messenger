@@ -107,7 +107,6 @@ mod test {
         logic::{
             account::create_account,
             device::{create_device, create_device_token, link_device, unlink_device},
-            test_utils::{create_device_link, create_publish_key_bundle},
         },
         managers::{
             in_memory::test_utils::LINK_SECRET,
@@ -119,6 +118,7 @@ mod test {
             },
         },
         state::ServerState,
+        test_utils::{create_device_link, create_publish_key_bundle},
     };
 
     #[tokio::test]

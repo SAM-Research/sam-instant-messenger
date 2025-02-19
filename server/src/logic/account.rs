@@ -95,10 +95,7 @@ mod test {
     use sam_common::api::{device::DeviceActivationInfo, Key, RegistrationRequest};
 
     use crate::{
-        logic::{
-            account::{create_account, delete_account},
-            test_utils::create_publish_key_bundle,
-        },
+        logic::account::{create_account, delete_account},
         managers::{
             in_memory::test_utils::LINK_SECRET,
             traits::{
@@ -110,6 +107,7 @@ mod test {
             },
         },
         state::ServerState,
+        test_utils::create_publish_key_bundle,
     };
 
     #[tokio::test]

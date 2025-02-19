@@ -23,7 +23,7 @@ macro_rules! closing_err {
         error!(
             "User '{}' websocket encountered an error '{}' closing connection...",
             $username, $err
-        );
+        )
     };
 }
 
@@ -34,13 +34,17 @@ pub async fn websocket_message_receiver<T: StateType>(
     auth_user: AuthenticatedUser,
 ) {
     while let Some(Ok(msg)) = receiver.next().await {
-        info!(
-            "Received websocket message from user '{}'",
-            auth_user.account().username()
-        );
         let decode_res = match msg {
             Message::Binary(b) => {
+                info!(
+                    "Received websocket message from user '{}'",
+                    auth_user.account().username()
+                );
                 ClientMessage::decode(Bytes::from(b)).map_err(|_| ServerError::WebSocketDecodeError)
+            }
+            Message::Text(x) => {
+                info!("{}", x);
+                continue;
             }
             Message::Close(_) => Err(ServerError::WebSocketDisconnected),
             _ => continue,
@@ -48,7 +52,7 @@ pub async fn websocket_message_receiver<T: StateType>(
 
         let msg_res = match decode_res {
             Ok(msg) => handle_client_message(&mut state, &auth_user, msg).await,
-            Err(_) => Err(ServerError::WebSocketDecodeError),
+            Err(e) => Err(e),
         };
 
         let is_msg_res_err = msg_res.is_err();
@@ -67,11 +71,11 @@ pub async fn websocket_message_sender<T: StateType>(
     while let Some(msg_res) = message_consumer.recv().await {
         let send_res = match msg_res {
             Ok(Some(msg)) => sender
-                .send(Message::Binary(msg.encode_to_vec()))
+                .send(Message::Binary(msg.encode_to_vec().into()))
                 .await
                 .map_err(|_| ServerError::WebSocketSendError),
+            Err(ServerError::WebSocketDisconnected) => Err(ServerError::WebSocketDisconnected),
             Err(err) => {
-                closing_err!(auth_user.account().username(), err);
                 let res = sender
                     .send(Message::Close(Some(CloseFrame {
                         code: 1011,
@@ -90,7 +94,10 @@ pub async fn websocket_message_sender<T: StateType>(
         match send_res {
             Ok(_) => continue,
             Err(err) => {
-                closing_err!(auth_user.account().username(), err);
+                match err {
+                    ServerError::WebSocketDisconnected => break,
+                    _ => closing_err!(auth_user.account().username(), err),
+                }
                 break;
             }
         }
