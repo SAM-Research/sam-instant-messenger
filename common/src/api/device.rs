@@ -1,9 +1,7 @@
 use serde::{Deserialize, Serialize};
-use uuid::Uuid;
 
-use crate::RegistrationId;
-
-use super::keys::PublishKeyBundle;
+use super::keys::PublishPreKeys;
+use crate::address::{AccountId, DeviceId, RegistrationId};
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
 #[serde(rename_all = "camelCase")]
@@ -28,8 +26,8 @@ impl LinkDeviceToken {
 #[derive(Serialize, Deserialize, Clone)]
 #[serde(rename_all = "camelCase")]
 pub struct LinkDeviceResponse {
-    pub account_id: Uuid,
-    pub device_id: u32,
+    pub account_id: AccountId,
+    pub device_id: DeviceId,
 }
 
 #[derive(Debug, Serialize, Deserialize)]
@@ -44,5 +42,5 @@ pub struct LinkDeviceRequest {
 pub struct DeviceActivationInfo {
     pub name: String,
     pub registration_id: RegistrationId,
-    pub key_bundle: PublishKeyBundle,
+    pub key_bundle: PublishPreKeys,
 }

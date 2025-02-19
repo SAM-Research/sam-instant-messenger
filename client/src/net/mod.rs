@@ -1,6 +1,6 @@
 use async_trait::async_trait;
 use derive_more::{Display, Error};
-use sam_common::api::{keys::PublishKeyBundle, RegistrationRequest, RegistrationResponse};
+use sam_common::api::{keys::PublishPreKeys, RegistrationRequest, RegistrationResponse};
 
 #[async_trait(?Send)]
 pub trait SignalApiClient {
@@ -15,7 +15,7 @@ pub trait SignalApiClient {
     ) -> Result<RegistrationResponse, Self::Error>;
 
     /// Uploads a Pre Key Bundle to the Server.
-    async fn publish_pre_key_bundle(&self, bundle: PublishKeyBundle) -> Result<(), Self::Error>;
+    async fn publish_pre_key_bundle(&self, bundle: PublishPreKeys) -> Result<(), Self::Error>;
 }
 
 #[derive(Debug)]
@@ -36,7 +36,7 @@ impl SignalApiClient for HttpClient {
         todo!()
     }
 
-    async fn publish_pre_key_bundle(&self, _bundle: PublishKeyBundle) -> Result<(), Self::Error> {
+    async fn publish_pre_key_bundle(&self, _bundle: PublishPreKeys) -> Result<(), Self::Error> {
         todo!()
     }
 }

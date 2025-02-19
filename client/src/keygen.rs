@@ -8,7 +8,7 @@ use libsignal_protocol::{
     PreKeyRecord, PreKeyStore, SignedPreKeyRecord, SignedPreKeyStore,
 };
 use rand::{CryptoRng, Rng};
-use sam_common::api::keys::PublishKeyBundle;
+use sam_common::api::keys::PublishPreKeys;
 
 #[derive(Debug)]
 pub struct OneTimePreKeyCollection {
@@ -21,8 +21,8 @@ impl OneTimePreKeyCollection {
         self,
         signed_pre_key: SignedPreKeyRecord,
         pq_last_resort_pre_key: KyberPreKeyRecord,
-    ) -> PublishKeyBundle {
-        PublishKeyBundle {
+    ) -> PublishPreKeys {
+        PublishPreKeys {
             signed_pre_key: Some(signed_pre_key.into()),
             pre_keys: Some(self.pre_keys.into_iter().map(|key| key.into()).collect()),
             pq_pre_keys: Some(self.pq_pre_keys.into_iter().map(|key| key.into()).collect()),

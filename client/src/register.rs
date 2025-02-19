@@ -57,14 +57,14 @@ pub async fn register_client<
         },
     };
 
-    let response = http_client
+    let _response = http_client
         .register_client(password.to_owned(), registration_request)
         .await
         .map_err(Into::into)?;
 
-    let aci = response.account_id.into();
+    //let aci = response.account_id.into();
 
-    store.account_store.set_aci(aci).await?;
+    //store.account_store.set_aci(aci).await?;
     store.account_store.set_password(password).await?;
 
     Ok(Client { store })
