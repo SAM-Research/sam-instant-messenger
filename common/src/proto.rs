@@ -3,7 +3,6 @@ use std::collections::HashMap;
 use crate::{
     address::{AccountId, DeviceAddress, DeviceId, MessageId},
     sam_message::{ClientEnvelope, EnvelopeType, ServerEnvelope},
-    LibError,
 };
 
 impl ClientEnvelope {
@@ -43,56 +42,6 @@ impl ServerEnvelope {
             content,
             id: id.into(),
         }
-    }
-    pub fn validate(self) -> Result<ValidatedServerEnvelope, LibError> {
-        todo!()
-    }
-}
-
-#[derive(Debug, Clone)]
-pub struct ValidatedServerEnvelope {
-    r#type: EnvelopeType,
-    destination: DeviceAddress,
-    source: DeviceAddress,
-    content: Vec<u8>,
-    id: MessageId,
-}
-
-impl ValidatedServerEnvelope {
-    pub fn new(
-        r#type: EnvelopeType,
-        destination: DeviceAddress,
-        source: DeviceAddress,
-        content: Vec<u8>,
-        id: MessageId,
-    ) -> Self {
-        Self {
-            r#type,
-            destination,
-            source,
-            content,
-            id,
-        }
-    }
-
-    pub fn r#type(&self) -> EnvelopeType {
-        self.r#type
-    }
-
-    pub fn destination(&self) -> DeviceAddress {
-        self.destination
-    }
-
-    pub fn source(&self) -> DeviceAddress {
-        self.source
-    }
-
-    pub fn content(&self) -> &Vec<u8> {
-        &self.content
-    }
-
-    pub fn id(&self) -> MessageId {
-        self.id
     }
 }
 

@@ -1,17 +1,17 @@
-use std::collections::HashMap;
+use std::{collections::HashMap, sync::Arc};
 
 use sam_common::{
     address::{AccountId, DeviceAddress, DeviceId, MessageId},
     sam_message::ServerEnvelope,
 };
-use tokio::sync::mpsc;
+use tokio::sync::{mpsc, Mutex};
 
 use crate::{managers::traits::message_manager::MessageManager, ServerError};
 
 #[derive(Clone)]
 pub struct InMemoryMessageManager {
-    messages: HashMap<DeviceAddress, HashMap<MessageId, ServerEnvelope>>,
-    subscribers: HashMap<DeviceAddress, mpsc::Sender<MessageId>>,
+    messages: Arc<Mutex<HashMap<DeviceAddress, HashMap<MessageId, ServerEnvelope>>>>,
+    subscribers: Arc<Mutex<HashMap<DeviceAddress, mpsc::Sender<MessageId>>>>,
 }
 
 impl Default for InMemoryMessageManager {
@@ -23,8 +23,8 @@ impl Default for InMemoryMessageManager {
 impl InMemoryMessageManager {
     pub fn new() -> Self {
         InMemoryMessageManager {
-            messages: HashMap::new(),
-            subscribers: HashMap::new(),
+            messages: Arc::new(Mutex::new(HashMap::new())),
+            subscribers: Arc::new(Mutex::new(HashMap::new())),
         }
     }
 }
@@ -40,9 +40,10 @@ impl MessageManager for InMemoryMessageManager {
     ) -> Result<(), ServerError> {
         let key = DeviceAddress::new(account_id, device_id);
 
-        self.messages.entry(key).or_default();
+        self.messages.lock().await.entry(key).or_default();
 
-        let msgs = self.messages.get_mut(&key);
+        let mut messages = self.messages.lock().await;
+        let msgs = messages.get_mut(&key);
 
         if msgs
             .as_ref()
@@ -64,7 +65,7 @@ impl MessageManager for InMemoryMessageManager {
     ) -> Result<ServerEnvelope, ServerError> {
         let key = DeviceAddress::new(account_id, device_id);
 
-        match self.messages.get(&key) {
+        match self.messages.lock().await.get(&key) {
             Some(msgs) => msgs
                 .get(&message_id)
                 .cloned()
@@ -81,7 +82,7 @@ impl MessageManager for InMemoryMessageManager {
     ) -> Result<(), ServerError> {
         let key = DeviceAddress::new(account_id, device_id);
 
-        match self.messages.get_mut(&key) {
+        match self.messages.lock().await.get_mut(&key) {
             Some(msgs) => msgs
                 .remove(&message_id)
                 .ok_or(ServerError::EnvelopeNotExists)
@@ -98,6 +99,8 @@ impl MessageManager for InMemoryMessageManager {
         let key = DeviceAddress::new(account_id, device_id);
 
         self.messages
+            .lock()
+            .await
             .get(&key)
             .ok_or(ServerError::AccountNotExist)
             .map(|msgs| msgs.keys().cloned().collect::<Vec<MessageId>>())
@@ -111,11 +114,11 @@ impl MessageManager for InMemoryMessageManager {
         let key = DeviceAddress::new(account_id, device_id);
         let (sender, receiver) = mpsc::channel(10);
 
-        if self.subscribers.contains_key(&key) {
+        if self.subscribers.lock().await.contains_key(&key) {
             return Err(ServerError::MessageSubscriberExists);
         }
 
-        let _ = self.subscribers.insert(key, sender);
+        let _ = self.subscribers.lock().await.insert(key, sender);
         Ok(receiver)
     }
 
@@ -126,11 +129,11 @@ impl MessageManager for InMemoryMessageManager {
     ) -> Result<(), ServerError> {
         let key = DeviceAddress::new(account_id, device_id);
 
-        if self.subscribers.contains_key(&key) {
+        if self.subscribers.lock().await.contains_key(&key) {
             return Err(ServerError::MessageSubscriberNotExists);
         }
 
-        self.subscribers.remove(&key);
+        self.subscribers.lock().await.remove(&key);
         Ok(())
     }
 }

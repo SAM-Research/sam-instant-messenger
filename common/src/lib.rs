@@ -9,6 +9,4 @@ pub use error::Result;
 
 pub use time::time_now_millis;
 
-pub use proto::ValidatedServerEnvelope;
-
 include!(concat!(env!("OUT_DIR"), "/_includes.rs"));
