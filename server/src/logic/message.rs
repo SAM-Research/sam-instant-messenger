@@ -100,7 +100,7 @@ async fn handle_client_evelope<T: StateType>(
             .destination_account_id(envelope.destination_account_id.clone())
             .destination_device_id(device_id)
             .source_account_id(envelope.source_account_id.clone())
-            .source_device_id(envelope.source_device_id.clone())
+            .source_device_id(envelope.source_device_id)
             .content(cipher)
             .id(id.into_bytes().to_vec())
             .build();
