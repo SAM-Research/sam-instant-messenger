@@ -86,6 +86,14 @@ define_uuid_type!(MessageId);
 )]
 pub struct DeviceId(u32);
 
+impl Deref for DeviceId {
+    type Target = u32;
+
+    fn deref(&self) -> &Self::Target {
+        &self.0
+    }
+}
+
 impl Display for DeviceId {
     fn fmt(&self, f: &mut Formatter) -> fmt::Result {
         write!(f, "{}", self.0)

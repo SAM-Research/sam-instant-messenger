@@ -63,7 +63,7 @@ impl DeviceManager for InMemoryDeviceManager {
         let mut devices = self.get_devices(account_id).await?;
         devices.sort();
         for (i, &num) in devices.iter().enumerate() {
-            if num != ((i as u32) + 1).into() {
+            if *num != (i as u32) + 1 {
                 return Ok(((i as u32) + 1).into());
             }
         }
