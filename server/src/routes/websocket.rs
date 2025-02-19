@@ -97,7 +97,7 @@ mod test {
             tx.send(()).expect("Can oneshot");
             server.await
         });
-        return rx;
+        rx
     }
 
     async fn connect_user(

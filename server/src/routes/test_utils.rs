@@ -31,7 +31,7 @@ pub async fn create_user<T: StateType>(
     let id_pair = IdentityKeyPair::generate(&mut rng);
     let account = Account::builder()
         .id(Uuid::new_v4())
-        .identity(id_pair.identity_key().clone())
+        .identity(*id_pair.identity_key())
         .username(username.to_string())
         .build();
     let device = Device::builder()
@@ -51,5 +51,5 @@ pub async fn create_user<T: StateType>(
         .add_device(*account.id(), &device)
         .await
         .expect("Device can be added");
-    (id_pair, account.id().clone())
+    (id_pair, *account.id())
 }

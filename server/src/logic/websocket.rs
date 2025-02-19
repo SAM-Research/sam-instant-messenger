@@ -4,7 +4,7 @@ use futures_util::{
     SinkExt, StreamExt,
 };
 use log::{error, info};
-use prost::{bytes::Bytes, Message as _};
+use prost::Message as _;
 use sam_common::sam_message::{ClientMessage, ServerMessage};
 use tokio::sync::mpsc::{Receiver, Sender};
 use uuid::Uuid;
@@ -40,7 +40,7 @@ pub async fn websocket_message_receiver<T: StateType>(
                     "Received websocket message from user '{}'",
                     auth_user.account().username()
                 );
-                ClientMessage::decode(Bytes::from(b)).map_err(|_| ServerError::WebSocketDecodeError)
+                ClientMessage::decode(b).map_err(|_| ServerError::WebSocketDecodeError)
             }
             Message::Text(x) => {
                 info!("{}", x);

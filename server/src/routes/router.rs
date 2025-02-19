@@ -6,8 +6,10 @@ use super::{
     account::account_routes, device::device_routes, keys::key_routes, websocket::websocket_routes,
 };
 
+type SAMRouter<T> = Router<ServerState<T>>;
+
 struct RouterBuilder<T: StateType> {
-    routes: Vec<fn(Router<ServerState<T>>) -> Router<ServerState<T>>>,
+    routes: Vec<fn(SAMRouter<T>) -> SAMRouter<T>>,
 }
 
 impl<T: StateType> RouterBuilder<T> {
