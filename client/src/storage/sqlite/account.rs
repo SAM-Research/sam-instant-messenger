@@ -18,8 +18,8 @@ impl SqliteAccountStore {
 
 #[async_trait(?Send)]
 impl AccountStore for SqliteAccountStore {
-    async fn set_account_id(&mut self, aci: AccountId) -> Result<(), ClientError> {
-        let aci = aci.to_string();
+    async fn set_account_id(&mut self, id: AccountId) -> Result<(), ClientError> {
+        let aci = id.to_string();
         sqlx::query!(
             r#"
             DELETE FROM Aci;

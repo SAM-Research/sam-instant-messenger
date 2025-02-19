@@ -5,10 +5,13 @@ use libsignal_protocol::{
     IdentityKeyPair, IdentityKeyStore, KyberPreKeyId, KyberPreKeyStore, PreKeyId, PreKeyStore,
     SenderKeyStore, SessionStore, SignedPreKeyId, SignedPreKeyStore,
 };
-use sam_common::address::AccountId;
 use std::fmt::Debug;
+
+pub use traits::{account::AccountStore, contact::ContactStore};
+
 pub mod inmem;
 pub mod sqlite;
+pub mod traits;
 
 #[cfg(test)]
 pub mod tests;
@@ -24,18 +27,6 @@ pub trait StoreConfig {
     ) -> Result<Store<Self::StoreType>, ClientError>;
 
     async fn load_store(self) -> Result<Store<Self::StoreType>, ClientError>;
-}
-
-pub trait ContactStore {}
-
-#[async_trait(?Send)]
-pub trait AccountStore {
-    async fn set_account_id(&mut self, account_id: AccountId) -> Result<(), ClientError>;
-    async fn get_account_id(&self) -> Result<AccountId, ClientError>;
-    async fn set_password(&mut self, password: String) -> Result<(), ClientError>;
-    async fn get_password(&self) -> Result<String, ClientError>;
-    async fn set_username(&mut self, username: String) -> Result<(), ClientError>;
-    async fn get_username(&self) -> Result<String, ClientError>;
 }
 
 #[async_trait(?Send)]

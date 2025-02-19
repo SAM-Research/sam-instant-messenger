@@ -2,7 +2,6 @@ mod account;
 mod identity;
 mod kyber;
 mod pre_key;
-mod sender_key;
 mod session;
 mod signed_pre_key;
 
