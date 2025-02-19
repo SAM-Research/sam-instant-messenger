@@ -1,9 +1,9 @@
-use sam_client::signal_time_now;
 use super::{in_mem, sqlite};
 use libsignal_protocol::{
     GenericSignedPreKey as _, IdentityKeyPair, KeyPair, SignedPreKeyRecord, SignedPreKeyStore,
 };
 use rand::rngs::OsRng;
+use sam_client::signal_time_now;
 
 macro_rules! test_signed_pre_key_store {
     ( [ $( ($struct:ty, $factory:expr) ),* ]) => {
