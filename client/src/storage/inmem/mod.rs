@@ -8,6 +8,8 @@ use libsignal_protocol::{
     IdentityKeyPair, InMemIdentityKeyStore, InMemKyberPreKeyStore, InMemPreKeyStore,
     InMemSenderKeyStore, InMemSessionStore, InMemSignedPreKeyStore,
 };
+use rand::rngs::OsRng;
+use sam_common::address::RegistrationId;
 
 pub mod account;
 pub mod contact;
@@ -62,6 +64,11 @@ impl StoreConfig for InMemoryStoreConfig {
     }
 
     async fn load_store(self) -> Result<InMemoryStore, ClientError> {
-        todo!("Loading an in memory store does not make sense")
+        let mut csprng = OsRng;
+        self.create_store(
+            IdentityKeyPair::generate(&mut csprng),
+            RegistrationId::generate(&mut csprng),
+        )
+        .await
     }
 }
