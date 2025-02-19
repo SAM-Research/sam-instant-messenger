@@ -15,3 +15,4 @@ bon = "3.3.2"
 sqlx = { version = "0.8.3", features = ["sqlite", "runtime-tokio"] }
 tokio = { version = "1.43.0", features = ["macros", "rt-multi-thread"] }
 rand = "0.8.5"
+paste = "1.0.15"

@@ -17,6 +17,9 @@ pub enum ClientError {
     Sqlx(AssertUnwindSafe<SqlxError>),
     Lib(LibError),
     Curve(CurveError),
+    NoAccountId,
+    NoPassword,
+    NoUsername,
 }
 
 impl From<SqlxError> for ClientError {
