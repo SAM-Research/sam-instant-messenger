@@ -7,7 +7,6 @@ use crate::{
     ClientError,
 };
 
-#[derive(Debug)]
 pub struct Client<S: StoreType> {
     pub store: Store<S>,
 }

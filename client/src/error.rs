@@ -12,8 +12,21 @@ pub enum ClientError {
     InvalidServiceId(#[error(not(source))] String),
     SignalProtocol(SignalProtocolError),
     Sqlite(SqliteError),
+    #[from(ignore)]
     Sqlx(SqlxError),
     Lib(LibError),
     Curve(CurveError),
     HttpClient(HttpClientError),
+    NoAccountId,
+    NoPassword,
+    NoUsername,
+}
+
+impl From<SqlxError> for ClientError {
+    fn from(value: SqlxError) -> Self {
+        match value {
+            SqlxError::Database(database_error) => ClientError::Sqlite(*database_error.downcast()),
+            err => panic!("{}", err),
+        }
+    }
 }
