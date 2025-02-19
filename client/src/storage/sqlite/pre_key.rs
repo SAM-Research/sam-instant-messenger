@@ -3,7 +3,10 @@ use base64::{prelude::BASE64_STANDARD, Engine};
 use libsignal_protocol::{PreKeyId, PreKeyRecord, PreKeyStore, SignalProtocolError};
 use sqlx::{Pool, Sqlite};
 
-use crate::{storage::ProvidesKeyId, ClientError};
+use crate::{
+    storage::{error::DatabaseError, ProvidesKeyId},
+    ClientError,
+};
 
 #[derive(Debug)]
 pub struct SqlitePreKeyStore {
@@ -84,7 +87,7 @@ impl PreKeyStore for SqlitePreKeyStore {
 
             Err(err) => Err(SignalProtocolError::ApplicationCallbackError(
                 "save pre key",
-                Box::new(ClientError::from(err)),
+                Box::new(DatabaseError::from(err)),
             )),
         }
     }
@@ -113,7 +116,7 @@ impl PreKeyStore for SqlitePreKeyStore {
         .map_err(|err| {
             SignalProtocolError::ApplicationCallbackError(
                 "save pre key",
-                Box::new(ClientError::from(err)),
+                Box::new(DatabaseError::from(err)),
             )
         })
     }
@@ -136,7 +139,7 @@ impl PreKeyStore for SqlitePreKeyStore {
         .map_err(|err| {
             SignalProtocolError::ApplicationCallbackError(
                 "remove pre key",
-                Box::new(ClientError::from(err)),
+                Box::new(DatabaseError::from(err)),
             )
         })
     }

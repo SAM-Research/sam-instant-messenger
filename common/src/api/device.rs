@@ -1,8 +1,7 @@
 use serde::{Deserialize, Serialize};
 
-use crate::address::{AccountId, DeviceId, RegistrationId};
-
 use super::keys::PublishPreKeys;
+use crate::address::{AccountId, DeviceId, RegistrationId};
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
 #[serde(rename_all = "camelCase")]

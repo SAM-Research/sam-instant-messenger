@@ -4,9 +4,9 @@ use libsignal_protocol::{
     Direction, IdentityKey, IdentityKeyPair, IdentityKeyStore, PrivateKey, ProtocolAddress,
     SignalProtocolError,
 };
-use sqlx::{Pool, Sqlite};
+use sqlx::{Error as SqlxError, Pool, Sqlite};
 
-use crate::ClientError;
+use crate::{storage::error::DatabaseError, ClientError};
 
 #[derive(Debug)]
 pub struct SqliteIdentityKeyStore {
@@ -18,7 +18,7 @@ impl SqliteIdentityKeyStore {
         &self,
         address: &ProtocolAddress,
         identity: &IdentityKey,
-    ) -> Result<(), ClientError> {
+    ) -> Result<(), SqlxError> {
         let addr = format!("{}", address);
         let key = BASE64_STANDARD.encode(identity.serialize());
 
@@ -35,7 +35,6 @@ impl SqliteIdentityKeyStore {
         .execute(&self.database)
         .await
         .map(|_| ())
-        .map_err(ClientError::from)
     }
 
     async fn insert_account_key_information(
@@ -122,7 +121,7 @@ impl IdentityKeyStore for SqliteIdentityKeyStore {
             )),
             Err(err) => Err(SignalProtocolError::ApplicationCallbackError(
                 "Could not fetch Identity Key bundle from database",
-                Box::new(ClientError::from(err)),
+                Box::new(DatabaseError::from(err)),
             )),
         }
     }
@@ -142,7 +141,7 @@ impl IdentityKeyStore for SqliteIdentityKeyStore {
         .map_err(|err| {
             SignalProtocolError::ApplicationCallbackError(
                 "Could not Retrieve local registration id",
-                Box::new(ClientError::from(err)),
+                Box::new(DatabaseError::from(err)),
             )
         })
     }
@@ -164,7 +163,7 @@ impl IdentityKeyStore for SqliteIdentityKeyStore {
                     .map_err(|err| {
                         SignalProtocolError::ApplicationCallbackError(
                             "Could not update own Identity",
-                            Box::new(err),
+                            Box::new(DatabaseError::from(err)),
                         )
                     })?;
                 Ok(true)
@@ -175,7 +174,7 @@ impl IdentityKeyStore for SqliteIdentityKeyStore {
                     .map_err(|err| {
                         SignalProtocolError::ApplicationCallbackError(
                             "Could not insert own Identity",
-                            Box::new(err),
+                            Box::new(DatabaseError::from(err)),
                         )
                     })?;
                 Ok(false)
