@@ -13,9 +13,6 @@ pub mod inmem;
 pub mod sqlite;
 pub mod traits;
 
-#[cfg(test)]
-pub mod tests;
-
 #[async_trait(?Send)]
 pub trait StoreConfig {
     type StoreType: StoreType;

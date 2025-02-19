@@ -3,7 +3,7 @@ use libsignal_protocol::{
 };
 use rand::rngs::OsRng;
 
-use crate::storage::tests::{in_mem, sqlite};
+use super::{in_mem, sqlite};
 
 macro_rules! test_kyber_key_store {
     ( [ $( ($struct:ty, $factory:expr) ),* ]) => {

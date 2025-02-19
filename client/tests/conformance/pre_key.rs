@@ -1,4 +1,4 @@
-use crate::storage::tests::{in_mem, sqlite};
+use super::{in_mem, sqlite};
 use crate::test_pre_key_store;
 use libsignal_protocol::{KeyPair, PreKeyRecord, PreKeyStore};
 use rand::rngs::OsRng;

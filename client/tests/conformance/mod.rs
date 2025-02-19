@@ -1,18 +1,16 @@
+use libsignal_core::ProtocolAddress;
+use libsignal_protocol::IdentityKeyPair;
+use rand::rngs::OsRng;
+use sam_client::storage::inmem::{InMemoryStore, InMemoryStoreConfig};
+use sam_client::storage::sqlite::{SqliteStore, SqliteStoreConfig};
+use sam_client::storage::StoreConfig;
+
 mod account;
 mod identity;
 mod kyber;
 mod pre_key;
 mod session;
 mod signed_pre_key;
-
-use super::{
-    inmem::{InMemoryStore, InMemoryStoreConfig},
-    sqlite::{SqliteStore, SqliteStoreConfig},
-    StoreConfig,
-};
-use libsignal_core::ProtocolAddress;
-use libsignal_protocol::IdentityKeyPair;
-use rand::rngs::OsRng;
 
 async fn sqlite() -> SqliteStore {
     let key_pair = IdentityKeyPair::generate(&mut OsRng);

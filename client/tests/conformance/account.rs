@@ -1,6 +1,6 @@
-use crate::storage::tests::{in_mem, sqlite};
-use crate::storage::AccountStore;
-use crate::ClientError;
+use super::{in_mem, sqlite};
+use sam_client::storage::AccountStore;
+use sam_client::ClientError;
 use sam_common::address::AccountId;
 
 macro_rules! test_account_store {

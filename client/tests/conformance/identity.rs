@@ -1,4 +1,4 @@
-use crate::storage::sqlite::{connect_to_in_memory, identity::SqliteIdentityKeyStore};
+use sam_client::storage::sqlite::{connect_to_in_memory, identity::SqliteIdentityKeyStore};
 use libsignal_protocol::{
     Direction, IdentityKeyPair, IdentityKeyStore, InMemIdentityKeyStore, ProtocolAddress,
 };

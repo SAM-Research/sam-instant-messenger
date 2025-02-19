@@ -1,5 +1,5 @@
-use crate::signal_time_now;
-use crate::storage::tests::{in_mem, sqlite};
+use sam_client::signal_time_now;
+use super::{in_mem, sqlite};
 use libsignal_protocol::{
     GenericSignedPreKey as _, IdentityKeyPair, KeyPair, SignedPreKeyRecord, SignedPreKeyStore,
 };

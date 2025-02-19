@@ -1,4 +1,4 @@
-use crate::storage::tests::{in_mem, sqlite};
+use super::{in_mem, sqlite};
 
 use super::alice_address;
 use libsignal_protocol::{SessionRecord, SessionStore};
