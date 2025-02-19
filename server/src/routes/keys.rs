@@ -3,8 +3,10 @@ use axum::{
     routing::{get, put},
     Json, Router,
 };
-use sam_common::api::keys::{KeyBundleResponse, PublishKeyBundleRequest};
-use uuid::Uuid;
+use sam_common::{
+    address::AccountId,
+    api::keys::{PreKeyBundles, PublishPreKeys},
+};
 
 use crate::{
     auth::authenticated_user::AuthenticatedUser,
@@ -14,10 +16,10 @@ use crate::{
 };
 
 /// Returns key bundles for users devices
-async fn keys_bundles_endpoint<T: StateType>(
-    Path(account_id): Path<Uuid>,
+pub async fn keys_bundles_endpoint<T: StateType>(
+    Path(account_id): Path<AccountId>,
     State(mut state): State<ServerState<T>>,
-) -> Result<Json<KeyBundleResponse>, ServerError> {
+) -> Result<Json<PreKeyBundles>, ServerError> {
     get_keybundles(&mut state, account_id).await.map(Json)
 }
 
@@ -25,11 +27,11 @@ async fn keys_bundles_endpoint<T: StateType>(
 async fn publish_keys_endpoint<T: StateType>(
     State(mut state): State<ServerState<T>>,
     auth_user: AuthenticatedUser,
-    Json(req): Json<PublishKeyBundleRequest>,
+    Json(req): Json<PublishPreKeys>,
 ) -> Result<(), ServerError> {
     publish_keybundle(
         &mut state,
-        *auth_user.account().id(),
+        auth_user.account().id(),
         auth_user.device().id(),
         req,
     )
@@ -61,12 +63,12 @@ mod test {
     #[tokio::test]
     async fn test_publish_keys() {
         let mut state = ServerState::in_memory_default(LINK_SECRET.to_owned());
-        let (pair, id) = create_user(&mut state, "alice", "phone", "bob", OsRng).await;
+        let (pair, account_id, _) = create_user(&mut state, "alice", "phone", "bob", OsRng).await;
 
         let server = test_server(state, key_routes);
         let basic = format!(
             "Basic {}",
-            BASE64_STANDARD.encode(format!("{}.1:{}", id, "bob"))
+            BASE64_STANDARD.encode(format!("{}.1:{}", account_id, "bob"))
         );
 
         let res = server

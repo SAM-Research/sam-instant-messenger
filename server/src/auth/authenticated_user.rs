@@ -1,9 +1,11 @@
+use std::str::FromStr;
+
 use axum::extract::FromRequestParts;
 use axum::http::request::Parts;
 use axum_extra::headers::authorization::Basic;
 use axum_extra::headers::Authorization;
 use axum_extra::TypedHeader;
-use uuid::Uuid;
+use sam_common::address::AccountId;
 
 use crate::managers::entities::account::Account;
 use crate::managers::entities::device::Device;
@@ -47,13 +49,13 @@ impl<T: StateType> FromRequestParts<ServerState<T>> for AuthenticatedUser {
             .split_once(".")
             .ok_or(ServerError::AuthBasicParseError)?;
         let account_id =
-            Uuid::parse_str(account_id).map_err(|_| ServerError::AuthBasicParseError)?;
+            AccountId::from_str(account_id).map_err(|_| ServerError::AuthBasicParseError)?;
         let device_id = device_id
             .parse()
             .map_err(|_| ServerError::AuthBasicParseError)?;
 
-        let account = state.accounts.get_account(account_id).await?;
-        let device = state.devices.get_device(account_id, device_id).await?;
+        let account = { state.accounts.get_account(account_id).await? };
+        let device = { state.devices.get_device(account_id, device_id).await? };
 
         device.password().verify(password)?;
         Ok(Self { account, device })
@@ -79,15 +81,15 @@ mod test {
     use base64::{engine::general_purpose::STANDARD, Engine as _};
     use libsignal_protocol::IdentityKeyPair;
     use rand::rngs::OsRng;
-    use uuid::Uuid;
+    use sam_common::address::AccountId;
 
     #[tokio::test]
     async fn test_from_request_parts() {
         let mut state = ServerState::in_memory_default(LINK_SECRET.to_string());
 
-        let account_id = Uuid::new_v4();
+        let account_id = AccountId::generate();
         let account_pwd = "thebestetpassword3".to_string();
-        let device_id = 1u32;
+        let device_id = 1u32.into();
 
         let auth_header = format!(
             "Basic {}",
@@ -114,10 +116,10 @@ mod test {
             .name("a".to_string())
             .password(Password::generate(account_pwd).expect("abc3 can create password"))
             .creation(0)
-            .registration_id(1)
+            .registration_id(1.into())
             .build();
 
-        let account_id = *account.id();
+        let account_id = account.id();
         state
             .devices
             .add_device(account_id, &device)
@@ -133,7 +135,8 @@ mod test {
 
         let result = AuthenticatedUser::from_request_parts(&mut parts, &state).await;
 
-        assert!(result
-            .is_ok_and(|au| *au.account().id() == account_id && au.device().id() == device_id))
+        assert!(
+            result.is_ok_and(|au| au.account().id() == account_id && au.device().id() == device_id)
+        )
     }
 }

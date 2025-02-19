@@ -1,50 +1,52 @@
 use crate::ServerError;
-use sam_common::sam_message::ServerEnvelope;
+use sam_common::{
+    address::{AccountId, DeviceId, MessageId},
+    sam_message::ServerEnvelope,
+};
 use tokio::sync::mpsc::Receiver;
-use uuid::Uuid;
 
 #[async_trait::async_trait]
 pub trait MessageManager: Send + Sync + Clone {
     async fn insert_envelope(
         &mut self,
-        account_id: Uuid,
-        device_id: u32,
-        envelope_id: Uuid,
-        envelope: ServerEnvelope,
+        account_id: AccountId,
+        device_id: DeviceId,
+        message_id: MessageId,
+        message: ServerEnvelope,
     ) -> Result<(), ServerError>;
     async fn get_envelope(
         &self,
-        account_id: Uuid,
-        device_id: u32,
-        envelope_id: Uuid,
+        account_id: AccountId,
+        device_id: DeviceId,
+        message_id: MessageId,
     ) -> Result<ServerEnvelope, ServerError>;
     async fn remove_envelope(
         &mut self,
-        account_id: Uuid,
-        device_id: u32,
-        envelope_id: Uuid,
+        account_id: AccountId,
+        device_id: DeviceId,
+        message_id: MessageId,
     ) -> Result<(), ServerError>;
     async fn get_envelope_ids(
         &self,
-        account_id: Uuid,
-        device_id: u32,
-    ) -> Result<Vec<Uuid>, ServerError>;
+        account_id: AccountId,
+        device_id: DeviceId,
+    ) -> Result<Vec<MessageId>, ServerError>;
     async fn subscribe(
         &mut self,
-        account_id: Uuid,
-        device_id: u32,
-    ) -> Result<Receiver<Uuid>, ServerError>;
-    async fn unsubscribe(&mut self, account_id: Uuid, device_id: u32);
+        account_id: AccountId,
+        device_id: DeviceId,
+    ) -> Result<Receiver<MessageId>, ServerError>;
+    async fn unsubscribe(&mut self, account_id: AccountId, device_id: DeviceId);
     async fn add_pending_message(
         &mut self,
-        account_id: Uuid,
-        device_id: u32,
-        message_id: Uuid,
+        account_id: AccountId,
+        device_id: DeviceId,
+        message_id: MessageId,
     ) -> Result<(), ServerError>;
     async fn remove_pending_message(
         &mut self,
-        account_id: Uuid,
-        device_id: u32,
-        message_id: Uuid,
+        account_id: AccountId,
+        device_id: DeviceId,
+        message_id: MessageId,
     ) -> Result<(), ServerError>;
 }

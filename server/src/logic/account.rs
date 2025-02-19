@@ -1,5 +1,7 @@
-use sam_common::api::account::{RegistrationRequest, RegistrationResponse};
-use uuid::Uuid;
+use sam_common::{
+    address::AccountId,
+    api::account::{RegistrationRequest, RegistrationResponse},
+};
 
 use crate::{
     logic::device::create_device,
@@ -20,7 +22,7 @@ use crate::{
 
 pub async fn delete_account<T: StateType>(
     state: &mut ServerState<T>,
-    account_id: Uuid,
+    account_id: AccountId,
 ) -> Result<(), ServerError> {
     {
         for device_id in state.devices.get_devices(account_id).await? {
@@ -67,7 +69,7 @@ pub async fn create_account<T: StateType>(
     password: String,
 ) -> Result<RegistrationResponse, ServerError> {
     let account = Account::builder()
-        .id(Uuid::new_v4())
+        .id(AccountId::generate())
         .username(username)
         .identity(registration.identity_key)
         .build();
@@ -76,15 +78,15 @@ pub async fn create_account<T: StateType>(
 
     create_device(
         state,
-        *account.id(),
+        account.id(),
         account.identity(),
         registration.device_activation,
-        1,
+        1.into(),
         password,
     )
     .await?;
     Ok(RegistrationResponse {
-        account_id: *account.id(),
+        account_id: account.id(),
     })
 }
 
@@ -121,7 +123,7 @@ mod test {
             identity_key: *pair.identity_key(),
             device_activation: DeviceActivationInfo {
                 name: "Alice Phone".to_string(),
-                registration_id: 1,
+                registration_id: 1.into(),
                 key_bundle: create_publish_key_bundle(
                     Some(vec![0]),
                     Some(1),
@@ -150,18 +152,18 @@ mod test {
             .await
             .expect("Alice has an account");
 
-        assert!(*account.id() == alice_id);
+        assert!(account.id() == alice_id);
         assert!(*account.identity() == *id);
         assert!(account.username() == "RealAlice");
 
         // Check if device is created
         let device = state
             .devices
-            .get_device(alice_id, 1)
+            .get_device(alice_id, 1.into())
             .await
             .expect("Alice has primary device");
 
-        assert!(device.registration_id() == 1);
+        assert!(device.registration_id() == 1.into());
         assert!(device.name() == "Alice Phone");
         device
             .password()
@@ -169,11 +171,14 @@ mod test {
             .expect("Alice loves bob");
 
         // check if keys are inserted
-
-        let ec_key_ids = state.keys.get_pre_key_ids(alice_id, 1).await.unwrap();
+        let ec_key_ids = state
+            .keys
+            .get_pre_key_ids(alice_id, 1.into())
+            .await
+            .unwrap();
         let signed_ec_id = state
             .keys
-            .get_signed_pre_key(alice_id, 1)
+            .get_signed_pre_key(alice_id, 1.into())
             .await
             .unwrap()
             .id();
@@ -181,10 +186,14 @@ mod test {
         assert!(ec_key_ids == vec![0]);
         assert!(signed_ec_id == 1);
 
-        let pq_key_ids = state.keys.get_pq_pre_key_ids(alice_id, 1).await.unwrap();
+        let pq_key_ids = state
+            .keys
+            .get_pq_pre_key_ids(alice_id, 1.into())
+            .await
+            .unwrap();
         let last_resort_id = state
             .keys
-            .get_last_resort_key(alice_id, 1)
+            .get_last_resort_key(alice_id, 1.into())
             .await
             .unwrap()
             .id();
@@ -203,7 +212,7 @@ mod test {
             identity_key: *pair.identity_key(),
             device_activation: DeviceActivationInfo {
                 name: "Alice Phone".to_string(),
-                registration_id: 1,
+                registration_id: 1.into(),
                 key_bundle: create_publish_key_bundle(
                     Some(vec![0]),
                     Some(1),
@@ -230,10 +239,26 @@ mod test {
             .expect("Alice can delete account");
 
         assert!(state.accounts.get_account(alice_id).await.is_err());
-        assert!(state.devices.get_device(alice_id, 1).await.is_err());
-        assert!(state.keys.get_last_resort_key(alice_id, 1).await.is_err());
-        assert!(state.keys.get_signed_pre_key(alice_id, 1).await.is_err());
-        assert!(state.keys.get_pre_key_ids(alice_id, 1).await.is_err());
-        assert!(state.keys.get_pq_pre_key_ids(alice_id, 1).await.is_err());
+        assert!(state.devices.get_device(alice_id, 1.into()).await.is_err());
+        assert!(state
+            .keys
+            .get_last_resort_key(alice_id, 1.into())
+            .await
+            .is_err());
+        assert!(state
+            .keys
+            .get_signed_pre_key(alice_id, 1.into())
+            .await
+            .is_err());
+        assert!(state
+            .keys
+            .get_pre_key_ids(alice_id, 1.into())
+            .await
+            .is_err());
+        assert!(state
+            .keys
+            .get_pq_pre_key_ids(alice_id, 1.into())
+            .await
+            .is_err());
     }
 }

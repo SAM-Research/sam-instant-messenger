@@ -5,9 +5,11 @@ use futures_util::{
 };
 use log::{error, info};
 use prost::Message as _;
-use sam_common::sam_message::{ClientMessage, ServerMessage};
+use sam_common::{
+    address::MessageId,
+    sam_message::{ClientMessage, ServerMessage},
+};
 use tokio::sync::mpsc::{Receiver, Sender};
-use uuid::Uuid;
 
 use crate::{
     auth::authenticated_user::AuthenticatedUser,
@@ -105,20 +107,20 @@ pub async fn websocket_message_sender<T: StateType>(
 
     state
         .messages
-        .unsubscribe(*auth_user.account().id(), auth_user.device().id())
+        .unsubscribe(auth_user.account().id(), auth_user.device().id())
         .await;
 }
 
 pub async fn websocket_dispatcher<T: StateType>(
     mut state: ServerState<T>,
-    mut dispatch: Receiver<Uuid>,
+    mut dispatch: Receiver<MessageId>,
     message_producer: Sender<Result<Option<ServerMessage>, ServerError>>,
     auth_user: AuthenticatedUser,
 ) {
     while let Some(msg_id) = dispatch.recv().await {
         let msg_res = state
             .messages
-            .get_envelope(*auth_user.account().id(), auth_user.device().id(), msg_id)
+            .get_envelope(auth_user.account().id(), auth_user.device().id(), msg_id)
             .await;
 
         let msg_res = match msg_res {

@@ -8,7 +8,10 @@ use axum_extra::{
     TypedHeader,
 };
 
-use sam_common::api::device::{LinkDeviceRequest, LinkDeviceResponse, LinkDeviceToken};
+use sam_common::{
+    address::DeviceId,
+    api::device::{LinkDeviceRequest, LinkDeviceResponse, LinkDeviceToken},
+};
 
 use crate::{
     auth::authenticated_user::AuthenticatedUser,
@@ -22,10 +25,10 @@ async fn device_provision_token_endpoint<T: StateType>(
     State(state): State<ServerState<T>>,
     auth_user: AuthenticatedUser,
 ) -> Result<Json<LinkDeviceToken>, ServerError> {
-    if auth_user.device().id() != 1 {
+    if auth_user.device().id() != 1.into() {
         return Err(ServerError::DeviceProvisionUnAuth);
     }
-    create_device_token(&state, *auth_user.account().id())
+    create_device_token(&state, auth_user.account().id())
         .await
         .map(Json)
 }
@@ -44,10 +47,10 @@ async fn link_device_endpoint<T: StateType>(
 /// Handle device linking
 async fn delete_device_endpoint<T: StateType>(
     State(mut state): State<ServerState<T>>,
-    Path(device_id): Path<u32>,
+    Path(device_id): Path<DeviceId>,
     auth_user: AuthenticatedUser,
 ) -> Result<(), ServerError> {
-    unlink_device(&mut state, *auth_user.account().id(), device_id).await
+    unlink_device(&mut state, auth_user.account().id(), device_id).await
 }
 
 pub fn device_routes<T: StateType>(router: Router<ServerState<T>>) -> Router<ServerState<T>> {

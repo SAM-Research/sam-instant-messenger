@@ -6,6 +6,4 @@ pub use account::{RegistrationRequest, RegistrationResponse};
 
 pub use device::{LinkDeviceRequest, LinkDeviceResponse, LinkDeviceToken};
 
-pub use keys::{
-    EcPreKey, Key, KeyBundleResponse, PqPreKey, PublishKeyBundleRequest, SignedEcPreKey, SignedKey,
-};
+pub use keys::{EcPreKey, Key, PqPreKey, PreKeyBundle, PublishPreKeys, SignedEcPreKey, SignedKey};

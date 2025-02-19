@@ -26,7 +26,7 @@ async fn websocket_endpoint<T: StateType>(
     // TODO: find a solution to encapsulate this in a logic function
     let dispatch = state
         .messages
-        .subscribe(*auth_user.account().id(), auth_user.device().id())
+        .subscribe(auth_user.account().id(), auth_user.device().id())
         .await?;
 
     Ok(ws.on_upgrade(move |socket| async move {
@@ -71,12 +71,14 @@ mod test {
     use maplit::hashmap;
     use prost::Message;
     use rand::rngs::OsRng;
-    use sam_common::sam_message::{ClientEnvelope, ClientMessage, EnvelopeType, MessageType};
+    use sam_common::{
+        address::{AccountId, MessageId},
+        sam_message::{ClientEnvelope, ClientMessage, EnvelopeType, MessageType},
+    };
     use tokio::sync::oneshot;
     use tokio_tungstenite::{
         connect_async, tungstenite::client::IntoClientRequest, MaybeTlsStream, WebSocketStream,
     };
-    use uuid::Uuid;
 
     use crate::{
         managers::in_memory::test_utils::LINK_SECRET,
@@ -101,7 +103,7 @@ mod test {
     }
 
     async fn connect_user(
-        account_id: Uuid,
+        account_id: AccountId,
         password: &str,
         address: &str,
     ) -> WebSocketStream<MaybeTlsStream<tokio::net::TcpStream>> {
@@ -121,8 +123,10 @@ mod test {
     #[tokio::test]
     async fn test_websocket_alice_send_to_bob() {
         let mut state = ServerState::in_memory_default(LINK_SECRET.to_owned());
-        let (_, id) = create_user(&mut state, "alice", "phone", "bob", OsRng).await;
-        let (_, bob_id) = create_user(&mut state, "bob", "laptop", "cheeseburger", OsRng).await;
+        let (_, alice_id, alice_device) =
+            create_user(&mut state, "alice", "phone", "bob", OsRng).await;
+        let (_, bob_id, bob_device) =
+            create_user(&mut state, "bob", "laptop", "cheeseburger", OsRng).await;
 
         let address = "127.0.0.1:8888".to_string();
         start_websocket_server(state.clone(), address.clone())
@@ -130,20 +134,21 @@ mod test {
             .expect("Server can start");
 
         let envelope = ClientEnvelope::builder()
-            .destination(bob_id.into())
-            .source(id.into())
+            .destination_account_id(bob_id.into())
+            .source_account_id(alice_id.into())
+            .source_device_id(alice_device.into())
             .r#type(EnvelopeType::PlaintextContent as i32)
-            .content(hashmap! {1u32 => "hi bob<3".into()})
+            .content(hashmap! {bob_device.into() => "hi bob<3".into()})
             .build();
 
-        let msg_id = Uuid::new_v4();
+        let msg_id = MessageId::generate();
         let msg = ClientMessage::builder()
             .id(msg_id.into())
             .message(envelope)
             .r#type(MessageType::Message as i32)
             .build();
 
-        let mut alice = connect_user(id, "bob", &address).await;
+        let mut alice = connect_user(alice_id, "bob", &address).await;
         let mut bob = connect_user(bob_id, "cheeseburger", &address).await;
 
         let alice_send = tokio::time::timeout(

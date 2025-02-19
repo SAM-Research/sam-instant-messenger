@@ -1,8 +1,9 @@
 use axum::Router;
 use axum_test::TestServer;
 use libsignal_protocol::IdentityKeyPair;
+
 use rand::rngs::OsRng;
-use uuid::Uuid;
+use sam_common::address::{AccountId, DeviceId};
 
 use crate::{
     auth::password::Password,
@@ -27,17 +28,17 @@ pub async fn create_user<T: StateType>(
     device_name: &str,
     password: &str,
     mut rng: OsRng,
-) -> (IdentityKeyPair, Uuid) {
+) -> (IdentityKeyPair, AccountId, DeviceId) {
     let id_pair = IdentityKeyPair::generate(&mut rng);
     let account = Account::builder()
-        .id(Uuid::new_v4())
+        .id(AccountId::generate())
         .identity(*id_pair.identity_key())
         .username(username.to_string())
         .build();
     let device = Device::builder()
         .creation(0)
-        .id(1)
-        .registration_id(1)
+        .id(1.into())
+        .registration_id(1.into())
         .name(device_name.to_string())
         .password(Password::generate(password.to_string()).expect("Password can be generated"))
         .build();
@@ -48,8 +49,8 @@ pub async fn create_user<T: StateType>(
         .expect("Account can be added");
     state
         .devices
-        .add_device(*account.id(), &device)
+        .add_device(account.id(), &device)
         .await
         .expect("Device can be added");
-    (id_pair, *account.id())
+    (id_pair, account.id(), device.id())
 }

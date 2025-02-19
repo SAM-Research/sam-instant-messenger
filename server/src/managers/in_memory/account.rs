@@ -1,7 +1,7 @@
+use sam_common::address::AccountId;
 use std::{collections::HashMap, sync::Arc};
 
 use tokio::sync::Mutex;
-use uuid::Uuid;
 
 use crate::{
     managers::{entities::account::Account, traits::account_manager::AccountManager},
@@ -10,7 +10,7 @@ use crate::{
 
 #[derive(Clone)]
 pub struct InMemoryAccountManager {
-    accounts: Arc<Mutex<HashMap<Uuid, Account>>>,
+    accounts: Arc<Mutex<HashMap<AccountId, Account>>>,
 }
 
 impl Default for InMemoryAccountManager {
@@ -29,7 +29,7 @@ impl InMemoryAccountManager {
 
 #[async_trait::async_trait]
 impl AccountManager for InMemoryAccountManager {
-    async fn get_account(&self, id: Uuid) -> Result<Account, ServerError> {
+    async fn get_account(&self, id: AccountId) -> Result<Account, ServerError> {
         self.accounts
             .lock()
             .await
@@ -39,17 +39,17 @@ impl AccountManager for InMemoryAccountManager {
     }
 
     async fn add_account(&mut self, account: &Account) -> Result<(), ServerError> {
-        if self.accounts.lock().await.contains_key(account.id()) {
+        if self.accounts.lock().await.contains_key(&account.id()) {
             return Err(ServerError::AccountExists);
         }
         self.accounts
             .lock()
             .await
-            .insert(*account.id(), account.clone());
+            .insert(account.id(), account.clone());
         Ok(())
     }
 
-    async fn remove_account(&mut self, account_id: Uuid) -> Result<(), ServerError> {
+    async fn remove_account(&mut self, account_id: AccountId) -> Result<(), ServerError> {
         self.accounts
             .lock()
             .await

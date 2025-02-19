@@ -2,11 +2,16 @@ use crate::ClientError;
 use async_trait::async_trait;
 use bon::Builder;
 use libsignal_protocol::{
-    Aci, IdentityKeyPair, IdentityKeyStore, KyberPreKeyId, KyberPreKeyStore, PreKeyId, PreKeyStore,
+    IdentityKeyPair, IdentityKeyStore, KyberPreKeyId, KyberPreKeyStore, PreKeyId, PreKeyStore,
     SenderKeyStore, SessionStore, SignedPreKeyId, SignedPreKeyStore,
 };
 use std::fmt::Debug;
+
+pub use traits::{account::AccountStore, contact::ContactStore};
+
+pub mod inmem;
 pub mod sqlite;
+pub mod traits;
 
 #[async_trait(?Send)]
 pub trait StoreConfig {
@@ -21,32 +26,20 @@ pub trait StoreConfig {
     async fn load_store(self) -> Result<Store<Self::StoreType>, ClientError>;
 }
 
-pub trait ContactStore {}
-
-#[async_trait(?Send)]
-pub trait AccountStore {
-    async fn set_aci(&self, aci: Aci) -> Result<(), ClientError>;
-    async fn get_aci(&self) -> Result<Aci, ClientError>;
-    async fn set_password(&self, password: String) -> Result<(), ClientError>;
-    async fn get_password(&self) -> Result<String, ClientError>;
-    async fn set_username(&self, username: String) -> Result<(), ClientError>;
-    async fn get_username(&self) -> Result<String, ClientError>;
-}
-
 #[async_trait(?Send)]
 pub trait ProvidesKeyId<T> {
     async fn next_key_id(&self) -> Result<T, ClientError>;
 }
 
 pub trait StoreType {
-    type ContactStore: ContactStore + Debug;
-    type AccountStore: AccountStore + Debug;
-    type IdentityKeyStore: IdentityKeyStore + Debug;
-    type PreKeyStore: PreKeyStore + ProvidesKeyId<PreKeyId> + Debug;
-    type SignedPreKeyStore: SignedPreKeyStore + ProvidesKeyId<SignedPreKeyId> + Debug;
-    type KyberPreKeyStore: KyberPreKeyStore + ProvidesKeyId<KyberPreKeyId> + Debug;
-    type SessionStore: SessionStore + Debug;
-    type SenderKeyStore: SenderKeyStore + Debug;
+    type ContactStore: ContactStore;
+    type AccountStore: AccountStore;
+    type IdentityKeyStore: IdentityKeyStore;
+    type PreKeyStore: PreKeyStore + ProvidesKeyId<PreKeyId>;
+    type SignedPreKeyStore: SignedPreKeyStore + ProvidesKeyId<SignedPreKeyId>;
+    type KyberPreKeyStore: KyberPreKeyStore + ProvidesKeyId<KyberPreKeyId>;
+    type SessionStore: SessionStore;
+    type SenderKeyStore: SenderKeyStore;
 }
 
 #[derive(Debug, Builder)]

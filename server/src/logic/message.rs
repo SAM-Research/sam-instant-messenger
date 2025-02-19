@@ -5,9 +5,14 @@ use crate::{
     ServerError,
 };
 use log::{error, warn};
-use sam_common::sam_message::{ClientEnvelope, MessageType};
-use sam_common::sam_message::{ClientMessage, ServerEnvelope, ServerMessage};
-use uuid::Uuid;
+use sam_common::{
+    address::AccountId,
+    sam_message::{ClientMessage, ServerEnvelope, ServerMessage},
+};
+use sam_common::{
+    address::MessageId,
+    sam_message::{ClientEnvelope, MessageType},
+};
 
 macro_rules! error_message {
     ($msg_id:expr) => {
@@ -25,7 +30,7 @@ pub async fn handle_client_message<T: StateType>(
     auth_user: &AuthenticatedUser,
     message: ClientMessage,
 ) -> Result<Option<ServerMessage>, ServerError> {
-    let message_id = match message.id.parse() {
+    let message_id = match MessageId::try_from(message.id.clone()) {
         Ok(id) => id,
         Err(_) => return error_message!(message.id),
     };
@@ -33,13 +38,13 @@ pub async fn handle_client_message<T: StateType>(
     match message.r#type() {
         MessageType::Message => {
             if let Some(envelope) = message.message {
-                handle_client_evelope(state, message.id, envelope).await
+                handle_client_evelope(state, message_id, envelope).await
             } else {
-                error_message!(message.id)
+                error_message!(message_id.into())
             }
         }
         MessageType::Ack => {
-            let account_id = *auth_user.account().id();
+            let account_id = auth_user.account().id();
             let device_id = auth_user.device().id();
             let pending_res = state
                 .messages
@@ -62,7 +67,7 @@ pub async fn handle_client_message<T: StateType>(
                         e,
                         auth_user.account().username()
                     );
-                    error_message!(message.id)
+                    error_message!(message_id.into())
                 }
             }
         }
@@ -80,32 +85,34 @@ pub async fn handle_client_message<T: StateType>(
 
 async fn handle_client_evelope<T: StateType>(
     state: &mut ServerState<T>,
-    message_id: String,
+    message_id: MessageId,
     envelope: ClientEnvelope,
 ) -> Result<Option<ServerMessage>, ServerError> {
-    let dest_id = match envelope.destination.parse() {
+    let dest_id = match AccountId::try_from(envelope.destination_account_id.clone()) {
         Ok(id) => id,
-        Err(_) => return error_message!(message_id),
+        Err(_) => return error_message!(message_id.into()),
     };
 
     for (device_id, cipher) in envelope.content {
-        let id = Uuid::new_v4();
+        let id = MessageId::generate();
         let server_envelope = ServerEnvelope::builder()
             .r#type(envelope.r#type)
-            .destination(envelope.destination.clone())
-            .source(envelope.source.clone())
+            .destination_account_id(envelope.destination_account_id.clone())
+            .destination_device_id(device_id)
+            .source_account_id(envelope.source_account_id.clone())
+            .source_device_id(envelope.source_device_id.clone())
             .content(cipher)
-            .id(id.to_string())
+            .id(id.into_bytes().to_vec())
             .build();
         state
             .messages
-            .insert_envelope(dest_id, device_id, id, server_envelope)
+            .insert_envelope(dest_id, device_id.into(), id, server_envelope)
             .await?;
     }
 
     Ok(Some(
         ServerMessage::builder()
-            .id(message_id)
+            .id(message_id.into())
             .r#type(MessageType::Ack as i32)
             .build(),
     ))
@@ -116,20 +123,19 @@ pub async fn handle_server_envelope<T: StateType>(
     auth_user: &AuthenticatedUser,
     envelope: ServerEnvelope,
 ) -> Result<Option<ServerMessage>, ServerError> {
-    let id = match envelope.id.parse() {
+    let id = match MessageId::try_from(envelope.id.clone()) {
         Ok(id) => id,
         Err(_) => return Err(ServerError::EnvelopeMalformed),
     };
 
     state
         .messages
-        .add_pending_message(*auth_user.account().id(), auth_user.device().id(), id)
+        .add_pending_message(auth_user.account().id(), auth_user.device().id(), id)
         .await?;
 
-    let id = envelope.id.clone();
     Ok(Some(
         ServerMessage::builder()
-            .id(id)
+            .id(id.into())
             .message(envelope)
             .r#type(MessageType::Message as i32)
             .build(),
