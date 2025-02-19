@@ -1,6 +1,8 @@
 use libsignal_protocol::IdentityKey;
-use sam_common::api::keys::{Key, KeyBundle, KeyBundleResponse, PublishKeyBundle};
-use uuid::Uuid;
+use sam_common::{
+    address::{AccountId, DeviceId, RegistrationId},
+    api::keys::{Key, PreKeyBundle, PreKeyBundles, PublishPreKeys},
+};
 
 use crate::{
     managers::traits::{
@@ -14,10 +16,10 @@ use crate::{
 
 pub async fn get_keybundle<T: StateType>(
     state: &mut ServerState<T>,
-    account_id: Uuid,
-    registration_id: u32,
-    device_id: u32,
-) -> Result<KeyBundle, ServerError> {
+    account_id: AccountId,
+    registration_id: RegistrationId,
+    device_id: DeviceId,
+) -> Result<PreKeyBundle, ServerError> {
     let pre_key = state.keys.get_pre_key(account_id, device_id).await?;
     let pq_pre_key = state.keys.get_pq_pre_key(account_id, device_id).await?;
     let signed_pre_key = state.keys.get_signed_pre_key(account_id, device_id).await?;
@@ -32,6 +34,7 @@ pub async fn get_keybundle<T: StateType>(
         }
         None => None,
     };
+
     let pq_pre_key = match pq_pre_key {
         Some(key) => {
             state
@@ -48,9 +51,9 @@ pub async fn get_keybundle<T: StateType>(
         }
     };
 
-    Ok(KeyBundle {
-        device_id,
-        registration_id,
+    Ok(PreKeyBundle {
+        device_id: device_id.into(),
+        registration_id: registration_id.into(),
         pre_key,
         pq_pre_key,
         signed_pre_key,
@@ -60,9 +63,9 @@ pub async fn get_keybundle<T: StateType>(
 pub async fn add_keybundle<T: StateType>(
     state: &mut ServerState<T>,
     identity: &IdentityKey,
-    account_id: Uuid,
-    device_id: u32,
-    key_bundle: PublishKeyBundle,
+    account_id: AccountId,
+    device_id: DeviceId,
+    key_bundle: PublishPreKeys,
 ) -> Result<(), ServerError> {
     if let Some(pre_keys) = key_bundle.pre_keys {
         for pre_key in pre_keys {
@@ -99,10 +102,9 @@ pub async fn add_keybundle<T: StateType>(
 
 pub async fn get_keybundles<T: StateType>(
     state: &mut ServerState<T>,
-    account_id: Uuid,
-) -> Result<KeyBundleResponse, ServerError> {
-    let account = state.accounts.get_account(account_id).await?;
-    let identity_key = account.identity();
+    account_id: AccountId,
+) -> Result<PreKeyBundles, ServerError> {
+    let identity_key = { *state.accounts.get_account(account_id).await?.identity() };
 
     let devices = {
         let mut device_vec = vec![];
@@ -123,30 +125,28 @@ pub async fn get_keybundles<T: StateType>(
         bundle_vec
     };
 
-    Ok(KeyBundleResponse {
-        identity_key: *identity_key,
+    Ok(PreKeyBundles {
+        identity_key,
         bundles,
     })
 }
 
 pub async fn publish_keybundle<T: StateType>(
     state: &mut ServerState<T>,
-    account_id: Uuid,
-    device_id: u32,
-    bundle: PublishKeyBundle,
+    account_id: AccountId,
+    device_id: DeviceId,
+    bundle: PublishPreKeys,
 ) -> Result<(), ServerError> {
-    let account = state.accounts.get_account(account_id).await?;
-    let identity = account.identity();
+    let identity = { *state.accounts.get_account(account_id).await?.identity() };
 
-    add_keybundle(state, identity, account_id, device_id, bundle).await
+    add_keybundle(state, &identity, account_id, device_id, bundle).await
 }
 
 #[cfg(test)]
 mod test {
     use libsignal_protocol::IdentityKeyPair;
     use rand::rngs::OsRng;
-    use sam_common::api::Key;
-    use uuid::Uuid;
+    use sam_common::{address::AccountId, api::Key};
 
     use crate::{
         auth::password::Password,
@@ -161,7 +161,7 @@ mod test {
                 account_manager::AccountManager,
                 device_manager::DeviceManager,
                 key_manager::{
-                    LastResortKeyManager, PqPreKeyManager, PreKeyManager, SignedPreKeyManager,
+                    LastResortKeyManager, PqPreKeyManager, PreKeyManager as _, SignedPreKeyManager,
                 },
             },
         },
@@ -174,7 +174,7 @@ mod test {
         let mut rng = OsRng;
         let pair = IdentityKeyPair::generate(&mut rng);
 
-        let account_id = Uuid::new_v4();
+        let account_id = AccountId::generate();
 
         let key_bundle = create_publish_key_bundle(
             Some(vec![1, 2]),
@@ -185,13 +185,35 @@ mod test {
             rng,
         );
 
-        add_keybundle(&mut state, pair.identity_key(), account_id, 1, key_bundle)
+        add_keybundle(
+            &mut state,
+            pair.identity_key(),
+            account_id,
+            1.into(),
+            key_bundle,
+        )
+        .await
+        .expect("User can create key bundle");
+        assert!(state
+            .keys
+            .get_last_resort_key(account_id, 1.into())
             .await
-            .expect("User can create key bundle");
-        assert!(state.keys.get_last_resort_key(account_id, 1).await.is_ok());
-        assert!(state.keys.get_signed_pre_key(account_id, 1).await.is_ok());
-        assert!(state.keys.get_pre_key_ids(account_id, 1).await.is_ok());
-        assert!(state.keys.get_pq_pre_key_ids(account_id, 1).await.is_ok());
+            .is_ok());
+        assert!(state
+            .keys
+            .get_signed_pre_key(account_id, 1.into())
+            .await
+            .is_ok());
+        assert!(state
+            .keys
+            .get_pre_key_ids(account_id, 1.into())
+            .await
+            .is_ok());
+        assert!(state
+            .keys
+            .get_pq_pre_key_ids(account_id, 1.into())
+            .await
+            .is_ok());
     }
 
     #[tokio::test]
@@ -200,7 +222,7 @@ mod test {
         let mut rng = OsRng;
         let pair = IdentityKeyPair::generate(&mut rng);
 
-        let account_id = Uuid::new_v4();
+        let account_id = AccountId::generate();
 
         let key_bundle = create_publish_key_bundle(
             Some(vec![1, 2]),
@@ -211,12 +233,18 @@ mod test {
             rng,
         );
 
-        add_keybundle(&mut state, pair.identity_key(), account_id, 1, key_bundle)
-            .await
-            .expect("User can create key bundle");
+        add_keybundle(
+            &mut state,
+            pair.identity_key(),
+            account_id,
+            1.into(),
+            key_bundle,
+        )
+        .await
+        .expect("User can create key bundle");
 
         // testing if we get keys
-        let bundle = get_keybundle(&mut state, account_id, 1, 1)
+        let bundle = get_keybundle(&mut state, account_id, 1.into(), 1.into())
             .await
             .expect("User have uploaded bundles");
 
@@ -225,11 +253,11 @@ mod test {
         assert!(bundle.pre_key.is_some_and(|k| k.id() == 1));
         assert!(bundle.signed_pre_key.id() == 22);
         assert!(bundle.pq_pre_key.id() == 1);
+
         // testing if we get last resort key
-        let bundle = get_keybundle(&mut state, account_id, 1, 1)
+        let bundle = get_keybundle(&mut state, account_id, 1.into(), 1.into())
             .await
             .expect("User have uploaded bundles");
-
         assert!(bundle.pq_pre_key.id() == 33)
     }
 
@@ -240,7 +268,7 @@ mod test {
         let pair = IdentityKeyPair::generate(&mut rng);
 
         let account = Account::builder()
-            .id(Uuid::new_v4())
+            .id(AccountId::generate())
             .identity(*pair.identity_key())
             .username("Alice".to_string())
             .build();
@@ -259,16 +287,31 @@ mod test {
             &pair,
             rng,
         );
-
-        let account_id = *account.id();
-        publish_keybundle(&mut state, account_id, 1, key_bundle)
+        let account_id = account.id();
+        publish_keybundle(&mut state, account_id, 1.into(), key_bundle)
             .await
             .expect("Alice can publish bundle");
 
-        assert!(state.keys.get_last_resort_key(account_id, 1).await.is_ok());
-        assert!(state.keys.get_signed_pre_key(account_id, 1).await.is_ok());
-        assert!(state.keys.get_pre_key_ids(account_id, 1).await.is_ok());
-        assert!(state.keys.get_pq_pre_key_ids(account_id, 1).await.is_ok());
+        assert!(state
+            .keys
+            .get_last_resort_key(account_id, 1.into())
+            .await
+            .is_ok());
+        assert!(state
+            .keys
+            .get_signed_pre_key(account_id, 1.into())
+            .await
+            .is_ok());
+        assert!(state
+            .keys
+            .get_pre_key_ids(account_id, 1.into())
+            .await
+            .is_ok());
+        assert!(state
+            .keys
+            .get_pq_pre_key_ids(account_id, 1.into())
+            .await
+            .is_ok());
     }
 
     #[tokio::test]
@@ -278,7 +321,7 @@ mod test {
         let pair = IdentityKeyPair::generate(&mut rng);
 
         let account = Account::builder()
-            .id(Uuid::new_v4())
+            .id(AccountId::generate())
             .identity(*pair.identity_key())
             .username("Alice".to_string())
             .build();
@@ -290,17 +333,17 @@ mod test {
             .expect("Can add account");
 
         let device = Device::builder()
-            .id(1)
+            .id(1.into())
             .name("Alice Secret Phone".to_string())
             .password(Password::generate("dave<3".to_string()).expect("Alice can create password"))
             .creation(0)
-            .registration_id(1)
+            .registration_id(1.into())
             .build();
 
-        let account_id = *account.id();
+        let account_id = account.id();
         state
             .devices
-            .add_device(account_id, &device)
+            .add_device(account_id, device)
             .await
             .expect("Alice can add device");
 
@@ -313,7 +356,7 @@ mod test {
             rng,
         );
 
-        publish_keybundle(&mut state, account_id, 1, key_bundle)
+        publish_keybundle(&mut state, account_id, 1.into(), key_bundle)
             .await
             .expect("Alice can publish bundle");
 

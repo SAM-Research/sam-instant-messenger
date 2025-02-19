@@ -11,16 +11,19 @@ enum EnvelopeType {
 message ClientEnvelope {
   required EnvelopeType type = 1;
   map<uint32, bytes> content = 2;
-  required string destination = 3;
-  required string source = 4;
+  required bytes  destination_account_id = 3;
+  required bytes  source_account_id = 4;
+  required uint32 source_device_id  = 5;
 }
 
 message ServerEnvelope {
   required EnvelopeType type = 1;
   required bytes content = 2;
-  required string destination = 3;
-  required string source = 4;
-  required string id = 5;
+  required bytes  destination_account_id = 3;
+  required uint32 destination_device_id  = 4;
+  required bytes  source_account_id = 5;
+  required uint32 source_device_id  = 6;
+  required bytes id = 7;
 }
 
 enum MessageType {
@@ -31,12 +34,12 @@ enum MessageType {
 
 message ClientMessage {
   required MessageType type = 1;
-  required string id = 2;
+  required bytes id = 2;
   optional ClientEnvelope message = 3;
 }
 
 message ServerMessage {
   required MessageType type = 1;
-  required string id = 2;
+  required bytes id = 2;
   optional ServerEnvelope message = 3;
 }

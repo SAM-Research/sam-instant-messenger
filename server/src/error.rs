@@ -1,5 +1,6 @@
 use axum::{http::StatusCode, response::IntoResponse};
 use derive_more::derive::{Display, Error};
+use libsignal_protocol::SignalProtocolError;
 use sam_common::LibError;
 
 pub type Result<T> = std::result::Result<T, ServerError>;
@@ -9,6 +10,7 @@ pub enum ServerError {
     #[error(ignore)]
     Custom(String),
     Lib(LibError),
+    SignalProtocol(SignalProtocolError),
     KeyVerification,
     DeviceTokenMalformed,
     DeviceSignatureDecodeError,
@@ -62,6 +64,7 @@ impl IntoResponse for ServerError {
             ServerError::EnvelopeNotExists => todo!(),
             ServerError::MessageSubscriberExists => todo!(),
             ServerError::MessageSubscriberNotExists => todo!(),
+            ServerError::SignalProtocol(_) => todo!(),
         }
         .into_response()
     }

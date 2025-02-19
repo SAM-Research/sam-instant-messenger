@@ -5,7 +5,7 @@ use crate::managers::traits::{
     message_manager::MessageManager,
 };
 
-pub trait StateType: 'static {
+pub trait StateType: 'static + Clone {
     type AccountManager: AccountManager;
     type DeviceManager: DeviceManager;
     type MessageManager: MessageManager;

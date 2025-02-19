@@ -34,5 +34,5 @@ pub async fn delete_account_endpoint<T: StateType>(
     State(mut state): State<ServerState<T>>,
     auth_user: AuthenticatedUser,
 ) -> Result<(), ServerError> {
-    delete_account(&mut state, *auth_user.account().id()).await
+    delete_account(&mut state, auth_user.account().id()).await
 }

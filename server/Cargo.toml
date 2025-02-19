@@ -16,8 +16,7 @@ axum-extra = { version = "0.9.4", features = ["typed-header"] }
 axum-server = { version = "0.7", features = ["tls-rustls"] }
 env_logger = "0.11.6"
 log = "0.4.25"
-bon = "3.0.0"
-uuid = { version = "1.10.0", features = ["v4"] }
+bon = "3.3.2"
 hkdf = "0.12.4"
 sha2 = "0.10"
 hex = "0.4.3"
@@ -25,3 +24,4 @@ rand = "0.8.5"
 base64 = "0.21.7"
 argon2 = "0.5.3"
 rustls = { version = "0.23.15", features = ["ring"] }
+

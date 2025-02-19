@@ -1,17 +1,17 @@
 use std::{collections::HashMap, sync::Arc};
 
-use sam_common::sam_message::ServerEnvelope;
+use sam_common::{
+    address::{AccountId, DeviceAddress, DeviceId, MessageId},
+    sam_message::ServerEnvelope,
+};
 use tokio::sync::{mpsc, Mutex};
-use uuid::Uuid;
 
 use crate::{managers::traits::message_manager::MessageManager, ServerError};
 
-use super::device_key;
-
 #[derive(Clone)]
 pub struct InMemoryMessageManager {
-    messages: Arc<Mutex<HashMap<String, HashMap<Uuid, ServerEnvelope>>>>,
-    subscribers: Arc<Mutex<HashMap<String, mpsc::Sender<Uuid>>>>,
+    messages: Arc<Mutex<HashMap<DeviceAddress, HashMap<MessageId, ServerEnvelope>>>>,
+    subscribers: Arc<Mutex<HashMap<DeviceAddress, mpsc::Sender<MessageId>>>>,
 }
 
 impl Default for InMemoryMessageManager {
@@ -33,19 +33,14 @@ impl InMemoryMessageManager {
 impl MessageManager for InMemoryMessageManager {
     async fn insert_message(
         &mut self,
-        account_id: Uuid,
-        device_id: u32,
-        message_id: Uuid,
+        account_id: AccountId,
+        device_id: DeviceId,
+        message_id: MessageId,
         message: ServerEnvelope,
     ) -> Result<(), ServerError> {
-        let key = device_key(account_id, device_id);
+        let key = DeviceAddress::new(account_id, device_id);
 
-        if !self.messages.lock().await.contains_key(&key) {
-            self.messages
-                .lock()
-                .await
-                .insert(key.clone(), HashMap::new());
-        }
+        self.messages.lock().await.entry(key).or_default();
 
         let mut messages = self.messages.lock().await;
         let msgs = messages.get_mut(&key);
@@ -64,11 +59,11 @@ impl MessageManager for InMemoryMessageManager {
 
     async fn get_message(
         &self,
-        account_id: Uuid,
-        device_id: u32,
-        message_id: Uuid,
+        account_id: AccountId,
+        device_id: DeviceId,
+        message_id: MessageId,
     ) -> Result<ServerEnvelope, ServerError> {
-        let key = device_key(account_id, device_id);
+        let key = DeviceAddress::new(account_id, device_id);
 
         match self.messages.lock().await.get(&key) {
             Some(msgs) => msgs
@@ -81,11 +76,11 @@ impl MessageManager for InMemoryMessageManager {
 
     async fn remove_message(
         &mut self,
-        account_id: Uuid,
-        device_id: u32,
-        message_id: Uuid,
+        account_id: AccountId,
+        device_id: DeviceId,
+        message_id: MessageId,
     ) -> Result<(), ServerError> {
-        let key = device_key(account_id, device_id);
+        let key = DeviceAddress::new(account_id, device_id);
 
         match self.messages.lock().await.get_mut(&key) {
             Some(msgs) => msgs
@@ -98,25 +93,25 @@ impl MessageManager for InMemoryMessageManager {
 
     async fn get_message_ids(
         &self,
-        account_id: Uuid,
-        device_id: u32,
-    ) -> Result<Vec<Uuid>, ServerError> {
-        let key = device_key(account_id, device_id);
+        account_id: AccountId,
+        device_id: DeviceId,
+    ) -> Result<Vec<MessageId>, ServerError> {
+        let key = DeviceAddress::new(account_id, device_id);
 
         self.messages
             .lock()
             .await
             .get(&key)
             .ok_or(ServerError::AccountNotExist)
-            .map(|msgs| msgs.keys().cloned().collect::<Vec<Uuid>>())
+            .map(|msgs| msgs.keys().cloned().collect::<Vec<MessageId>>())
     }
 
     async fn subscribe(
         &mut self,
-        account_id: Uuid,
-        device_id: u32,
-    ) -> Result<mpsc::Receiver<Uuid>, ServerError> {
-        let key = device_key(account_id, device_id);
+        account_id: AccountId,
+        device_id: DeviceId,
+    ) -> Result<mpsc::Receiver<MessageId>, ServerError> {
+        let key = DeviceAddress::new(account_id, device_id);
         let (sender, receiver) = mpsc::channel(10);
 
         if self.subscribers.lock().await.contains_key(&key) {
@@ -127,8 +122,12 @@ impl MessageManager for InMemoryMessageManager {
         Ok(receiver)
     }
 
-    async fn unsubscribe(&mut self, account_id: Uuid, device_id: u32) -> Result<(), ServerError> {
-        let key = device_key(account_id, device_id);
+    async fn unsubscribe(
+        &mut self,
+        account_id: AccountId,
+        device_id: DeviceId,
+    ) -> Result<(), ServerError> {
+        let key = DeviceAddress::new(account_id, device_id);
 
         if self.subscribers.lock().await.contains_key(&key) {
             return Err(ServerError::MessageSubscriberNotExists);
