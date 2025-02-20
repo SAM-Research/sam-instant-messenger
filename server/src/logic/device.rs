@@ -125,7 +125,7 @@ mod test {
 
     #[tokio::test]
     async fn test_create_device() {
-        let mut state = ServerState::in_memory_default(LINK_SECRET.to_string());
+        let mut state = ServerState::in_memory(LINK_SECRET.to_string(), 10);
 
         let mut rng = OsRng;
         let pair = IdentityKeyPair::generate(&mut rng);
@@ -206,7 +206,7 @@ mod test {
 
     #[tokio::test]
     async fn test_unlink_device() {
-        let mut state = ServerState::in_memory_default(LINK_SECRET.to_string());
+        let mut state = ServerState::in_memory(LINK_SECRET.to_string(), 10);
 
         let mut rng = OsRng;
         let pair = IdentityKeyPair::generate(&mut rng);
@@ -244,7 +244,7 @@ mod test {
 
     #[tokio::test]
     async fn test_create_device_token() {
-        let state = ServerState::in_memory_default(LINK_SECRET.to_string());
+        let state = ServerState::in_memory(LINK_SECRET.to_string(), 10);
         assert!(create_device_token(&state, AccountId::generate())
             .await
             .is_ok())
@@ -252,7 +252,7 @@ mod test {
 
     #[tokio::test]
     async fn test_link_device() {
-        let mut state = ServerState::in_memory_default(LINK_SECRET.to_string());
+        let mut state = ServerState::in_memory(LINK_SECRET.to_string(), 10);
 
         let mut rng = OsRng;
         let pair = IdentityKeyPair::generate(&mut rng);

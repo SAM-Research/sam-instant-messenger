@@ -9,6 +9,7 @@ pub type EnvelopeId = MessageId;
 
 #[async_trait::async_trait]
 pub trait MessageManager: Send + Sync + Clone {
+    async fn channel_buffer(&self) -> usize;
     async fn insert_envelope(
         &mut self,
         account_id: AccountId,
@@ -32,12 +33,17 @@ pub trait MessageManager: Send + Sync + Clone {
         &self,
         account_id: AccountId,
         device_id: DeviceId,
-    ) -> Result<Vec<EnvelopeId>, ServerError>;
+    ) -> Option<Vec<EnvelopeId>>;
     async fn subscribe(
         &mut self,
         account_id: AccountId,
         device_id: DeviceId,
     ) -> Result<Receiver<EnvelopeId>, ServerError>;
+    async fn dispatch_envelopes(
+        &mut self,
+        account_id: AccountId,
+        device_id: DeviceId,
+    ) -> Result<(), ServerError>;
     async fn unsubscribe(&mut self, account_id: AccountId, device_id: DeviceId);
     async fn add_pending_message(
         &mut self,

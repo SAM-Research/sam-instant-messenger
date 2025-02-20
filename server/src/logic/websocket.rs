@@ -9,6 +9,7 @@ use sam_common::{
     address::MessageId,
     sam_message::{ClientMessage, ServerMessage},
 };
+use tokio::sync::mpsc;
 use tokio::sync::mpsc::{Receiver, Sender};
 
 use crate::{
@@ -29,7 +30,39 @@ macro_rules! closing_err {
     };
 }
 
-pub async fn websocket_message_receiver<T: StateType>(
+pub async fn init_websocket<T: StateType>(
+    state: ServerState<T>,
+    auth_user: AuthenticatedUser,
+    socket: WebSocket,
+    dispatch: Receiver<MessageId>,
+) {
+    info!("{} Connected!", auth_user.account().username());
+
+    let (sender, receiver) = socket.split();
+    let (msg_producer, msg_consumer) = mpsc::channel(state.messages.channel_buffer().await);
+
+    tokio::spawn(websocket_message_receiver(
+        state.clone(),
+        receiver,
+        msg_producer.clone(),
+        auth_user.clone(),
+    ));
+    tokio::spawn(websocket_dispatcher(
+        state.clone(),
+        dispatch,
+        msg_producer,
+        auth_user.clone(),
+    ));
+
+    tokio::spawn(websocket_message_sender(
+        state,
+        sender,
+        msg_consumer,
+        auth_user,
+    ));
+}
+
+async fn websocket_message_receiver<T: StateType>(
     mut state: ServerState<T>,
     mut receiver: SplitStream<WebSocket>,
     message_producer: Sender<Result<Option<ServerMessage>, ServerError>>,
@@ -64,7 +97,7 @@ pub async fn websocket_message_receiver<T: StateType>(
     }
 }
 
-pub async fn websocket_message_sender<T: StateType>(
+async fn websocket_message_sender<T: StateType>(
     mut state: ServerState<T>,
     mut sender: SplitSink<WebSocket, Message>,
     mut message_consumer: Receiver<Result<Option<ServerMessage>, ServerError>>,
@@ -111,7 +144,7 @@ pub async fn websocket_message_sender<T: StateType>(
         .await;
 }
 
-pub async fn websocket_dispatcher<T: StateType>(
+async fn websocket_dispatcher<T: StateType>(
     mut state: ServerState<T>,
     mut dispatch: Receiver<MessageId>,
     message_producer: Sender<Result<Option<ServerMessage>, ServerError>>,

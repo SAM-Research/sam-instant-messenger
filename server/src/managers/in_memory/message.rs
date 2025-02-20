@@ -19,20 +19,22 @@ pub struct InMemoryMessageManager {
     envelopes: Arc<Mutex<HashMap<DeviceAddress, HashMap<EnvelopeId, ServerEnvelope>>>>,
     subscribers: Arc<Mutex<HashMap<DeviceAddress, mpsc::Sender<EnvelopeId>>>>,
     pending_messages: Arc<Mutex<HashSet<EnvelopeKey>>>,
+    channel_buffer: usize,
 }
 
 impl Default for InMemoryMessageManager {
     fn default() -> Self {
-        Self::new()
+        Self::new(10)
     }
 }
 
 impl InMemoryMessageManager {
-    pub fn new() -> Self {
+    pub fn new(channel_buffer: usize) -> Self {
         InMemoryMessageManager {
             envelopes: Arc::new(Mutex::new(HashMap::new())),
             subscribers: Arc::new(Mutex::new(HashMap::new())),
             pending_messages: Arc::new(Mutex::new(HashSet::new())),
+            channel_buffer: channel_buffer,
         }
     }
 }
@@ -108,14 +110,13 @@ impl MessageManager for InMemoryMessageManager {
         &self,
         account_id: AccountId,
         device_id: DeviceId,
-    ) -> Result<Vec<EnvelopeId>, ServerError> {
+    ) -> Option<Vec<EnvelopeId>> {
         let key = DeviceAddress::new(account_id, device_id);
 
         self.envelopes
             .lock()
             .await
             .get(&key)
-            .ok_or(ServerError::AccountNotExist)
             .map(|msgs| msgs.keys().cloned().collect::<Vec<EnvelopeId>>())
     }
 
@@ -125,7 +126,7 @@ impl MessageManager for InMemoryMessageManager {
         device_id: DeviceId,
     ) -> Result<mpsc::Receiver<EnvelopeId>, ServerError> {
         let key = DeviceAddress::new(account_id, device_id);
-        let (sender, receiver) = mpsc::channel(10);
+        let (sender, receiver) = mpsc::channel(self.channel_buffer);
 
         if self.subscribers.lock().await.contains_key(&key) {
             return Err(ServerError::MessageSubscriberExists);
@@ -143,6 +144,33 @@ impl MessageManager for InMemoryMessageManager {
         }
 
         self.subscribers.lock().await.remove(&key);
+    }
+
+    async fn dispatch_envelopes(
+        &mut self,
+        account_id: AccountId,
+        device_id: DeviceId,
+    ) -> Result<(), ServerError> {
+        let ids = self.get_envelope_ids(account_id, device_id).await;
+        match ids {
+            Some(ids) => {
+                let key = DeviceAddress::new(account_id, device_id);
+
+                match self.subscribers.lock().await.get(&key) {
+                    Some(sender) => {
+                        for id in ids {
+                            sender
+                                .send(id)
+                                .await
+                                .map_err(|_| ServerError::MessageSubscriberSendErorr)?;
+                        }
+                        Ok(())
+                    }
+                    None => Err(ServerError::MessageSubscriberExists),
+                }
+            }
+            None => Ok(()),
+        }
     }
 
     async fn add_pending_message(
@@ -173,6 +201,10 @@ impl MessageManager for InMemoryMessageManager {
         }
         self.pending_messages.lock().await.remove(&key);
         Ok(())
+    }
+
+    async fn channel_buffer(&self) -> usize {
+        self.channel_buffer
     }
 }
 

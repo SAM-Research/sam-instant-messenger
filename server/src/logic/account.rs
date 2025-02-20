@@ -26,7 +26,7 @@ pub async fn delete_account<T: StateType>(
 ) -> Result<(), ServerError> {
     {
         for device_id in state.devices.get_devices(account_id).await? {
-            if let Ok(msgs) = state.messages.get_envelope_ids(account_id, device_id).await {
+            if let Some(msgs) = state.messages.get_envelope_ids(account_id, device_id).await {
                 for msg_id in msgs {
                     state
                         .messages
@@ -114,7 +114,7 @@ mod test {
 
     #[tokio::test]
     async fn test_create_account() {
-        let mut state = ServerState::in_memory_default(LINK_SECRET.to_string());
+        let mut state = ServerState::in_memory(LINK_SECRET.to_string(), 10);
 
         let mut rng = OsRng;
         let pair = IdentityKeyPair::generate(&mut rng);
@@ -204,7 +204,7 @@ mod test {
 
     #[tokio::test]
     async fn test_delete_account() {
-        let mut state = ServerState::in_memory_default(LINK_SECRET.to_string());
+        let mut state = ServerState::in_memory(LINK_SECRET.to_string(), 10);
 
         let mut rng = OsRng;
         let pair = IdentityKeyPair::generate(&mut rng);

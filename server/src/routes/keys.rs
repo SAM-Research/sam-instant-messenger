@@ -62,7 +62,7 @@ mod test {
 
     #[tokio::test]
     async fn test_publish_keys() {
-        let mut state = ServerState::in_memory_default(LINK_SECRET.to_owned());
+        let mut state = ServerState::in_memory(LINK_SECRET.to_owned(), 10);
         let (pair, account_id, _) = create_user(&mut state, "alice", "phone", "bob", OsRng).await;
 
         let server = test_server(state, key_routes);

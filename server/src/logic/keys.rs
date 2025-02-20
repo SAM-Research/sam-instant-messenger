@@ -168,7 +168,7 @@ mod test {
 
     #[tokio::test]
     async fn test_add_keybundle() {
-        let mut state = ServerState::in_memory_default(LINK_SECRET.to_string());
+        let mut state = ServerState::in_memory(LINK_SECRET.to_string(), 10);
         let mut rng = OsRng;
         let pair = IdentityKeyPair::generate(&mut rng);
 
@@ -216,7 +216,7 @@ mod test {
 
     #[tokio::test]
     async fn test_get_keybundle() {
-        let mut state = ServerState::in_memory_default(LINK_SECRET.to_string());
+        let mut state = ServerState::in_memory(LINK_SECRET.to_string(), 10);
         let mut rng = OsRng;
         let pair = IdentityKeyPair::generate(&mut rng);
 
@@ -261,7 +261,7 @@ mod test {
 
     #[tokio::test]
     async fn test_add_publish_keybundle() {
-        let mut state = ServerState::in_memory_default(LINK_SECRET.to_string());
+        let mut state = ServerState::in_memory(LINK_SECRET.to_string(), 10);
         let mut rng = OsRng;
         let pair = IdentityKeyPair::generate(&mut rng);
 
@@ -314,7 +314,7 @@ mod test {
 
     #[tokio::test]
     async fn test_get_keybundles() {
-        let mut state = ServerState::in_memory_default(LINK_SECRET.to_string());
+        let mut state = ServerState::in_memory(LINK_SECRET.to_string(), 10);
         let mut rng = OsRng;
         let pair = IdentityKeyPair::generate(&mut rng);
 

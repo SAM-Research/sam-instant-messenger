@@ -85,7 +85,7 @@ mod test {
 
     #[tokio::test]
     async fn test_from_request_parts() {
-        let mut state = ServerState::in_memory_default(LINK_SECRET.to_string());
+        let mut state = ServerState::in_memory(LINK_SECRET.to_string(), 10);
 
         let account_id = AccountId::generate();
         let account_pwd = "thebestetpassword3".to_string();

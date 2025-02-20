@@ -4,15 +4,10 @@ use axum::{
     routing::get,
     Router,
 };
-use futures_util::StreamExt;
-use log::info;
-use tokio::sync::mpsc;
 
 use crate::{
     auth::authenticated_user::AuthenticatedUser,
-    logic::websocket::{
-        websocket_dispatcher, websocket_message_receiver, websocket_message_sender,
-    },
+    logic::websocket::init_websocket,
     managers::traits::message_manager::MessageManager,
     state::{state_type::StateType, ServerState},
     ServerError,
@@ -23,37 +18,16 @@ async fn websocket_endpoint<T: StateType>(
     auth_user: AuthenticatedUser,
     ws: WebSocketUpgrade,
 ) -> Result<impl IntoResponse, ServerError> {
-    // TODO: find a solution to encapsulate this in a logic function
-    let dispatch = state
+    let account_id = auth_user.account().id();
+    let device_id = auth_user.device().id();
+    let dispatch = state.messages.subscribe(account_id, device_id).await?;
+    state
         .messages
-        .subscribe(auth_user.account().id(), auth_user.device().id())
+        .dispatch_envelopes(account_id, device_id)
         .await?;
 
     Ok(ws.on_upgrade(move |socket| async move {
-        info!("{} Connected!", auth_user.account().username());
-
-        let (sender, receiver) = socket.split();
-        let (msg_producer, msg_consumer) = mpsc::channel(5);
-
-        tokio::spawn(websocket_message_receiver(
-            state.clone(),
-            receiver,
-            msg_producer.clone(),
-            auth_user.clone(),
-        ));
-        tokio::spawn(websocket_dispatcher(
-            state.clone(),
-            dispatch,
-            msg_producer,
-            auth_user.clone(),
-        ));
-
-        tokio::spawn(websocket_message_sender(
-            state,
-            sender,
-            msg_consumer,
-            auth_user,
-        ));
+        init_websocket(state, auth_user, socket, dispatch).await
     }))
 }
 
@@ -122,7 +96,7 @@ mod test {
 
     #[tokio::test]
     async fn test_websocket_alice_send_to_bob() {
-        let mut state = ServerState::in_memory_default(LINK_SECRET.to_owned());
+        let mut state = ServerState::in_memory(LINK_SECRET.to_owned(), 10);
         let (_, alice_id, alice_device) =
             create_user(&mut state, "alice", "phone", "bob", OsRng).await;
         let (_, bob_id, bob_device) =
