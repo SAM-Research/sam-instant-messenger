@@ -146,6 +146,7 @@ pub struct PublishPreKeys {
 }
 
 pub mod id_key {
+    use base64::{prelude::BASE64_STANDARD, Engine as _};
     use libsignal_protocol::IdentityKey;
     use serde::{self, Deserialize, Deserializer, Serializer};
 
@@ -153,8 +154,7 @@ pub mod id_key {
     where
         S: Serializer,
     {
-        // Convert IdentityKey to bytes and serialize them
-        serializer.serialize_bytes(&key.serialize())
+        serializer.serialize_str(&BASE64_STANDARD.encode(key.serialize()))
     }
 
     pub fn deserialize<'de, D>(deserializer: D) -> Result<IdentityKey, D::Error>
@@ -162,9 +162,11 @@ pub mod id_key {
         D: Deserializer<'de>,
     {
         use serde::de::Error;
-        let bytes = Vec::<u8>::deserialize(deserializer)?;
+        let bytes = BASE64_STANDARD
+            .decode(String::deserialize(deserializer)?)
+            .map_err(|err| Error::custom(format!("{err}")))?;
 
         IdentityKey::decode(&bytes)
-            .map_err(|e| Error::custom(format!("Failed to decode IdentityKey: {}", e)))
+            .map_err(|err| Error::custom(format!("Failed to decode IdentityKey: {err}")))
     }
 }
