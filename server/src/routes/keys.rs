@@ -128,11 +128,7 @@ mod test {
                 device_id: 1,
                 registration_id: 1,
                 pre_key: keys.pre_keys.unwrap().first().cloned(),
-                pq_pre_key: keys
-                    .pq_pre_keys
-                    .unwrap()
-                    .first().cloned()
-                    .unwrap(),
+                pq_pre_key: keys.pq_pre_keys.unwrap().first().cloned().unwrap(),
                 signed_pre_key: keys.signed_pre_key.unwrap(),
             }],
         };
