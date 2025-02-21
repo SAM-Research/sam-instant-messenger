@@ -6,8 +6,9 @@ use rand::rngs::OsRng;
 use sam_common::{
     address::RegistrationId,
     api::{
-        device::DeviceActivationInfo, keys::PublishPreKeys, EcPreKey, LinkDeviceRequest,
-        LinkDeviceToken, PqPreKey, SignedEcPreKey,
+        device::DeviceActivationInfo,
+        keys::{PublishPreKeys, RegistrationPreKeys},
+        EcPreKey, LinkDeviceRequest, LinkDeviceToken, PqPreKey, SignedEcPreKey,
     },
     time_now_millis,
 };
@@ -16,7 +17,7 @@ pub fn create_device_link(
     token: LinkDeviceToken,
     name: &str,
     registration_id: RegistrationId,
-    key_bundle: PublishPreKeys,
+    key_bundle: RegistrationPreKeys,
 ) -> LinkDeviceRequest {
     LinkDeviceRequest {
         token,
@@ -28,7 +29,7 @@ pub fn create_device_link(
     }
 }
 
-pub fn create_publish_key_bundle(
+pub fn create_publish_pre_keys(
     pre_key_ids: Option<Vec<u32>>,
     signed_pre_key_id: Option<u32>,
     pq_pre_key_ids: Option<Vec<u32>>,

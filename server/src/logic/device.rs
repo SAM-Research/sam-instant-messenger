@@ -38,7 +38,11 @@ pub async fn link_device<T: StateType>(
     device_link: LinkDeviceRequest,
     password: String,
 ) -> Result<LinkDeviceResponse, ServerError> {
-    let account_id = verify_token(&state.devices.link_secret().await?, device_link.token)?;
+    let account_id = verify_token(
+        &state.devices.link_secret().await?,
+        state.devices.provision_expire_seconds().await?,
+        device_link.token,
+    )?;
 
     let account = state.accounts.get_account(account_id).await?;
 
@@ -91,7 +95,7 @@ pub async fn create_device<T: StateType>(
         identity,
         account_id,
         device_id,
-        device_info.key_bundle,
+        device_info.key_bundle.into(),
     )
     .await
 }
@@ -117,7 +121,7 @@ mod test {
             },
         },
         state::ServerState,
-        test_utils::{create_device_link, create_publish_key_bundle},
+        test_utils::{create_device_link, create_publish_pre_keys},
     };
 
     #[tokio::test]
@@ -130,14 +134,16 @@ mod test {
         let device_info = DeviceActivationInfo {
             name: "a".to_string(),
             registration_id: 1.into(),
-            key_bundle: create_publish_key_bundle(
+            key_bundle: create_publish_pre_keys(
                 Some(vec![0]),
                 Some(1),
                 Some(vec![33]),
                 Some(2),
                 &pair,
                 rng,
-            ),
+            )
+            .try_into()
+            .expect("Can make RegistrationPreKeys"),
         };
 
         let account_id = AccountId::generate();
@@ -182,7 +188,7 @@ mod test {
             .unwrap()
             .id();
 
-        assert!(ec_key_ids == vec![0]);
+        assert!(ec_key_ids == Some(vec![0]));
         assert!(signed_ec_id == 1);
 
         let pq_key_ids = state
@@ -197,7 +203,7 @@ mod test {
             .unwrap()
             .id();
 
-        assert!(pq_key_ids == vec![33]);
+        assert!(pq_key_ids == Some(vec![33]));
         assert!(last_resort_id == 2);
     }
 
@@ -211,7 +217,9 @@ mod test {
         let device_info = DeviceActivationInfo {
             name: "a".to_string(),
             registration_id: 1.into(),
-            key_bundle: create_publish_key_bundle(None, None, None, None, &pair, rng),
+            key_bundle: create_publish_pre_keys(None, Some(1), None, Some(2), &pair, rng)
+                .try_into()
+                .expect("Can make RegistrationPreKeys"),
         };
 
         let account_id = AccountId::generate();
@@ -258,14 +266,16 @@ mod test {
             device_activation: DeviceActivationInfo {
                 name: "Alice Phone".to_string(),
                 registration_id: 1.into(),
-                key_bundle: create_publish_key_bundle(
+                key_bundle: create_publish_pre_keys(
                     Some(vec![0]),
                     Some(1),
                     Some(vec![33]),
                     Some(2),
                     &pair,
                     rng,
-                ),
+                )
+                .try_into()
+                .expect("Can make RegistrationPreKeys"),
             },
         };
 
@@ -285,7 +295,9 @@ mod test {
 
         let device_pwd = "charlie<3".to_string();
 
-        let key_bundle = create_publish_key_bundle(None, None, None, None, &pair, rng);
+        let key_bundle = create_publish_pre_keys(None, Some(1), None, Some(2), &pair, rng)
+            .try_into()
+            .expect("Can make RegistrationPreKeys");
         let device_link = create_device_link(token, "Alice Laptop", 2.into(), key_bundle);
 
         let res = link_device(&mut state, device_link, device_pwd)

@@ -2,7 +2,7 @@ use serde::{Deserialize, Serialize};
 
 use crate::address::{AccountId, DeviceId, RegistrationId};
 
-use super::keys::PublishPreKeys;
+use super::keys::RegistrationPreKeys;
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
 #[serde(rename_all = "camelCase")]
@@ -43,5 +43,5 @@ pub struct LinkDeviceRequest {
 pub struct DeviceActivationInfo {
     pub name: String,
     pub registration_id: RegistrationId,
-    pub key_bundle: PublishPreKeys,
+    pub key_bundle: RegistrationPreKeys,
 }

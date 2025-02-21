@@ -58,7 +58,6 @@ mod test {
     };
 
     use crate::{
-        managers::in_memory::test_utils::LINK_SECRET,
         routes::{test_utils::create_user, websocket::websocket_routes},
         state::{state_type::StateType, ServerState},
     };
@@ -106,7 +105,7 @@ mod test {
 
     #[tokio::test]
     async fn test_websocket_alice_send_to_bob() {
-        let mut state = ServerState::in_memory(LINK_SECRET.to_owned(), 10);
+        let mut state = ServerState::in_memory_test();
         let (_, alice_id, alice_device) =
             create_user(&mut state, "alice", "phone", "bob", OsRng).await;
         let (_, bob_id, bob_device) =
@@ -163,7 +162,7 @@ mod test {
 
     #[tokio::test]
     async fn test_websocket_alice_send_to_bob_offline() {
-        let mut state = ServerState::in_memory(LINK_SECRET.to_owned(), 10);
+        let mut state = ServerState::in_memory_test();
         let (_, alice_id, alice_device) =
             create_user(&mut state, "alice", "phone", "bob", OsRng).await;
         let (_, bob_id, bob_device) =

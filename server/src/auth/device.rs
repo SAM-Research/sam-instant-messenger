@@ -18,7 +18,11 @@ pub fn create_token(secret: &str, account_id: AccountId) -> LinkDeviceToken {
     LinkDeviceToken::new(id, token)
 }
 
-pub fn verify_token(secret: &str, token: LinkDeviceToken) -> Result<AccountId, ServerError> {
+pub fn verify_token(
+    secret: &str,
+    expire_seconds: u64,
+    token: LinkDeviceToken,
+) -> Result<AccountId, ServerError> {
     let (claims, b64_signature) = token
         .token()
         .split_once(":")
@@ -44,7 +48,7 @@ pub fn verify_token(secret: &str, token: LinkDeviceToken) -> Result<AccountId, S
     );
     let time_now = Duration::from_millis(time_now_millis() as u64);
     let elapsed = time_now - time_then;
-    if elapsed.as_secs() > 600 {
+    if elapsed.as_secs() > expire_seconds {
         return Err(ServerError::DeviceLinkTooSlow);
     }
     Ok(account_id)
