@@ -98,14 +98,11 @@ mod test {
 
     use crate::{
         logic::account::{create_account, delete_account},
-        managers::{
-            in_memory::test_utils::LINK_SECRET,
-            traits::{
-                account_manager::AccountManager,
-                device_manager::DeviceManager,
-                key_manager::{
-                    LastResortKeyManager, PqPreKeyManager, PreKeyManager, SignedPreKeyManager,
-                },
+        managers::traits::{
+            account_manager::AccountManager,
+            device_manager::DeviceManager,
+            key_manager::{
+                LastResortKeyManager, PqPreKeyManager, PreKeyManager, SignedPreKeyManager,
             },
         },
         state::ServerState,
@@ -114,7 +111,7 @@ mod test {
 
     #[tokio::test]
     async fn test_create_account() {
-        let mut state = ServerState::in_memory(LINK_SECRET.to_string(), 10);
+        let mut state = ServerState::in_memory_test();
 
         let mut rng = OsRng;
         let pair = IdentityKeyPair::generate(&mut rng);
@@ -204,7 +201,7 @@ mod test {
 
     #[tokio::test]
     async fn test_delete_account() {
-        let mut state = ServerState::in_memory(LINK_SECRET.to_string(), 10);
+        let mut state = ServerState::in_memory_test();
 
         let mut rng = OsRng;
         let pair = IdentityKeyPair::generate(&mut rng);

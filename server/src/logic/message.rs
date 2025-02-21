@@ -72,13 +72,21 @@ pub async fn handle_client_message<T: StateType>(
             }
         }
         MessageType::Error => {
-            // TODO: scheduler to remove error messages from pending?
+            let account_id = auth_user.account().id();
+            let device_id = auth_user.device().id();
+            let pending_res = state
+                .messages
+                .remove_pending_message(account_id, device_id, message_id)
+                .await;
             error!(
                 "User '{}' failed to process message with id '{}'",
                 auth_user.account().username(),
                 message_id
             );
-            Ok(None)
+            match pending_res {
+                Ok(_) => Ok(None),
+                Err(e) => Err(e),
+            }
         }
     }
 }

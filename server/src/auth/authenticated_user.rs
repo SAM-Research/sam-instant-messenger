@@ -68,7 +68,6 @@ mod test {
         auth::{authenticated_user::AuthenticatedUser, password::Password},
         managers::{
             entities::{account::Account, device::Device},
-            in_memory::test_utils::LINK_SECRET,
             traits::{account_manager::AccountManager, device_manager::DeviceManager},
         },
         state::ServerState,
@@ -85,7 +84,7 @@ mod test {
 
     #[tokio::test]
     async fn test_from_request_parts() {
-        let mut state = ServerState::in_memory(LINK_SECRET.to_string(), 10);
+        let mut state = ServerState::in_memory_test();
 
         let account_id = AccountId::generate();
         let account_pwd = "thebestetpassword3".to_string();

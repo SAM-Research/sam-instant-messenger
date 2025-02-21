@@ -110,13 +110,10 @@ mod test {
             account::create_account,
             device::{create_device, create_device_token, link_device, unlink_device},
         },
-        managers::{
-            in_memory::test_utils::LINK_SECRET,
-            traits::{
-                device_manager::DeviceManager,
-                key_manager::{
-                    LastResortKeyManager, PqPreKeyManager, PreKeyManager, SignedPreKeyManager,
-                },
+        managers::traits::{
+            device_manager::DeviceManager,
+            key_manager::{
+                LastResortKeyManager, PqPreKeyManager, PreKeyManager, SignedPreKeyManager,
             },
         },
         state::ServerState,
@@ -125,7 +122,7 @@ mod test {
 
     #[tokio::test]
     async fn test_create_device() {
-        let mut state = ServerState::in_memory(LINK_SECRET.to_string(), 10);
+        let mut state = ServerState::in_memory_test();
 
         let mut rng = OsRng;
         let pair = IdentityKeyPair::generate(&mut rng);
@@ -206,7 +203,7 @@ mod test {
 
     #[tokio::test]
     async fn test_unlink_device() {
-        let mut state = ServerState::in_memory(LINK_SECRET.to_string(), 10);
+        let mut state = ServerState::in_memory_test();
 
         let mut rng = OsRng;
         let pair = IdentityKeyPair::generate(&mut rng);
@@ -244,7 +241,7 @@ mod test {
 
     #[tokio::test]
     async fn test_create_device_token() {
-        let state = ServerState::in_memory(LINK_SECRET.to_string(), 10);
+        let state = ServerState::in_memory_test();
         assert!(create_device_token(&state, AccountId::generate())
             .await
             .is_ok())
@@ -252,7 +249,7 @@ mod test {
 
     #[tokio::test]
     async fn test_link_device() {
-        let mut state = ServerState::in_memory(LINK_SECRET.to_string(), 10);
+        let mut state = ServerState::in_memory_test();
 
         let mut rng = OsRng;
         let pair = IdentityKeyPair::generate(&mut rng);

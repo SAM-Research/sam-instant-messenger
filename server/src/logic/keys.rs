@@ -153,7 +153,6 @@ mod test {
         logic::keys::{add_keybundle, get_keybundle, get_keybundles, publish_keybundle},
         managers::{
             entities::{account::Account, device::Device},
-            in_memory::test_utils::LINK_SECRET,
             traits::{
                 account_manager::AccountManager,
                 device_manager::DeviceManager,
@@ -168,7 +167,7 @@ mod test {
 
     #[tokio::test]
     async fn test_add_keybundle() {
-        let mut state = ServerState::in_memory(LINK_SECRET.to_string(), 10);
+        let mut state = ServerState::in_memory_test();
         let mut rng = OsRng;
         let pair = IdentityKeyPair::generate(&mut rng);
 
@@ -216,7 +215,7 @@ mod test {
 
     #[tokio::test]
     async fn test_get_keybundle() {
-        let mut state = ServerState::in_memory(LINK_SECRET.to_string(), 10);
+        let mut state = ServerState::in_memory_test();
         let mut rng = OsRng;
         let pair = IdentityKeyPair::generate(&mut rng);
 
@@ -261,7 +260,7 @@ mod test {
 
     #[tokio::test]
     async fn test_add_publish_keybundle() {
-        let mut state = ServerState::in_memory(LINK_SECRET.to_string(), 10);
+        let mut state = ServerState::in_memory_test();
         let mut rng = OsRng;
         let pair = IdentityKeyPair::generate(&mut rng);
 
@@ -314,7 +313,7 @@ mod test {
 
     #[tokio::test]
     async fn test_get_keybundles() {
-        let mut state = ServerState::in_memory(LINK_SECRET.to_string(), 10);
+        let mut state = ServerState::in_memory_test();
         let mut rng = OsRng;
         let pair = IdentityKeyPair::generate(&mut rng);
 

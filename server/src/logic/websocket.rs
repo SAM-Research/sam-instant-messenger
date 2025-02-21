@@ -77,10 +77,6 @@ async fn websocket_message_receiver<T: StateType>(
                 );
                 ClientMessage::decode(b).map_err(|_| ServerError::WebSocketDecodeError)
             }
-            Message::Text(x) => {
-                info!("{}", x);
-                continue;
-            }
             Message::Close(_) => Err(ServerError::WebSocketDisconnected),
             _ => continue,
         };

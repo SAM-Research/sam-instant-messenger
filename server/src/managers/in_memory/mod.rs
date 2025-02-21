@@ -33,4 +33,16 @@ impl ServerState<InMemStateType> {
             InMemoryKeyManager::default(),
         )
     }
+
+    #[cfg(test)]
+    pub fn in_memory_test() -> Self {
+        use test_utils::LINK_SECRET;
+
+        ServerState::new(
+            InMemoryAccountManager::default(),
+            InMemoryDeviceManager::new(LINK_SECRET.to_string()),
+            InMemoryMessageManager::default(),
+            InMemoryKeyManager::default(),
+        )
+    }
 }
