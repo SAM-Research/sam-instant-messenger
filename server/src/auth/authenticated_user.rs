@@ -15,6 +15,7 @@ use crate::state::state_type::StateType;
 use crate::state::ServerState;
 use crate::ServerError;
 
+#[derive(Clone)]
 pub struct AuthenticatedUser {
     account: Account,
     device: Device,
@@ -30,7 +31,6 @@ impl AuthenticatedUser {
     }
 }
 
-#[async_trait::async_trait]
 impl<T: StateType> FromRequestParts<ServerState<T>> for AuthenticatedUser {
     type Rejection = ServerError;
 
@@ -45,7 +45,6 @@ impl<T: StateType> FromRequestParts<ServerState<T>> for AuthenticatedUser {
                     .map_err(|_| ServerError::AuthBasicParseError)?;
             (basic.username().to_string(), basic.password().to_string())
         };
-
         let (account_id, device_id) = userinfo
             .split_once(".")
             .ok_or(ServerError::AuthBasicParseError)?;
@@ -69,7 +68,6 @@ mod test {
         auth::{authenticated_user::AuthenticatedUser, password::Password},
         managers::{
             entities::{account::Account, device::Device},
-            in_memory::test_utils::LINK_SECRET,
             traits::{account_manager::AccountManager, device_manager::DeviceManager},
         },
         state::ServerState,
@@ -86,7 +84,7 @@ mod test {
 
     #[tokio::test]
     async fn test_from_request_parts() {
-        let mut state = ServerState::in_memory_default(LINK_SECRET.to_string());
+        let mut state = ServerState::in_memory_test();
 
         let account_id = AccountId::generate();
         let account_pwd = "thebestetpassword3".to_string();
@@ -123,7 +121,7 @@ mod test {
         let account_id = account.id();
         state
             .devices
-            .add_device(account_id, device)
+            .add_device(account_id, &device)
             .await
             .expect("Alice can add device");
 

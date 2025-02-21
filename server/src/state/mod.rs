@@ -23,6 +23,4 @@ impl<T: StateType> ServerState<T> {
             keys: key,
         }
     }
-    pub async fn init(&mut self) {}
-    pub async fn cleanup(&mut self) {}
 }

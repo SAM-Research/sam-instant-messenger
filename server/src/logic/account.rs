@@ -26,11 +26,11 @@ pub async fn delete_account<T: StateType>(
 ) -> Result<(), ServerError> {
     {
         for device_id in state.devices.get_devices(account_id).await? {
-            if let Ok(msgs) = state.messages.get_message_ids(account_id, device_id).await {
+            if let Some(msgs) = state.messages.get_envelope_ids(account_id, device_id).await {
                 for msg_id in msgs {
                     state
                         .messages
-                        .remove_message(account_id, device_id, msg_id)
+                        .remove_envelope(account_id, device_id, msg_id)
                         .await?;
                 }
             }
@@ -97,26 +97,21 @@ mod test {
     use sam_common::api::{device::DeviceActivationInfo, Key, RegistrationRequest};
 
     use crate::{
-        logic::{
-            account::{create_account, delete_account},
-            test_utils::create_publish_key_bundle,
-        },
-        managers::{
-            in_memory::test_utils::LINK_SECRET,
-            traits::{
-                account_manager::AccountManager,
-                device_manager::DeviceManager,
-                key_manager::{
-                    LastResortKeyManager, PqPreKeyManager, PreKeyManager, SignedPreKeyManager,
-                },
+        logic::account::{create_account, delete_account},
+        managers::traits::{
+            account_manager::AccountManager,
+            device_manager::DeviceManager,
+            key_manager::{
+                LastResortKeyManager, PqPreKeyManager, PreKeyManager, SignedPreKeyManager,
             },
         },
         state::ServerState,
+        test_utils::create_publish_key_bundle,
     };
 
     #[tokio::test]
     async fn test_create_account() {
-        let mut state = ServerState::in_memory_default(LINK_SECRET.to_string());
+        let mut state = ServerState::in_memory_test();
 
         let mut rng = OsRng;
         let pair = IdentityKeyPair::generate(&mut rng);
@@ -206,7 +201,7 @@ mod test {
 
     #[tokio::test]
     async fn test_delete_account() {
-        let mut state = ServerState::in_memory_default(LINK_SECRET.to_string());
+        let mut state = ServerState::in_memory_test();
 
         let mut rng = OsRng;
         let pair = IdentityKeyPair::generate(&mut rng);

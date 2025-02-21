@@ -11,7 +11,7 @@ pub trait DeviceManager: Send + Sync + Clone {
     async fn add_device(
         &mut self,
         account_id: AccountId,
-        device: Device,
+        device: &Device,
     ) -> Result<(), ServerError>;
     async fn remove_device(
         &mut self,

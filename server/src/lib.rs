@@ -6,5 +6,8 @@ pub mod routes;
 pub mod server;
 pub mod state;
 
+#[cfg(test)]
+mod test_utils;
+
 pub use error::ServerError;
 pub use server::{start_server, ServerConfig};

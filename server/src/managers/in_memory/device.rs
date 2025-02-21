@@ -77,7 +77,7 @@ impl DeviceManager for InMemoryDeviceManager {
     async fn add_device(
         &mut self,
         account_id: AccountId,
-        device: Device,
+        device: &Device,
     ) -> Result<(), ServerError> {
         let key = DeviceAddress::new(account_id, device.id());
 

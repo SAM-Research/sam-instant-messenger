@@ -1,28 +1,40 @@
-use axum::{
-    routing::{delete, get, post, put},
-    Router,
-};
+use axum::Router;
 
 use crate::state::{state_type::StateType, ServerState};
 
-use super::account::{account_register_endpoint, delete_account_endpoint};
-use super::device::{
-    delete_device_endpoint, device_provision_token_endpoint, link_device_endpoint,
+use super::{
+    account::account_routes, device::device_routes, keys::key_routes, websocket::websocket_routes,
 };
-use super::keys::{keys_bundles_endpoint, publish_keys_endpoint};
+
+type SAMRouter<T> = Router<ServerState<T>>;
+
+struct RouterBuilder<T: StateType> {
+    routes: Vec<fn(SAMRouter<T>) -> SAMRouter<T>>,
+}
+
+impl<T: StateType> RouterBuilder<T> {
+    fn add_routes(mut self, f: fn(Router<ServerState<T>>) -> Router<ServerState<T>>) -> Self {
+        self.routes.push(f);
+        self
+    }
+    fn new() -> Self {
+        Self { routes: Vec::new() }
+    }
+
+    fn build(self) -> Router<ServerState<T>> {
+        let mut router = Router::new();
+        for f in self.routes {
+            router = f(router)
+        }
+        router
+    }
+}
 
 pub fn router<T: StateType>() -> Router<ServerState<T>> {
-    Router::new()
-        .route("/", get(|| async { "Hello From SAM Service" }))
-        .route("/api/v1/account", post(account_register_endpoint))
-        .route("/api/v1/account", delete(delete_account_endpoint))
-        .route("/api/v1/keys/:account_id", get(keys_bundles_endpoint))
-        .route("/api/v1/keys", put(publish_keys_endpoint))
-        .route(
-            "/api/v1/devices/provision",
-            get(device_provision_token_endpoint),
-        )
-        .route("/api/v1/devices/link", post(link_device_endpoint))
-        .route("/api/v1/device/:id", delete(delete_device_endpoint))
-    // TODO: Add Websocket endpoint
+    RouterBuilder::new()
+        .add_routes(account_routes)
+        .add_routes(key_routes)
+        .add_routes(device_routes)
+        .add_routes(websocket_routes)
+        .build()
 }

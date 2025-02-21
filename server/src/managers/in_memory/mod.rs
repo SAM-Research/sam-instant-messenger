@@ -25,10 +25,22 @@ impl StateType for InMemStateType {
 }
 
 impl ServerState<InMemStateType> {
-    pub fn in_memory_default(link_secret: String) -> Self {
+    pub fn in_memory(link_secret: String, message_buffer: usize) -> Self {
         ServerState::new(
             InMemoryAccountManager::default(),
             InMemoryDeviceManager::new(link_secret),
+            InMemoryMessageManager::new(message_buffer),
+            InMemoryKeyManager::default(),
+        )
+    }
+
+    #[cfg(test)]
+    pub fn in_memory_test() -> Self {
+        use test_utils::LINK_SECRET;
+
+        ServerState::new(
+            InMemoryAccountManager::default(),
+            InMemoryDeviceManager::new(LINK_SECRET.to_string()),
             InMemoryMessageManager::default(),
             InMemoryKeyManager::default(),
         )

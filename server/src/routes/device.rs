@@ -1,6 +1,7 @@
 use axum::{
     extract::{Path, State},
-    Json,
+    routing::{delete, get, post},
+    Json, Router,
 };
 use axum_extra::{
     headers::{authorization::Basic, Authorization},
@@ -20,7 +21,7 @@ use crate::{
 };
 
 /// Handle device provisioning
-pub async fn device_provision_token_endpoint<T: StateType>(
+async fn device_provision_token_endpoint<T: StateType>(
     State(state): State<ServerState<T>>,
     auth_user: AuthenticatedUser,
 ) -> Result<Json<LinkDeviceToken>, ServerError> {
@@ -33,7 +34,7 @@ pub async fn device_provision_token_endpoint<T: StateType>(
 }
 
 /// Handle device linking
-pub async fn link_device_endpoint<T: StateType>(
+async fn link_device_endpoint<T: StateType>(
     State(mut state): State<ServerState<T>>,
     TypedHeader(Authorization(basic)): TypedHeader<Authorization<Basic>>,
     Json(req): Json<LinkDeviceRequest>,
@@ -44,10 +45,20 @@ pub async fn link_device_endpoint<T: StateType>(
 }
 
 /// Handle device linking
-pub async fn delete_device_endpoint<T: StateType>(
+async fn delete_device_endpoint<T: StateType>(
     State(mut state): State<ServerState<T>>,
     Path(device_id): Path<DeviceId>,
     auth_user: AuthenticatedUser,
 ) -> Result<(), ServerError> {
     unlink_device(&mut state, auth_user.account().id(), device_id).await
+}
+
+pub fn device_routes<T: StateType>(router: Router<ServerState<T>>) -> Router<ServerState<T>> {
+    router
+        .route(
+            "/api/v1/devices/provision",
+            get(device_provision_token_endpoint),
+        )
+        .route("/api/v1/devices/link", post(link_device_endpoint))
+        .route("/api/v1/device/{id}", delete(delete_device_endpoint))
 }

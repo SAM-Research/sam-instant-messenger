@@ -150,13 +150,9 @@ mod test {
 
     use crate::{
         auth::password::Password,
-        logic::{
-            keys::{add_keybundle, get_keybundle, get_keybundles, publish_keybundle},
-            test_utils::create_publish_key_bundle,
-        },
+        logic::keys::{add_keybundle, get_keybundle, get_keybundles, publish_keybundle},
         managers::{
             entities::{account::Account, device::Device},
-            in_memory::test_utils::LINK_SECRET,
             traits::{
                 account_manager::AccountManager,
                 device_manager::DeviceManager,
@@ -166,11 +162,12 @@ mod test {
             },
         },
         state::ServerState,
+        test_utils::create_publish_key_bundle,
     };
 
     #[tokio::test]
     async fn test_add_keybundle() {
-        let mut state = ServerState::in_memory_default(LINK_SECRET.to_string());
+        let mut state = ServerState::in_memory_test();
         let mut rng = OsRng;
         let pair = IdentityKeyPair::generate(&mut rng);
 
@@ -218,7 +215,7 @@ mod test {
 
     #[tokio::test]
     async fn test_get_keybundle() {
-        let mut state = ServerState::in_memory_default(LINK_SECRET.to_string());
+        let mut state = ServerState::in_memory_test();
         let mut rng = OsRng;
         let pair = IdentityKeyPair::generate(&mut rng);
 
@@ -263,7 +260,7 @@ mod test {
 
     #[tokio::test]
     async fn test_add_publish_keybundle() {
-        let mut state = ServerState::in_memory_default(LINK_SECRET.to_string());
+        let mut state = ServerState::in_memory_test();
         let mut rng = OsRng;
         let pair = IdentityKeyPair::generate(&mut rng);
 
@@ -316,7 +313,7 @@ mod test {
 
     #[tokio::test]
     async fn test_get_keybundles() {
-        let mut state = ServerState::in_memory_default(LINK_SECRET.to_string());
+        let mut state = ServerState::in_memory_test();
         let mut rng = OsRng;
         let pair = IdentityKeyPair::generate(&mut rng);
 
@@ -343,7 +340,7 @@ mod test {
         let account_id = account.id();
         state
             .devices
-            .add_device(account_id, device)
+            .add_device(account_id, &device)
             .await
             .expect("Alice can add device");
 
