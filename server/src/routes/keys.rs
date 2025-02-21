@@ -127,12 +127,11 @@ mod test {
             bundles: vec![PreKeyBundle {
                 device_id: 1,
                 registration_id: 1,
-                pre_key: keys.pre_keys.unwrap().first().map(|k| k.clone()),
+                pre_key: keys.pre_keys.unwrap().first().cloned(),
                 pq_pre_key: keys
                     .pq_pre_keys
                     .unwrap()
-                    .first()
-                    .map(|k| k.clone())
+                    .first().cloned()
                     .unwrap(),
                 signed_pre_key: keys.signed_pre_key.unwrap(),
             }],

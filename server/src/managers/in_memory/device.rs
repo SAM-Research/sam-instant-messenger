@@ -77,7 +77,7 @@ impl DeviceManager for InMemoryDeviceManager {
     }
 
     async fn provision_expire_seconds(&self) -> Result<u64, ServerError> {
-        Ok(self.provision_expire_seconds.clone())
+        Ok(self.provision_expire_seconds)
     }
 
     async fn add_device(
