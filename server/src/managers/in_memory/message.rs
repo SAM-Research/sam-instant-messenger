@@ -166,7 +166,7 @@ impl MessageManager for InMemoryMessageManager {
                         }
                         Ok(())
                     }
-                    None => Err(ServerError::MessageSubscriberExists),
+                    None => Err(ServerError::MessageSubscriberNotExists),
                 }
             }
             None => Ok(()),

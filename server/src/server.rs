@@ -19,7 +19,6 @@ async fn log_request(req: Request, next: Next) -> impl IntoResponse {
     let path = req.uri().path().to_string();
 
     info!("{} '{}'", method, path);
-    // Call the next handler in the chain
     next.run(req).await
 }
 

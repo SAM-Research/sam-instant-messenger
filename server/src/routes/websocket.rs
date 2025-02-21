@@ -37,11 +37,13 @@ pub fn websocket_routes<T: StateType>(router: Router<ServerState<T>>) -> Router<
 
 #[cfg(test)]
 mod test {
-    use std::{net::SocketAddr, time::Duration};
+    use std::{io::Error, net::SocketAddr, time::Duration};
 
     use axum::Router;
+    use axum_server::Handle;
     use base64::{prelude::BASE64_STANDARD, Engine};
     use futures_util::{SinkExt, StreamExt};
+
     use maplit::hashmap;
     use prost::Message;
     use rand::rngs::OsRng;
@@ -49,7 +51,8 @@ mod test {
         address::{AccountId, MessageId},
         sam_message::{ClientEnvelope, ClientMessage, EnvelopeType, MessageType},
     };
-    use tokio::sync::oneshot;
+
+    use tokio::{sync::oneshot, task::JoinHandle};
     use tokio_tungstenite::{
         connect_async, tungstenite::client::IntoClientRequest, MaybeTlsStream, WebSocketStream,
     };
@@ -64,20 +67,24 @@ mod test {
     fn start_websocket_server<T: StateType>(
         state: ServerState<T>,
         address: String,
-    ) -> Receiver<()> {
+    ) -> (JoinHandle<Result<(), Error>>, Handle, Receiver<()>) {
         let app = websocket_routes(Router::new()).with_state(state);
-        let (tx, rx) = oneshot::channel::<()>();
-        tokio::spawn(async move {
+        let (tx, started_rx) = oneshot::channel::<()>();
+        let axum = Handle::new();
+        let axum_handle = axum.clone();
+        let thread = tokio::spawn(async move {
             let server = axum_server::bind(address.parse().expect("Can make socket addr from str"))
+                .handle(axum_handle)
                 .serve(app.into_make_service_with_connect_info::<SocketAddr>());
             tx.send(()).expect("Can oneshot");
             server.await
         });
-        rx
+        (thread, axum, started_rx)
     }
 
     async fn connect_user(
         account_id: AccountId,
+        username: &str,
         password: &str,
         address: &str,
     ) -> WebSocketStream<MaybeTlsStream<tokio::net::TcpStream>> {
@@ -90,7 +97,10 @@ mod test {
         );
         req.headers_mut()
             .insert("Authorization", basic.parse().unwrap());
-        let (ws, _) = connect_async(req).await.expect("Can make connection");
+        let (ws, _) = connect_async(req)
+            .await
+            .inspect_err(|e| println!("{}", e))
+            .expect(&format!("{} can make connection", username));
         ws
     }
 
@@ -102,10 +112,9 @@ mod test {
         let (_, bob_id, bob_device) =
             create_user(&mut state, "bob", "laptop", "cheeseburger", OsRng).await;
 
-        let address = "127.0.0.1:8888".to_string();
-        start_websocket_server(state.clone(), address.clone())
-            .await
-            .expect("Server can start");
+        let address = "127.0.0.1:8001".to_string();
+        let (thread, axum, started) = start_websocket_server(state.clone(), address.clone());
+        started.await.expect("Server can start");
 
         let envelope = ClientEnvelope::builder()
             .destination_account_id(bob_id.into())
@@ -122,8 +131,8 @@ mod test {
             .r#type(MessageType::Message as i32)
             .build();
 
-        let mut alice = connect_user(alice_id, "bob", &address).await;
-        let mut bob = connect_user(bob_id, "cheeseburger", &address).await;
+        let mut alice = connect_user(alice_id, "alice", "bob", &address).await;
+        let mut bob = connect_user(bob_id, "bob", "cheeseburger", &address).await;
 
         let alice_send = tokio::time::timeout(
             Duration::from_millis(300),
@@ -135,13 +144,72 @@ mod test {
         let bob_recv = tokio::time::timeout(Duration::from_millis(300), bob.next());
 
         let alice_sent = alice_send.await;
+        let bob_received = bob_recv.await;
+
+        axum.shutdown();
+        let _ = thread.await;
         assert!(alice_sent.is_ok(), "Alice timed out");
         assert!(
             alice_sent.is_ok_and(|res| res.is_ok()),
             "Alice could not send"
         );
 
+        assert!(bob_received.is_ok(), "Bob timed out");
+        assert!(
+            bob_received.is_ok_and(|op| op.is_some_and(|res| res.is_ok())),
+            "Bob could not received"
+        )
+    }
+
+    #[tokio::test]
+    async fn test_websocket_alice_send_to_bob_offline() {
+        let mut state = ServerState::in_memory(LINK_SECRET.to_owned(), 10);
+        let (_, alice_id, alice_device) =
+            create_user(&mut state, "alice", "phone", "bob", OsRng).await;
+        let (_, bob_id, bob_device) =
+            create_user(&mut state, "bob", "laptop", "cheeseburger", OsRng).await;
+
+        let address = "127.0.0.1:8001".to_string();
+        let (thread, axum, started) = start_websocket_server(state.clone(), address.clone());
+        started.await.expect("Server can start");
+
+        let envelope = ClientEnvelope::builder()
+            .destination_account_id(bob_id.into())
+            .source_account_id(alice_id.into())
+            .source_device_id(alice_device.into())
+            .r#type(EnvelopeType::PlaintextContent as i32)
+            .content(hashmap! {bob_device.into() => "hi bob<3".into()})
+            .build();
+
+        let msg_id = MessageId::generate();
+        let msg = ClientMessage::builder()
+            .id(msg_id.into())
+            .message(envelope)
+            .r#type(MessageType::Message as i32)
+            .build();
+
+        let mut alice = connect_user(alice_id, "alice", "bob", &address).await;
+
+        let alice_send = tokio::time::timeout(
+            Duration::from_millis(300),
+            alice.send(tokio_tungstenite::tungstenite::Message::Binary(
+                msg.encode_to_vec().into(),
+            )),
+        );
+        let alice_sent = alice_send.await;
+
+        // bob goes online to receive message
+        let mut bob = connect_user(bob_id, "bob", "cheeseburger", &address).await;
+        let bob_recv = tokio::time::timeout(Duration::from_millis(300), bob.next());
         let bob_received = bob_recv.await;
+
+        axum.shutdown();
+        let _ = thread.await;
+        assert!(alice_sent.is_ok(), "Alice timed out");
+        assert!(
+            alice_sent.is_ok_and(|res| res.is_ok()),
+            "Alice could not send"
+        );
         assert!(bob_received.is_ok(), "Bob timed out");
         assert!(
             bob_received.is_ok_and(|op| op.is_some_and(|res| res.is_ok())),
