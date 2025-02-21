@@ -34,7 +34,7 @@ impl InMemoryMessageManager {
             envelopes: Arc::new(Mutex::new(HashMap::new())),
             subscribers: Arc::new(Mutex::new(HashMap::new())),
             pending_messages: Arc::new(Mutex::new(HashSet::new())),
-            channel_buffer: channel_buffer,
+            channel_buffer,
         }
     }
 }

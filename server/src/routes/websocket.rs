@@ -100,7 +100,7 @@ mod test {
         let (ws, _) = connect_async(req)
             .await
             .inspect_err(|e| println!("{}", e))
-            .expect(&format!("{} can make connection", username));
+            .unwrap_or_else(|_| panic!("{} can make connection", username));
         ws
     }
 
