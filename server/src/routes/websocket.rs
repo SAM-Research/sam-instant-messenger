@@ -169,7 +169,7 @@ mod test {
         let (_, bob_id, bob_device) =
             create_user(&mut state, "bob", "laptop", "cheeseburger", OsRng).await;
 
-        let address = "127.0.0.1:8001".to_string();
+        let address = "127.0.0.1:8002".to_string();
         let (thread, axum, started) = start_websocket_server(state.clone(), address.clone());
         started.await.expect("Server can start");
 
