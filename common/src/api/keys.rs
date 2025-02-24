@@ -3,11 +3,12 @@ use libsignal_protocol::{
 };
 use serde::{Deserialize, Serialize};
 use serde_with::{base64::Base64, serde_as};
+use utoipa::{PartialSchema, ToSchema};
 
 macro_rules! define_key {
     ($name:ident) => {
         #[serde_as]
-        #[derive(Debug, Serialize, Deserialize, Clone, PartialEq, Eq)]
+        #[derive(Debug, Serialize, Deserialize, Clone, PartialEq, Eq, ToSchema)]
         #[serde(rename_all = "camelCase")]
         pub struct $name {
             pub key_id: u32,
@@ -29,7 +30,7 @@ macro_rules! define_key {
 macro_rules! define_signed_key {
     ($name:ident) => {
         #[serde_as]
-        #[derive(Debug, Serialize, Deserialize, Clone, Hash, PartialEq, Eq)]
+        #[derive(Debug, Serialize, Deserialize, Clone, Hash, PartialEq, Eq, ToSchema)]
         #[serde(rename_all = "camelCase")]
         pub struct $name {
             pub key_id: u32,
@@ -167,4 +168,10 @@ pub mod id_key {
         IdentityKey::decode(&bytes)
             .map_err(|e| Error::custom(format!("Failed to decode IdentityKey: {}", e)))
     }
+}
+
+#[derive(ToSchema)]
+#[schema(as = IdentityKey)]
+struct FakeIdentityKey {
+    key: String,
 }

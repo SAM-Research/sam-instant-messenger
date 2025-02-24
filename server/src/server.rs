@@ -4,14 +4,25 @@ use crate::state::ServerState;
 use axum::extract::Request;
 use axum::middleware::{from_fn, Next};
 use axum::response::IntoResponse;
+use axum::Router;
 use axum_server::tls_rustls::RustlsConfig;
 use std::net::SocketAddr;
+use utoipa::OpenApi;
+use utoipa_swagger_ui::{Config, SwaggerUi};
 
 pub struct ServerConfig<T: StateType> {
     pub state: ServerState<T>,
     pub addr: SocketAddr,
     pub tls: Option<RustlsConfig>,
 }
+
+#[derive(OpenApi)]
+#[openapi(
+    tags(
+        (name = "SAM Instant Messaging API", description = "This is the SAM IM API documentation")
+    )
+)]
+struct ApiDoc;
 
 async fn log_request(req: Request, next: Next) -> impl IntoResponse {
     let method = req.method().clone();
@@ -22,10 +33,21 @@ async fn log_request(req: Request, next: Next) -> impl IntoResponse {
     next.run(req).await
 }
 
+fn swagger_ui() -> axum::Router {
+    let config = Config::from("/api-docs/openapi.json"); // <-- let the Swagger UI know the openapi json location
+    utoipa_swagger_ui::SwaggerUi::new("/swagger-ui")
+        .url("/openapi.json", ApiDoc::openapi())
+        .config(config)
+        .into()
+}
+
 pub async fn start_server<T: StateType>(config: ServerConfig<T>) -> Result<(), std::io::Error> {
     let mut state = config.state;
     state.init().await;
-    let app = router()
+
+    let app = Router::new()
+        .merge(SwaggerUi::new("/swagger-ui").url("api-docs/openapi.json", ApiDoc::openapi()))
+        .nest("/api", router(state.clone()))
         .layer(from_fn(log_request))
         .with_state(state.clone());
 

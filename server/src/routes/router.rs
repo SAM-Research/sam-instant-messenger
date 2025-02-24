@@ -1,15 +1,43 @@
+use crate::state::{state_type::StateType, ServerState};
 use axum::{
     routing::{delete, get, post, put},
     Router,
 };
-
-use crate::state::{state_type::StateType, ServerState};
 
 use super::account::{account_register_endpoint, delete_account_endpoint};
 use super::device::{
     delete_device_endpoint, device_provision_token_endpoint, link_device_endpoint,
 };
 use super::keys::{keys_bundles_endpoint, publish_keys_endpoint};
+use utoipa::OpenApi;
+/*
+delete_account_endpoint,
+        keys_bundles_endpoint,
+        publish_keys_endpoint,
+        device_provision_token_endpoint,
+        link_device_endpoint,
+        device_token_endpoint
+
+KeyBundleResponse,
+        PublishKeyBundleRequest,
+        RegistrationRequest,
+        RegistrationResponse,
+        LinkDeviceToken,
+        LinkDeviceResponse,
+        LinkDeviceRequest,
+        KeyBundleResponse,
+        PublishKeyBundleRequest,
+        AuthenticatedUser
+
+ */
+
+#[derive(OpenApi)]
+#[openapi(
+    tags(
+        (name = "SAM Instant Messaging API", description = "This is the SAM IM API documentation")
+    )
+)]
+struct ApiDoc;
 
 pub fn router<T: StateType>() -> Router<ServerState<T>> {
     Router::new()
@@ -24,5 +52,6 @@ pub fn router<T: StateType>() -> Router<ServerState<T>> {
         )
         .route("/api/v1/devices/link", post(link_device_endpoint))
         .route("/api/v1/device/:id", delete(delete_device_endpoint))
+
     // TODO: Add Websocket endpoint
 }

@@ -8,6 +8,7 @@ use serde::{Deserialize, Serialize};
 
 use derive_more::{Display, From, Into};
 use rand::Rng;
+use utoipa::ToSchema;
 use uuid::Uuid;
 
 macro_rules! define_uuid_type {
@@ -122,6 +123,7 @@ impl FromStr for DeviceId {
     Default,
     Serialize,
     Deserialize,
+    ToSchema,
 )]
 pub struct RegistrationId(u32);
 

@@ -1,6 +1,5 @@
-use serde::{Deserialize, Serialize};
-
 use crate::address::{AccountId, DeviceId, RegistrationId};
+use serde::{Deserialize, Serialize};
 
 use super::keys::PublishPreKeys;
 

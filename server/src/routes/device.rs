@@ -19,7 +19,20 @@ use crate::{
     ServerError,
 };
 
-/// Handle device provisioning
+/*
+#[utoipa::path(
+    get,
+    path = "/api/v1/devices/provision",
+    responses(
+        (status = 200, description = "Successfully created device token", body = LinkDeviceToken, content_type = "application/json"),
+        (status = 500, description = "Failed to create device token"),
+    ),
+    params(
+        ("auth_user" = AuthenticatedUser, Path, description = "Authentication"),
+    ),
+)]
+
+ */
 pub async fn device_provision_token_endpoint<T: StateType>(
     State(state): State<ServerState<T>>,
     auth_user: AuthenticatedUser,
@@ -32,7 +45,18 @@ pub async fn device_provision_token_endpoint<T: StateType>(
         .map(Json)
 }
 
-/// Handle device linking
+/*
+#[utoipa::path(
+    get,
+    path = "/api/v1/devices/link",
+    request_body(content = LinkDeviceRequest, content_type = "application/json"),
+    responses(
+        (status = 200, description = "Successfully linked device", body = LinkDeviceResponse, content_type = "application/json"),
+        (status = 500, description = "Failed to link device")
+    ),
+)]
+
+ */
 pub async fn link_device_endpoint<T: StateType>(
     State(mut state): State<ServerState<T>>,
     TypedHeader(Authorization(basic)): TypedHeader<Authorization<Basic>>,
@@ -43,7 +67,21 @@ pub async fn link_device_endpoint<T: StateType>(
         .map(Json)
 }
 
-/// Handle device linking
+/*
+#[utoipa::path(
+    get,
+    path = "/api/v1/device/{id}",
+    responses(
+        (status = 200, description = "Successfully deleted device"),
+        (status = 500, description = "Failed to delete device")
+    ),
+    params(
+        ("id" = u32, Path, description = "ID on the device to be deleted"),
+        ("auth_user" = AuthenticatedUser, Header, description = "Authentication")
+    ),
+)]
+
+ */
 pub async fn delete_device_endpoint<T: StateType>(
     State(mut state): State<ServerState<T>>,
     Path(device_id): Path<DeviceId>,

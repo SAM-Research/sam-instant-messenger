@@ -6,6 +6,7 @@ use axum_extra::headers::authorization::Basic;
 use axum_extra::headers::Authorization;
 use axum_extra::TypedHeader;
 use sam_common::address::AccountId;
+use utoipa::ToSchema;
 
 use crate::managers::entities::account::Account;
 use crate::managers::entities::device::Device;

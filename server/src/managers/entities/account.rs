@@ -1,5 +1,6 @@
 use libsignal_protocol::IdentityKey;
 use sam_common::address::AccountId;
+use utoipa::ToSchema;
 
 #[derive(Clone, bon::Builder)]
 pub struct Account {

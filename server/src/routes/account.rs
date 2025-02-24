@@ -13,7 +13,15 @@ use crate::{
     ServerError,
 };
 
-/// Handle registration of new users
+#[utoipa::path(
+    post,
+    path = "/api/v1/account",
+    request_body(content = RegistrationRequest, content_type = "application/json"),
+    responses(
+        (status = 200, description = "Registration successful", body = RegistrationResponse, content_type = "application/json"),
+        (status = 500, description = "Registration unsuccessful")
+    ),
+)]
 pub async fn account_register_endpoint<T: StateType>(
     State(mut state): State<ServerState<T>>,
     TypedHeader(Authorization(basic)): TypedHeader<Authorization<Basic>>,
@@ -29,7 +37,20 @@ pub async fn account_register_endpoint<T: StateType>(
     .map(Json)
 }
 
-// Handle deletion of account
+/*
+#[utoipa::path(
+    delete,
+    path = "/api/v1/account",
+    responses(
+        (status = 200, description = "Account deletion successful"),
+        (status = 500, description = "Account deletion unsuccessful")
+    ),
+    params(
+        ("auth_user" = AuthenticatedUser, Header)
+    ),
+)]
+
+ */
 pub async fn delete_account_endpoint<T: StateType>(
     State(mut state): State<ServerState<T>>,
     auth_user: AuthenticatedUser,
