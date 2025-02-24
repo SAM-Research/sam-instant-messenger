@@ -64,15 +64,15 @@ impl PreKeyManager for InMemoryKeyManager {
         &self,
         account_id: AccountId,
         device_id: DeviceId,
-    ) -> Result<Vec<u32>, ServerError> {
+    ) -> Result<Option<Vec<u32>>, ServerError> {
         let key = DeviceAddress::new(account_id, device_id);
 
-        self.pre_keys
+        Ok(self
+            .pre_keys
             .lock()
             .await
             .get(&key)
-            .map(|keys| keys.iter().map(|k| k.id()).collect::<Vec<u32>>())
-            .ok_or(ServerError::AccountNotExist)
+            .map(|keys| keys.iter().map(|k| k.id()).collect::<Vec<u32>>()))
     }
 
     async fn add_pre_key(
@@ -103,17 +103,12 @@ impl PreKeyManager for InMemoryKeyManager {
     ) -> Result<(), ServerError> {
         let dkey = DeviceAddress::new(account_id, device_id);
 
-        self.pre_keys
-            .lock()
-            .await
-            .get_mut(&dkey)
-            .and_then(|keys| {
-                keys.iter()
-                    .position(|k| k.id() == id)
-                    .map(|index| (keys, index))
-                    .map(|(keys, index)| keys.remove(index))
-            })
-            .ok_or(ServerError::KeyNotExist)?;
+        self.pre_keys.lock().await.get_mut(&dkey).and_then(|keys| {
+            keys.iter()
+                .position(|k| k.id() == id)
+                .map(|index| (keys, index))
+                .map(|(keys, index)| keys.remove(index))
+        });
         {
             let mut pre_keys = self.pre_keys.lock().await;
             if let Some(keys) = pre_keys.get(&dkey) {
@@ -165,12 +160,8 @@ impl SignedPreKeyManager for InMemoryKeyManager {
     ) -> Result<(), ServerError> {
         let key = DeviceAddress::new(account_id, device_id);
 
-        self.signed_pre_keys
-            .lock()
-            .await
-            .remove(&key)
-            .ok_or(ServerError::KeyNotExist)
-            .map(|_| ())
+        self.signed_pre_keys.lock().await.remove(&key);
+        Ok(())
     }
 }
 
@@ -196,15 +187,15 @@ impl PqPreKeyManager for InMemoryKeyManager {
         &self,
         account_id: AccountId,
         device_id: DeviceId,
-    ) -> Result<Vec<u32>, ServerError> {
+    ) -> Result<Option<Vec<u32>>, ServerError> {
         let key = DeviceAddress::new(account_id, device_id);
 
-        self.pq_pre_keys
+        Ok(self
+            .pq_pre_keys
             .lock()
             .await
             .get(&key)
-            .map(|keys| keys.iter().map(|k| k.id()).collect::<Vec<u32>>())
-            .ok_or(ServerError::AccountNotExist)
+            .map(|keys| keys.iter().map(|k| k.id()).collect::<Vec<u32>>()))
     }
 
     async fn add_pq_pre_key(

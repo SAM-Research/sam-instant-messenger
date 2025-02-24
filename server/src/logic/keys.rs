@@ -162,7 +162,7 @@ mod test {
             },
         },
         state::ServerState,
-        test_utils::create_publish_key_bundle,
+        test_utils::create_publish_pre_keys,
     };
 
     #[tokio::test]
@@ -173,7 +173,7 @@ mod test {
 
         let account_id = AccountId::generate();
 
-        let key_bundle = create_publish_key_bundle(
+        let key_bundle = create_publish_pre_keys(
             Some(vec![1, 2]),
             Some(1),
             Some(vec![1, 2]),
@@ -221,7 +221,7 @@ mod test {
 
         let account_id = AccountId::generate();
 
-        let key_bundle = create_publish_key_bundle(
+        let key_bundle = create_publish_pre_keys(
             Some(vec![1, 2]),
             Some(22),
             Some(vec![1]),
@@ -276,7 +276,7 @@ mod test {
             .await
             .expect("Can add account");
 
-        let key_bundle = create_publish_key_bundle(
+        let key_bundle = create_publish_pre_keys(
             Some(vec![1, 2]),
             Some(1),
             Some(vec![1, 2]),
@@ -344,7 +344,7 @@ mod test {
             .await
             .expect("Alice can add device");
 
-        let key_bundle = create_publish_key_bundle(
+        let key_bundle = create_publish_pre_keys(
             Some(vec![1, 2]),
             Some(22),
             Some(vec![1, 2]),

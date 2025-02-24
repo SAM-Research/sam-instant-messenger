@@ -8,6 +8,7 @@ pub trait DeviceManager: Send + Sync + Clone {
     async fn get_devices(&self, account_id: AccountId) -> Result<Vec<DeviceId>, ServerError>;
     async fn next_device_id(&self, account_id: AccountId) -> Result<DeviceId, ServerError>;
     async fn link_secret(&self) -> Result<String, ServerError>;
+    async fn provision_expire_seconds(&self) -> Result<u64, ServerError>;
     async fn add_device(
         &mut self,
         account_id: AccountId,

@@ -35,21 +35,25 @@ pub async fn delete_account<T: StateType>(
                 }
             }
 
-            for id in state.keys.get_pre_key_ids(account_id, device_id).await? {
-                state.keys.remove_pre_key(account_id, device_id, id).await?
+            if let Some(ids) = state.keys.get_pre_key_ids(account_id, device_id).await? {
+                for id in ids {
+                    state.keys.remove_pre_key(account_id, device_id, id).await?
+                }
             }
+
             state
                 .keys
                 .remove_signed_pre_key(account_id, device_id)
                 .await?;
 
-            for id in state.keys.get_pq_pre_key_ids(account_id, device_id).await? {
-                state
-                    .keys
-                    .remove_pq_pre_key(account_id, device_id, id)
-                    .await?
+            if let Some(ids) = state.keys.get_pq_pre_key_ids(account_id, device_id).await? {
+                for id in ids {
+                    state
+                        .keys
+                        .remove_pq_pre_key(account_id, device_id, id)
+                        .await?
+                }
             }
-
             state
                 .keys
                 .remove_last_resort_key(account_id, device_id)
@@ -106,7 +110,7 @@ mod test {
             },
         },
         state::ServerState,
-        test_utils::create_publish_key_bundle,
+        test_utils::create_publish_pre_keys,
     };
 
     #[tokio::test]
@@ -121,14 +125,16 @@ mod test {
             device_activation: DeviceActivationInfo {
                 name: "Alice Phone".to_string(),
                 registration_id: 1.into(),
-                key_bundle: create_publish_key_bundle(
+                key_bundle: create_publish_pre_keys(
                     Some(vec![0]),
                     Some(1),
                     Some(vec![33]),
                     Some(2),
                     &pair,
                     rng,
-                ),
+                )
+                .try_into()
+                .expect("Can make RegistrationPreKeys"),
             },
         };
 
@@ -180,7 +186,7 @@ mod test {
             .unwrap()
             .id();
 
-        assert!(ec_key_ids == vec![0]);
+        assert!(ec_key_ids == Some(vec![0]));
         assert!(signed_ec_id == 1);
 
         let pq_key_ids = state
@@ -195,7 +201,7 @@ mod test {
             .unwrap()
             .id();
 
-        assert!(pq_key_ids == vec![33]);
+        assert!(pq_key_ids == Some(vec![33]));
         assert!(last_resort_id == 2);
     }
 
@@ -210,14 +216,16 @@ mod test {
             device_activation: DeviceActivationInfo {
                 name: "Alice Phone".to_string(),
                 registration_id: 1.into(),
-                key_bundle: create_publish_key_bundle(
+                key_bundle: create_publish_pre_keys(
                     Some(vec![0]),
                     Some(1),
                     Some(vec![33]),
                     Some(2),
                     &pair,
                     rng,
-                ),
+                )
+                .try_into()
+                .expect("Can make RegistrationPreKeys"),
             },
         };
 
@@ -251,11 +259,11 @@ mod test {
             .keys
             .get_pre_key_ids(alice_id, 1.into())
             .await
-            .is_err());
+            .is_ok_and(|ids| ids.is_none()));
         assert!(state
             .keys
             .get_pq_pre_key_ids(alice_id, 1.into())
             .await
-            .is_err());
+            .is_ok_and(|ids| ids.is_none()));
     }
 }

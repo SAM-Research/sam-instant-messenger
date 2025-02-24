@@ -8,4 +8,5 @@ pub enum LibError {
     Custom(String),
     #[error(ignore)]
     AuthorizationError(String),
+    RegistrationKeyFieldsRequired,
 }

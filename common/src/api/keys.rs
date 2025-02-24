@@ -4,6 +4,8 @@ use libsignal_protocol::{
 use serde::{Deserialize, Serialize};
 use serde_with::{base64::Base64, serde_as};
 
+use crate::LibError;
+
 macro_rules! define_key {
     ($name:ident) => {
         #[serde_as]
@@ -100,15 +102,15 @@ impl From<KyberPreKeyRecord> for PqPreKey {
     }
 }
 
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Debug, Serialize, Deserialize, PartialEq)]
 #[serde(rename_all = "camelCase")]
 pub struct PreKeyBundles {
-    #[serde(with = "id_key")] // TODO: Check that this is Base64'ed
+    #[serde(with = "id_key")]
     pub identity_key: IdentityKey,
     pub bundles: Vec<PreKeyBundle>,
 }
 
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Debug, Serialize, Deserialize, PartialEq)]
 #[serde(rename_all = "camelCase")]
 pub struct PreKeyBundle {
     pub device_id: u32,
@@ -143,6 +145,43 @@ pub struct PublishPreKeys {
     pub signed_pre_key: Option<SignedEcPreKey>,
     pub pq_pre_keys: Option<Vec<PqPreKey>>,
     pub pq_last_resort_pre_key: Option<PqPreKey>,
+}
+
+impl From<RegistrationPreKeys> for PublishPreKeys {
+    fn from(value: RegistrationPreKeys) -> Self {
+        Self {
+            pre_keys: value.pre_keys,
+            signed_pre_key: Some(value.signed_pre_key),
+            pq_pre_keys: value.pq_pre_keys,
+            pq_last_resort_pre_key: Some(value.pq_last_resort_pre_key),
+        }
+    }
+}
+
+#[derive(Debug, Serialize, Deserialize, Clone)]
+#[serde(rename_all = "camelCase")]
+pub struct RegistrationPreKeys {
+    pub pre_keys: Option<Vec<EcPreKey>>,
+    pub signed_pre_key: SignedEcPreKey,
+    pub pq_pre_keys: Option<Vec<PqPreKey>>,
+    pub pq_last_resort_pre_key: PqPreKey,
+}
+
+impl TryFrom<PublishPreKeys> for RegistrationPreKeys {
+    type Error = LibError;
+
+    fn try_from(value: PublishPreKeys) -> Result<Self, Self::Error> {
+        Ok(Self {
+            pre_keys: value.pre_keys,
+            signed_pre_key: value
+                .signed_pre_key
+                .ok_or(LibError::RegistrationKeyFieldsRequired)?,
+            pq_pre_keys: value.pq_pre_keys,
+            pq_last_resort_pre_key: value
+                .pq_last_resort_pre_key
+                .ok_or(LibError::RegistrationKeyFieldsRequired)?,
+        })
+    }
 }
 
 pub mod id_key {

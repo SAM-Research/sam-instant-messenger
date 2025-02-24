@@ -16,6 +16,7 @@ pub enum ServerError {
     DeviceWrongSignature,
     DeviceLinkTooSlow,
     DeviceProvisionUnAuth,
+    DeviceUnAuth,
     AccountIDUnParsable,
     PasswordHashError,
     WrongPassword,
@@ -48,7 +49,7 @@ impl IntoResponse for ServerError {
             ServerError::DeviceTokenMalformed => StatusCode::INTERNAL_SERVER_ERROR,
             ServerError::DeviceSignatureDecodeError => StatusCode::INTERNAL_SERVER_ERROR,
             ServerError::DeviceWrongSignature => StatusCode::INTERNAL_SERVER_ERROR,
-            ServerError::DeviceLinkTooSlow => StatusCode::INTERNAL_SERVER_ERROR,
+            ServerError::DeviceLinkTooSlow => StatusCode::FORBIDDEN,
             ServerError::DeviceProvisionUnAuth => StatusCode::INTERNAL_SERVER_ERROR,
             ServerError::AccountIDUnParsable => StatusCode::INTERNAL_SERVER_ERROR,
             ServerError::PasswordHashError => StatusCode::INTERNAL_SERVER_ERROR,
@@ -70,6 +71,7 @@ impl IntoResponse for ServerError {
             ServerError::MessageNotPending => StatusCode::INTERNAL_SERVER_ERROR,
             ServerError::EnvelopeMalformed => StatusCode::INTERNAL_SERVER_ERROR,
             ServerError::MessageSubscriberSendErorr => StatusCode::INTERNAL_SERVER_ERROR,
+            ServerError::DeviceUnAuth => StatusCode::UNAUTHORIZED,
         }
         .into_response()
     }

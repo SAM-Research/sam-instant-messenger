@@ -25,10 +25,14 @@ impl StateType for InMemStateType {
 }
 
 impl ServerState<InMemStateType> {
-    pub fn in_memory(link_secret: String, message_buffer: usize) -> Self {
+    pub fn in_memory(
+        link_secret: String,
+        provision_expire_seconds: u64, // signal uses 600 seconds
+        message_buffer: usize,
+    ) -> Self {
         ServerState::new(
             InMemoryAccountManager::default(),
-            InMemoryDeviceManager::new(link_secret),
+            InMemoryDeviceManager::new(link_secret, provision_expire_seconds),
             InMemoryMessageManager::new(message_buffer),
             InMemoryKeyManager::default(),
         )
@@ -40,7 +44,7 @@ impl ServerState<InMemStateType> {
 
         ServerState::new(
             InMemoryAccountManager::default(),
-            InMemoryDeviceManager::new(LINK_SECRET.to_string()),
+            InMemoryDeviceManager::new(LINK_SECRET.to_string(), 600),
             InMemoryMessageManager::default(),
             InMemoryKeyManager::default(),
         )
