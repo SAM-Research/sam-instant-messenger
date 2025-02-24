@@ -5,7 +5,7 @@ pub enum SamApiClientError {
     CouldNotParseUrl(#[error(not(source))] String),
     CouldNotBuildRequest,
     CouldNotSendRequest,
-    #[display("{_0} - {_1}")]
+    #[display("Got bad response from server: {_0} - {_1}")]
     BadResponse(u16, String),
     CouldNotParseResponse,
 }

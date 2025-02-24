@@ -8,3 +8,6 @@ sam-common = { path = "../common" }
 sam-client = { path = "../client" }
 sam-server = { path = "../server"}
 tokio = { version = "1.43.0", features = ["macros", "rt-multi-thread"] }
+rand = "0.8.5"
+libsignal-protocol = { git = "https://github.com/signalapp/libsignal.git", version = "0.1.0" }
+env_logger = "0.11.6"
