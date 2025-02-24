@@ -11,3 +11,4 @@ mod test_utils;
 
 pub use error::ServerError;
 pub use server::{start_server, ServerConfig};
+pub use state::{state_type::StateType, ServerState};
