@@ -90,7 +90,9 @@ impl<T: KyberPreKeyStore + ProvidesKeyId<KyberPreKeyId>> KyberKeyGenerator for T
 #[cfg(test)]
 pub mod test {
     use super::*;
-    use libsignal_protocol::{InMemKyberPreKeyStore, InMemPreKeyStore, InMemSignedPreKeyStore};
+    use libsignal_protocol::{
+        IdentityKeyPair, InMemKyberPreKeyStore, InMemPreKeyStore, InMemSignedPreKeyStore,
+    };
     use rand::rngs::OsRng;
 
     #[tokio::test]
