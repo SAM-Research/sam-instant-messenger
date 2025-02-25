@@ -87,6 +87,7 @@ impl<T: KyberPreKeyStore + ProvidesKeyId<KyberPreKeyId>> KyberKeyGeneration<Kybe
     }
 }
 
+#[cfg(test)]
 pub mod test {
     use super::*;
     use libsignal_protocol::{InMemKyberPreKeyStore, InMemPreKeyStore, InMemSignedPreKeyStore};
