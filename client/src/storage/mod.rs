@@ -2,14 +2,19 @@ use crate::ClientError;
 use async_trait::async_trait;
 use bon::Builder;
 use libsignal_protocol::{
-    IdentityKeyPair, IdentityKeyStore, KyberPreKeyId, KyberPreKeyStore, PreKeyId, PreKeyStore,
-    SenderKeyStore, SessionStore, SignedPreKeyId, SignedPreKeyStore,
+    IdentityKeyPair, IdentityKeyStore, KyberPreKeyId, KyberPreKeyRecord, KyberPreKeyStore,
+    PreKeyId, PreKeyRecord, PreKeyStore, SenderKeyStore, SessionStore, SignedPreKeyId,
+    SignedPreKeyRecord, SignedPreKeyStore,
 };
 use std::fmt::Debug;
 
+use crate::storage::key_generation::{
+    KyberKeyGeneration, PreKeyGeneration, SignedPreKeyGeneration,
+};
 pub use traits::{account::AccountStore, contact::ContactStore};
 
 pub mod inmem;
+pub mod key_generation;
 pub mod sqlite;
 pub mod traits;
 
@@ -35,9 +40,13 @@ pub trait StoreType {
     type ContactStore: ContactStore;
     type AccountStore: AccountStore;
     type IdentityKeyStore: IdentityKeyStore;
-    type PreKeyStore: PreKeyStore + ProvidesKeyId<PreKeyId>;
-    type SignedPreKeyStore: SignedPreKeyStore + ProvidesKeyId<SignedPreKeyId>;
-    type KyberPreKeyStore: KyberPreKeyStore + ProvidesKeyId<KyberPreKeyId>;
+    type PreKeyStore: PreKeyStore + ProvidesKeyId<PreKeyId> + PreKeyGeneration<PreKeyRecord>;
+    type SignedPreKeyStore: SignedPreKeyStore
+        + ProvidesKeyId<SignedPreKeyId>
+        + SignedPreKeyGeneration<SignedPreKeyRecord>;
+    type KyberPreKeyStore: KyberPreKeyStore
+        + ProvidesKeyId<KyberPreKeyId>
+        + KyberKeyGeneration<KyberPreKeyRecord>;
     type SessionStore: SessionStore;
     type SenderKeyStore: SenderKeyStore;
 }
