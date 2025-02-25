@@ -91,53 +91,63 @@ impl<T: KyberPreKeyStore + ProvidesKeyId<KyberPreKeyId>> KyberKeyGeneration<Kybe
 pub mod test {
     use super::*;
     use libsignal_protocol::{InMemKyberPreKeyStore, InMemPreKeyStore, InMemSignedPreKeyStore};
+    use rand::rngs::OsRng;
 
     #[tokio::test]
     async fn inmem_pre_key_generation() {
         let mut inmem_keystore = InMemPreKeyStore::new();
-        let mut rand = rand::thread_rng();
-        let store = inmem_keystore.generate_key(&mut rand).await.unwrap();
-        let key = inmem_keystore
-            .get_pre_key(store.id().unwrap())
+        let mut rng = OsRng;
+        let returned_key = inmem_keystore.generate_key(&mut rng).await.unwrap();
+        let stored_key = inmem_keystore
+            .get_pre_key(returned_key.id().unwrap())
             .await
             .unwrap();
 
-        assert_eq!(store.public_key().unwrap(), key.public_key().unwrap());
+        assert_eq!(
+            returned_key.public_key().unwrap(),
+            stored_key.public_key().unwrap()
+        );
     }
 
     #[tokio::test]
     async fn inmem_signed_pre_key_generation() {
         let mut inmem_keystore = InMemSignedPreKeyStore::new();
-        let mut rand = rand::thread_rng();
-        let identity_key_pair = IdentityKeyPair::generate(&mut rand::thread_rng());
-        let store = inmem_keystore
-            .generate_key(&mut rand, identity_key_pair)
+        let mut rng = OsRng;
+        let identity_key_pair = IdentityKeyPair::generate(&mut rng);
+        let returned_key = inmem_keystore
+            .generate_key(&mut rng, identity_key_pair)
             .await
             .unwrap();
-        let key = inmem_keystore
-            .get_signed_pre_key(store.id().unwrap())
+        let stored_key = inmem_keystore
+            .get_signed_pre_key(returned_key.id().unwrap())
             .await
             .unwrap();
 
-        assert_eq!(store.public_key().unwrap(), key.public_key().unwrap());
-        assert_eq!(store.signature().unwrap(), key.signature().unwrap());
+        assert_eq!(
+            returned_key.public_key().unwrap(),
+            stored_key.public_key().unwrap()
+        );
+        assert_eq!(
+            returned_key.signature().unwrap(),
+            stored_key.signature().unwrap()
+        );
     }
 
     #[tokio::test]
     async fn inmem_kyber_pre_key_generation() {
         let mut inmem_keystore = InMemKyberPreKeyStore::new();
-        let identity_key_pair = IdentityKeyPair::generate(&mut rand::thread_rng());
-        let store = inmem_keystore
+        let identity_key_pair = IdentityKeyPair::generate(&mut OsRng);
+        let returned_key = inmem_keystore
             .generate_key(identity_key_pair)
             .await
             .unwrap();
-        let key_signature = inmem_keystore
-            .get_kyber_pre_key(store.id().unwrap())
+        let stored_key = inmem_keystore
+            .get_kyber_pre_key(returned_key.id().unwrap())
             .await
             .unwrap()
             .signature()
             .unwrap();
 
-        assert_eq!(store.signature().unwrap(), key_signature);
+        assert_eq!(returned_key.signature().unwrap(), stored_key);
     }
 }
