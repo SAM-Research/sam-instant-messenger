@@ -42,7 +42,12 @@ pub trait SamApiClient {
     /// * `Ok(())` if the account was successfully deleted.
     /// * `Err(SamApiClientError)` if the deletion fails.
     // TODO: What if deletion fails?
-    async fn delete_account(self, username: &str, password: &str) -> Result<(), SamApiClientError>;
+    async fn delete_account(
+        self,
+        account_id: &AccountId,
+        device_id: DeviceId,
+        password: &str,
+    ) -> Result<(), SamApiClientError>;
 
     /// Retrieves pre-key bundles for the given account.
     ///
@@ -60,9 +65,10 @@ pub trait SamApiClient {
     /// * `Err(SamApiClientError)` if fetching pre-key bundles fails.
     async fn get_pre_keys(
         &self,
-        username: &str,
+        account_id: &AccountId,
+        device_id: DeviceId,
         password: &str,
-        account_id: AccountId,
+        receiver_account_id: AccountId,
     ) -> Result<PreKeyBundles, SamApiClientError>;
 
     /// Publishes pre-keys for a device.
@@ -81,7 +87,8 @@ pub trait SamApiClient {
     /// * `Err(SamApiClientError)` if the operation fails.
     async fn publish_pre_keys(
         &self,
-        username: &str,
+        account_id: &AccountId,
+        device_id: DeviceId,
         password: &str,
         pre_keys: PublishPreKeys,
     ) -> Result<(), SamApiClientError>;
@@ -101,7 +108,8 @@ pub trait SamApiClient {
     /// * `Err(SamApiClientError)` if the provisioning fails.
     async fn provision_device(
         &self,
-        username: &str,
+        account_id: &AccountId,
+        device_id: DeviceId,
         password: &str,
     ) -> Result<LinkDeviceToken, SamApiClientError>;
 
@@ -121,7 +129,8 @@ pub trait SamApiClient {
     /// * `Err(SamApiClientError)` if the operation fails.
     async fn link_device(
         &self,
-        username: &str,
+        account_id: &AccountId,
+        device_id: DeviceId,
         password: &str,
         request: LinkDeviceRequest,
     ) -> Result<LinkDeviceResponse, SamApiClientError>;
@@ -143,8 +152,9 @@ pub trait SamApiClient {
     /// * `Err(SamApiClientError)` if the deletion fails.
     async fn delete_device(
         &self,
-        username: &str,
-        password: &str,
+        account_id: &AccountId,
         device_id: DeviceId,
+        password: &str,
+        removed_device: DeviceId,
     ) -> Result<(), SamApiClientError>;
 }
