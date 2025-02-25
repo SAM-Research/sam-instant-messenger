@@ -10,12 +10,12 @@ use libsignal_protocol::{
 use rand::{CryptoRng, Rng};
 
 #[async_trait(?Send)]
-pub trait PreKeyGeneration<T> {
+pub trait PreKeyGenerator<T> {
     async fn generate_key<R: Rng + CryptoRng>(&mut self, csprng: &mut R) -> Result<T, ClientError>;
 }
 
 #[async_trait(?Send)]
-impl<T: PreKeyStore + ProvidesKeyId<PreKeyId>> PreKeyGeneration<PreKeyRecord> for T {
+impl<T: PreKeyStore + ProvidesKeyId<PreKeyId>> PreKeyGenerator<PreKeyRecord> for T {
     async fn generate_key<R>(&mut self, csprng: &mut R) -> Result<PreKeyRecord, ClientError>
     where
         R: Rng + CryptoRng,
@@ -30,7 +30,7 @@ impl<T: PreKeyStore + ProvidesKeyId<PreKeyId>> PreKeyGeneration<PreKeyRecord> fo
 }
 
 #[async_trait(?Send)]
-pub trait SignedPreKeyGeneration<T> {
+pub trait SignedPreKeyGenerator<T> {
     async fn generate_key<R: Rng + CryptoRng>(
         &mut self,
         csprng: &mut R,
@@ -40,7 +40,7 @@ pub trait SignedPreKeyGeneration<T> {
 
 #[async_trait(?Send)]
 impl<T: SignedPreKeyStore + ProvidesKeyId<SignedPreKeyId>>
-    SignedPreKeyGeneration<SignedPreKeyRecord> for T
+    SignedPreKeyGenerator<SignedPreKeyRecord> for T
 {
     async fn generate_key<R>(
         &mut self,
@@ -66,12 +66,12 @@ impl<T: SignedPreKeyStore + ProvidesKeyId<SignedPreKeyId>>
 }
 
 #[async_trait(?Send)]
-pub trait KyberKeyGeneration<T> {
+pub trait KyberKeyGenerator<T> {
     async fn generate_key(&mut self, identity_key_pair: IdentityKeyPair) -> Result<T, ClientError>;
 }
 
 #[async_trait(?Send)]
-impl<T: KyberPreKeyStore + ProvidesKeyId<KyberPreKeyId>> KyberKeyGeneration<KyberPreKeyRecord>
+impl<T: KyberPreKeyStore + ProvidesKeyId<KyberPreKeyId>> KyberKeyGenerator<KyberPreKeyRecord>
     for T
 {
     async fn generate_key(

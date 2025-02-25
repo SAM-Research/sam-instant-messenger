@@ -40,13 +40,13 @@ pub trait StoreType {
     type ContactStore: ContactStore;
     type AccountStore: AccountStore;
     type IdentityKeyStore: IdentityKeyStore;
-    type PreKeyStore: PreKeyStore + ProvidesKeyId<PreKeyId> + PreKeyGeneration<PreKeyRecord>;
+    type PreKeyStore: PreKeyStore + ProvidesKeyId<PreKeyId> + PreKeyGenerator<PreKeyRecord>;
     type SignedPreKeyStore: SignedPreKeyStore
         + ProvidesKeyId<SignedPreKeyId>
-        + SignedPreKeyGeneration<SignedPreKeyRecord>;
+        + SignedPreKeyGenerator<SignedPreKeyRecord>;
     type KyberPreKeyStore: KyberPreKeyStore
         + ProvidesKeyId<KyberPreKeyId>
-        + KyberKeyGeneration<KyberPreKeyRecord>;
+        + KyberKeyGenerator<KyberPreKeyRecord>;
     type SessionStore: SessionStore;
     type SenderKeyStore: SenderKeyStore;
 }
