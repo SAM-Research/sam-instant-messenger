@@ -35,7 +35,6 @@ impl SamApiClient for HttpClient {
     ) -> Result<RegistrationResponse, SamApiClientError> {
         let url_str = format!("http://{}/api/v1/account", self.base_url);
         let url = Url::parse(&url_str).map_err(|_| SamApiClientError::CouldNotParseUrl(url_str))?;
-        // println!("{}", to_string(&registration_request).unwrap());
         let request = self
             .http_client
             .request(Method::POST, url)
@@ -67,13 +66,35 @@ impl SamApiClient for HttpClient {
             .map_err(|_| SamApiClientError::CouldNotParseResponse)?)
     }
 
-    async fn delete_account(
-        self,
-        _username: &str,
-        _password: &str,
-    ) -> Result<(), SamApiClientError> {
-        todo!()
+    async fn delete_account(self, username: &str, password: &str) -> Result<(), SamApiClientError> {
+        let url_str = format!("http://{}/api/v1/account", self.base_url);
+        let url = Url::parse(&url_str).map_err(|_| SamApiClientError::CouldNotParseUrl(url_str))?;
+        let request = self
+            .http_client
+            .request(Method::DELETE, url)
+            .basic_auth(username, Some(password))
+            .build()
+            .map_err(|_| SamApiClientError::CouldNotBuildRequest)?;
+        let response = self
+            .http_client
+            .execute(request)
+            .await
+            .map_err(|_| SamApiClientError::CouldNotSendRequest)?;
+        let status = response.status();
+        if !status.is_success() {
+            return Err(SamApiClientError::BadResponse(
+                status.as_u16(),
+                response.text().await.unwrap_or(
+                    status
+                        .canonical_reason()
+                        .unwrap_or("Unknown reason")
+                        .to_owned(),
+                ),
+            ));
+        }
+        Ok(())
     }
+
     async fn get_pre_keys(
         &self,
         _username: &str,
@@ -89,12 +110,12 @@ impl SamApiClient for HttpClient {
         password: &str,
         bundle: PublishPreKeys,
     ) -> Result<(), SamApiClientError> {
-        let url_str = format!("http://{}/api/v1/account", self.base_url);
+        let url_str = format!("http://{}/api/v1/keys", self.base_url);
         let url = Url::parse(&url_str).map_err(|_| SamApiClientError::CouldNotParseUrl(url_str))?;
 
         let request = self
             .http_client
-            .request(Method::POST, url)
+            .request(Method::PUT, url)
             .json(&bundle)
             .basic_auth(username, Some(password))
             .build()
@@ -119,10 +140,7 @@ impl SamApiClient for HttpClient {
             ));
         }
 
-        Ok(response
-            .json()
-            .await
-            .map_err(|_| SamApiClientError::CouldNotParseResponse)?)
+        Ok(())
     }
 
     async fn provision_device(
