@@ -1,5 +1,4 @@
 pub mod error;
-pub mod keygen;
 pub mod net;
 pub mod storage;
 pub mod time;
