@@ -45,17 +45,17 @@ pub trait SignedPreKeyGenerator {
 impl<T: SignedPreKeyStore + ProvidesKeyId<SignedPreKeyId>> SignedPreKeyGenerator for T {
     async fn generate_key<R>(
         &mut self,
-        cspring: &mut R,
+        csprng: &mut R,
         identity_key_pair: IdentityKeyPair,
     ) -> Result<SignedPreKeyRecord, ClientError>
     where
         R: Rng + CryptoRng,
     {
         let id = self.next_key_id().await?;
-        let signed_pre_key_pair = KeyPair::generate(cspring);
+        let signed_pre_key_pair = KeyPair::generate(csprng);
         let signature = identity_key_pair
             .private_key()
-            .calculate_signature(&signed_pre_key_pair.public_key.serialize(), cspring)?;
+            .calculate_signature(&signed_pre_key_pair.public_key.serialize(), csprng)?;
 
         let record =
             SignedPreKeyRecord::new(id, signal_time_now(), &signed_pre_key_pair, &signature);
