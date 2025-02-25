@@ -10,12 +10,15 @@ use libsignal_protocol::{
 use rand::{CryptoRng, Rng};
 
 #[async_trait(?Send)]
-pub trait PreKeyGenerator<T> {
-    async fn generate_key<R: Rng + CryptoRng>(&mut self, csprng: &mut R) -> Result<T, ClientError>;
+pub trait PreKeyGenerator {
+    async fn generate_key<R: Rng + CryptoRng>(
+        &mut self,
+        csprng: &mut R,
+    ) -> Result<PreKeyRecord, ClientError>;
 }
 
 #[async_trait(?Send)]
-impl<T: PreKeyStore + ProvidesKeyId<PreKeyId>> PreKeyGenerator<PreKeyRecord> for T {
+impl<T: PreKeyStore + ProvidesKeyId<PreKeyId>> PreKeyGenerator for T {
     async fn generate_key<R>(&mut self, csprng: &mut R) -> Result<PreKeyRecord, ClientError>
     where
         R: Rng + CryptoRng,
@@ -30,18 +33,16 @@ impl<T: PreKeyStore + ProvidesKeyId<PreKeyId>> PreKeyGenerator<PreKeyRecord> for
 }
 
 #[async_trait(?Send)]
-pub trait SignedPreKeyGenerator<T> {
+pub trait SignedPreKeyGenerator {
     async fn generate_key<R: Rng + CryptoRng>(
         &mut self,
         csprng: &mut R,
         identity_key: IdentityKeyPair,
-    ) -> Result<T, ClientError>;
+    ) -> Result<SignedPreKeyRecord, ClientError>;
 }
 
 #[async_trait(?Send)]
-impl<T: SignedPreKeyStore + ProvidesKeyId<SignedPreKeyId>>
-    SignedPreKeyGenerator<SignedPreKeyRecord> for T
-{
+impl<T: SignedPreKeyStore + ProvidesKeyId<SignedPreKeyId>> SignedPreKeyGenerator for T {
     async fn generate_key<R>(
         &mut self,
         cspring: &mut R,
@@ -66,14 +67,15 @@ impl<T: SignedPreKeyStore + ProvidesKeyId<SignedPreKeyId>>
 }
 
 #[async_trait(?Send)]
-pub trait KyberKeyGenerator<T> {
-    async fn generate_key(&mut self, identity_key_pair: IdentityKeyPair) -> Result<T, ClientError>;
+pub trait KyberKeyGenerator {
+    async fn generate_key(
+        &mut self,
+        identity_key_pair: IdentityKeyPair,
+    ) -> Result<KyberPreKeyRecord, ClientError>;
 }
 
 #[async_trait(?Send)]
-impl<T: KyberPreKeyStore + ProvidesKeyId<KyberPreKeyId>> KyberKeyGenerator<KyberPreKeyRecord>
-    for T
-{
+impl<T: KyberPreKeyStore + ProvidesKeyId<KyberPreKeyId>> KyberKeyGenerator for T {
     async fn generate_key(
         &mut self,
         identity_key_pair: IdentityKeyPair,
