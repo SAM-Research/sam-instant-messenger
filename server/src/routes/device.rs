@@ -50,9 +50,10 @@ async fn delete_device_endpoint<T: StateType>(
     Path(device_id): Path<DeviceId>,
     auth_user: AuthenticatedUser,
 ) -> Result<(), ServerError> {
-    if *auth_user.device().id() == 1 && auth_user.device().id() != device_id {
+    if *device_id == 1 {
         return Err(ServerError::DeviceUnAuth);
     }
+
     unlink_device(&mut state, auth_user.account().id(), device_id).await
 }
 
@@ -193,7 +194,6 @@ mod test {
             "Basic {}",
             BASE64_STANDARD.encode(format!("{account_id}.2:otherpass"))
         );
-
         let res = server
             .delete("/api/v1/device/2")
             .add_header(http::header::AUTHORIZATION, basic)
