@@ -22,7 +22,7 @@ pub trait ApiClient {
     /// # Returns
     ///
     /// * `Ok(RegistrationResponse)` on successful registration.
-    /// * `Err(SamApiClientError)` if the registration fails.
+    /// * `Err(ApiClientError)` if the registration fails.
     async fn register_account(
         &self,
         username: &str,
@@ -41,7 +41,7 @@ pub trait ApiClient {
     /// # Returns
     ///
     /// * `Ok(())` if the account was successfully deleted.
-    /// * `Err(SamApiClientError)` if the deletion fails.
+    /// * `Err(ApiClientError)` if the deletion fails.
     // TODO: What if deletion fails?
     async fn delete_account(
         self,
@@ -64,7 +64,7 @@ pub trait ApiClient {
     /// # Returns
     ///
     /// * `Ok(PreKeyBundles)` containing the retrieved pre-key bundles.
-    /// * `Err(SamApiClientError)` if fetching pre-key bundles fails.
+    /// * `Err(ApiClientError)` if fetching pre-key bundles fails.
     async fn get_pre_keys(
         &self,
         account_id: AccountId,
@@ -87,7 +87,7 @@ pub trait ApiClient {
     /// # Returns
     ///
     /// * `Ok(())` if the pre-keys were successfully published.
-    /// * `Err(SamApiClientError)` if the operation fails.
+    /// * `Err(ApiClientError)` if the operation fails.
     async fn publish_pre_keys(
         &self,
         account_id: AccountId,
@@ -109,7 +109,7 @@ pub trait ApiClient {
     /// # Returns
     ///
     /// * `Ok(LinkDeviceToken)` containing a token to link the new device.
-    /// * `Err(SamApiClientError)` if the provisioning fails.
+    /// * `Err(ApiClientError)` if the provisioning fails.
     async fn provision_device(
         &self,
         account_id: AccountId,
@@ -131,7 +131,7 @@ pub trait ApiClient {
     /// # Returns
     ///
     /// * `Ok(LinkDeviceResponse)` if the device was successfully linked.
-    /// * `Err(SamApiClientError)` if the operation fails.
+    /// * `Err(ApiClientError)` if the operation fails.
     async fn link_device(
         &self,
         account_id: AccountId,
@@ -155,7 +155,7 @@ pub trait ApiClient {
     /// # Returns
     ///
     /// * `Ok(())` if the device was successfully deleted.
-    /// * `Err(SamApiClientError)` if the deletion fails.
+    /// * `Err(ApiClientError)` if the deletion fails.
     async fn delete_device(
         &self,
         account_id: AccountId,
