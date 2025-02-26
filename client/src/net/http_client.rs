@@ -1,4 +1,4 @@
-use super::{api_trait::SamApiClient, SamApiClientError};
+use super::{api_trait::ApiClient, ApiClientError};
 use async_trait::async_trait;
 use reqwest::{Client as ReqwestClient, Method, Request, Response, Url};
 use sam_common::{
@@ -23,16 +23,16 @@ impl HttpClient {
         }
     }
 
-    async fn make_request(&self, request: Request) -> Result<Response, SamApiClientError> {
+    async fn make_request(&self, request: Request) -> Result<Response, ApiClientError> {
         let reponse = self
             .http_client
             .execute(request)
             .await
-            .map_err(|_| SamApiClientError::CouldNotSendRequest)?;
+            .map_err(|_| ApiClientError::CouldNotSendRequest)?;
         let status = reponse.status();
 
         if !status.is_success() {
-            return Err(SamApiClientError::BadResponse(
+            return Err(ApiClientError::BadResponse(
                 status.as_u16(),
                 reponse.text().await.unwrap_or(
                     status
@@ -48,28 +48,28 @@ impl HttpClient {
 }
 
 #[async_trait(?Send)]
-impl SamApiClient for HttpClient {
+impl ApiClient for HttpClient {
     async fn register_account(
         &self,
         username: &str,
         password: &str,
         registration_request: RegistrationRequest,
-    ) -> Result<RegistrationResponse, SamApiClientError> {
+    ) -> Result<RegistrationResponse, ApiClientError> {
         let url_str = format!("{}/api/v1/account", self.base_url);
-        let url = Url::parse(&url_str).map_err(|_| SamApiClientError::CouldNotParseUrl(url_str))?;
+        let url = Url::parse(&url_str).map_err(|_| ApiClientError::CouldNotParseUrl(url_str))?;
         let request = self
             .http_client
             .request(Method::POST, url)
             .json(&registration_request)
             .basic_auth(username, Some(password))
             .build()
-            .map_err(|_| SamApiClientError::CouldNotBuildRequest)?;
+            .map_err(|_| ApiClientError::CouldNotBuildRequest)?;
         let response = self.make_request(request).await?;
 
         Ok(response
             .json()
             .await
-            .map_err(|_| SamApiClientError::CouldNotParseResponse)?)
+            .map_err(|_| ApiClientError::CouldNotParseResponse)?)
     }
 
     async fn delete_account(
@@ -77,15 +77,15 @@ impl SamApiClient for HttpClient {
         account_id: AccountId,
         device_id: DeviceId,
         password: &str,
-    ) -> Result<(), SamApiClientError> {
+    ) -> Result<(), ApiClientError> {
         let url_str = format!("{}/api/v1/account", self.base_url);
-        let url = Url::parse(&url_str).map_err(|_| SamApiClientError::CouldNotParseUrl(url_str))?;
+        let url = Url::parse(&url_str).map_err(|_| ApiClientError::CouldNotParseUrl(url_str))?;
         let request = self
             .http_client
             .request(Method::DELETE, url)
             .basic_auth(format!("{}.{}", account_id, device_id), Some(password))
             .build()
-            .map_err(|_| SamApiClientError::CouldNotBuildRequest)?;
+            .map_err(|_| ApiClientError::CouldNotBuildRequest)?;
         let _ = self.make_request(request).await?;
         Ok(())
     }
@@ -96,23 +96,23 @@ impl SamApiClient for HttpClient {
         device_id: DeviceId,
         password: &str,
         receiver_account_id: AccountId,
-    ) -> Result<PreKeyBundles, SamApiClientError> {
+    ) -> Result<PreKeyBundles, ApiClientError> {
         let url_str = format!("{}/api/v1/keys/{}", self.base_url, receiver_account_id);
-        let url = Url::parse(&url_str).map_err(|_| SamApiClientError::CouldNotParseUrl(url_str))?;
+        let url = Url::parse(&url_str).map_err(|_| ApiClientError::CouldNotParseUrl(url_str))?;
 
         let request = self
             .http_client
             .request(Method::GET, url)
             .basic_auth(format!("{}.{}", account_id, device_id), Some(password))
             .build()
-            .map_err(|_| SamApiClientError::CouldNotBuildRequest)?;
+            .map_err(|_| ApiClientError::CouldNotBuildRequest)?;
 
         let response = self.make_request(request).await?;
 
         let prekey_bundles = response
             .json::<PreKeyBundles>()
             .await
-            .map_err(|_| SamApiClientError::CouldNotParseResponse)?;
+            .map_err(|_| ApiClientError::CouldNotParseResponse)?;
 
         Ok(prekey_bundles)
     }
@@ -123,9 +123,9 @@ impl SamApiClient for HttpClient {
         device_id: DeviceId,
         password: &str,
         bundle: PublishPreKeys,
-    ) -> Result<(), SamApiClientError> {
+    ) -> Result<(), ApiClientError> {
         let url_str = format!("{}/api/v1/keys", self.base_url);
-        let url = Url::parse(&url_str).map_err(|_| SamApiClientError::CouldNotParseUrl(url_str))?;
+        let url = Url::parse(&url_str).map_err(|_| ApiClientError::CouldNotParseUrl(url_str))?;
 
         let request = self
             .http_client
@@ -133,7 +133,7 @@ impl SamApiClient for HttpClient {
             .json(&bundle)
             .basic_auth(format!("{}.{}", account_id, device_id), Some(password))
             .build()
-            .map_err(|_| SamApiClientError::CouldNotBuildRequest)?;
+            .map_err(|_| ApiClientError::CouldNotBuildRequest)?;
 
         let _ = self.make_request(request).await?;
 
@@ -145,23 +145,23 @@ impl SamApiClient for HttpClient {
         account_id: AccountId,
         device_id: DeviceId,
         password: &str,
-    ) -> Result<LinkDeviceToken, SamApiClientError> {
+    ) -> Result<LinkDeviceToken, ApiClientError> {
         let url_str = format!("{}/api/v1/devices/provision", self.base_url);
-        let url = Url::parse(&url_str).map_err(|_| SamApiClientError::CouldNotParseUrl(url_str))?;
+        let url = Url::parse(&url_str).map_err(|_| ApiClientError::CouldNotParseUrl(url_str))?;
 
         let request = self
             .http_client
             .request(Method::GET, url)
             .basic_auth(format!("{}.{}", account_id, device_id), Some(password))
             .build()
-            .map_err(|_| SamApiClientError::CouldNotBuildRequest)?;
+            .map_err(|_| ApiClientError::CouldNotBuildRequest)?;
 
         let response = self.make_request(request).await?;
 
         let token = response
             .json::<LinkDeviceToken>()
             .await
-            .map_err(|_| SamApiClientError::CouldNotParseResponse)?;
+            .map_err(|_| ApiClientError::CouldNotParseResponse)?;
 
         Ok(token)
     }
@@ -172,9 +172,9 @@ impl SamApiClient for HttpClient {
         device_id: DeviceId,
         password: &str,
         request: LinkDeviceRequest,
-    ) -> Result<LinkDeviceResponse, SamApiClientError> {
+    ) -> Result<LinkDeviceResponse, ApiClientError> {
         let url_str = format!("{}/api/v1/devices/link", self.base_url);
-        let url = Url::parse(&url_str).map_err(|_| SamApiClientError::CouldNotParseUrl(url_str))?;
+        let url = Url::parse(&url_str).map_err(|_| ApiClientError::CouldNotParseUrl(url_str))?;
 
         let request = self
             .http_client
@@ -182,14 +182,14 @@ impl SamApiClient for HttpClient {
             .json(&request)
             .basic_auth(format!("{}.{}", account_id, device_id), Some(password))
             .build()
-            .map_err(|_| SamApiClientError::CouldNotBuildRequest)?;
+            .map_err(|_| ApiClientError::CouldNotBuildRequest)?;
 
         let response = self.make_request(request).await?;
 
         let link_device_response = response
             .json::<LinkDeviceResponse>()
             .await
-            .map_err(|_| SamApiClientError::CouldNotParseResponse)?;
+            .map_err(|_| ApiClientError::CouldNotParseResponse)?;
 
         Ok(link_device_response)
     }
@@ -200,16 +200,16 @@ impl SamApiClient for HttpClient {
         device_id: DeviceId,
         password: &str,
         removed_device: DeviceId,
-    ) -> Result<(), SamApiClientError> {
+    ) -> Result<(), ApiClientError> {
         let url_str = format!("{}/api/v1/device/{}", self.base_url, removed_device);
-        let url = Url::parse(&url_str).map_err(|_| SamApiClientError::CouldNotParseUrl(url_str))?;
+        let url = Url::parse(&url_str).map_err(|_| ApiClientError::CouldNotParseUrl(url_str))?;
 
         let request = self
             .http_client
             .request(Method::DELETE, url)
             .basic_auth(format!("{}.{}", account_id, device_id), Some(password))
             .build()
-            .map_err(|_| SamApiClientError::CouldNotBuildRequest)?;
+            .map_err(|_| ApiClientError::CouldNotBuildRequest)?;
 
         let _ = self.make_request(request).await?;
 

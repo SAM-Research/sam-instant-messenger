@@ -1,7 +1,7 @@
 use libsignal_protocol::IdentityKeyPair;
 use rand::rngs::OsRng;
-use sam_client::net::api_trait::SamApiClient;
-use sam_client::net::http_client::HttpClient;
+use sam_client::net::ApiClient;
+use sam_client::net::HttpClient;
 use sam_common::address::RegistrationId;
 use sam_common::api::device::DeviceActivationInfo;
 use sam_common::api::keys::RegistrationPreKeys;

@@ -7,10 +7,10 @@ use sam_common::{
     AccountId, DeviceId,
 };
 
-use super::SamApiClientError;
+use super::ApiClientError;
 
 #[async_trait(?Send)]
-pub trait SamApiClient {
+pub trait ApiClient {
     /// Registers a new account with the given registration request.
     ///
     /// # Arguments
@@ -28,13 +28,14 @@ pub trait SamApiClient {
         username: &str,
         password: &str,
         request: RegistrationRequest,
-    ) -> Result<RegistrationResponse, SamApiClientError>;
+    ) -> Result<RegistrationResponse, ApiClientError>;
 
     /// Deletes the current account.
     ///
     /// # Arguments
     ///
-    /// * `username` - The username of the account.
+    /// * `account_id` - A [`AccountId`] containing the id of the account.
+    /// * `device_id` - A [`DeviceId`] containing the id for the device on that account.
     /// * `password` - The password of the account.
     ///
     /// # Returns
@@ -47,7 +48,7 @@ pub trait SamApiClient {
         account_id: AccountId,
         device_id: DeviceId,
         password: &str,
-    ) -> Result<(), SamApiClientError>;
+    ) -> Result<(), ApiClientError>;
 
     /// Retrieves pre-key bundles for the given account.
     ///
@@ -55,9 +56,10 @@ pub trait SamApiClient {
     ///
     /// # Arguments
     ///
-    /// * `username` - The username of the account.
+    /// * `account_id` - A [`AccountId`] containing the id of the account.
+    /// * `device_id` - A [`DeviceId`] containing the id for the device on that account.
     /// * `password` - The password of the account.
-    /// * `account_id` - The [`AccountId`] for which pre-keys should be fetched.
+    /// * `receiver_account_id` - The [`AccountId`] for which pre-keys should be fetched.
     ///
     /// # Returns
     ///
@@ -69,7 +71,7 @@ pub trait SamApiClient {
         device_id: DeviceId,
         password: &str,
         receiver_account_id: AccountId,
-    ) -> Result<PreKeyBundles, SamApiClientError>;
+    ) -> Result<PreKeyBundles, ApiClientError>;
 
     /// Publishes pre-keys for a device.
     ///
@@ -77,7 +79,8 @@ pub trait SamApiClient {
     ///
     /// # Arguments
     ///
-    /// * `username` - The username of the account.
+    /// * `account_id` - A [`AccountId`] containing the id of the account.
+    /// * `device_id` - A [`DeviceId`] containing the id for the device on that account.
     /// * `password` - The password of the account.
     /// * `pre_keys` - A [`PublishPreKeys`] containing the new pre-keys to be published.
     ///
@@ -91,7 +94,7 @@ pub trait SamApiClient {
         device_id: DeviceId,
         password: &str,
         pre_keys: PublishPreKeys,
-    ) -> Result<(), SamApiClientError>;
+    ) -> Result<(), ApiClientError>;
 
     /// Provisions a new device for the user.
     ///
@@ -99,7 +102,8 @@ pub trait SamApiClient {
     ///
     /// # Arguments
     ///
-    /// * `username` - The username of the account.
+    /// * `account_id` - A [`AccountId`] containing the id of the account.
+    /// * `device_id` - A [`DeviceId`] containing the id for the device on that account.
     /// * `password` - The password of the account.
     ///
     /// # Returns
@@ -111,7 +115,7 @@ pub trait SamApiClient {
         account_id: AccountId,
         device_id: DeviceId,
         password: &str,
-    ) -> Result<LinkDeviceToken, SamApiClientError>;
+    ) -> Result<LinkDeviceToken, ApiClientError>;
 
     /// Links a new device to the user's account.
     ///
@@ -119,7 +123,8 @@ pub trait SamApiClient {
     ///
     /// # Arguments
     ///
-    /// * `username` - The username of the account.
+    /// * `account_id` - A [`AccountId`] containing the id of the account.
+    /// * `device_id` - A [`DeviceId`] containing the id for the device on that account.
     /// * `password` - The password of the account.
     /// * `request` - A [`LinkDeviceRequest`] containing the necessary details for linking the device.
     ///
@@ -133,7 +138,7 @@ pub trait SamApiClient {
         device_id: DeviceId,
         password: &str,
         request: LinkDeviceRequest,
-    ) -> Result<LinkDeviceResponse, SamApiClientError>;
+    ) -> Result<LinkDeviceResponse, ApiClientError>;
 
     /// Deletes a specific device from the user's account.
     ///
@@ -142,9 +147,10 @@ pub trait SamApiClient {
     ///
     /// # Arguments
     ///
-    /// * `username` - The username of the account.
+    /// * `account_id` - A [`AccountId`] containing the id of the account.
+    /// * `device_id` - A [`DeviceId`] containing the id for the device on that account.
     /// * `password` - The password of the account.
-    /// * `device_id` - The [`DeviceId`] of the device to be deleted.
+    /// * `removed_device` - The [`DeviceId`] of the device to be deleted.
     ///
     /// # Returns
     ///
@@ -156,5 +162,5 @@ pub trait SamApiClient {
         device_id: DeviceId,
         password: &str,
         removed_device: DeviceId,
-    ) -> Result<(), SamApiClientError>;
+    ) -> Result<(), ApiClientError>;
 }

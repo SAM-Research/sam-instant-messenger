@@ -1,7 +1,7 @@
 use derive_more::{Display, Error};
 
 #[derive(Debug, Display, Error)]
-pub enum SamApiClientError {
+pub enum ApiClientError {
     CouldNotParseUrl(#[error(not(source))] String),
     CouldNotBuildRequest,
     CouldNotSendRequest,

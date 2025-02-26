@@ -1,7 +1,6 @@
 use libsignal_protocol::IdentityKeyPair;
 use rand::rngs::OsRng;
-use sam_client::net::api_trait::SamApiClient;
-use sam_client::net::http_client::HttpClient;
+use sam_client::net::{ApiClient, HttpClient};
 
 mod utils;
 

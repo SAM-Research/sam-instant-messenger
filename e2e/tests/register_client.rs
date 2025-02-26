@@ -2,7 +2,7 @@ use crate::utils::client::{publish_keys, registration_request};
 use crate::utils::server::TestServer;
 use libsignal_protocol::IdentityKeyPair;
 use rand::rngs::OsRng;
-use sam_client::net::{api_trait::SamApiClient, http_client::HttpClient};
+use sam_client::net::{ApiClient, HttpClient};
 mod utils;
 
 #[tokio::test]
