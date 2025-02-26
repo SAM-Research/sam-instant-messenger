@@ -13,8 +13,6 @@ jobs:
   fmt:
     runs-on: ubuntu-latest
     steps:
-      - name: Upgrade rust
-        run: rustup upgrade
 
       - name: Checkout code
         uses: actions/checkout@v4
@@ -64,6 +62,9 @@ jobs:
   clippy:
     runs-on: ubuntu-latest
     steps:
+      - name: Upgrade rust
+        run: rustup upgrade
+
       - name: Checkout code
         uses: actions/checkout@v4
 
@@ -112,6 +113,9 @@ jobs:
   test:
     runs-on: ubuntu-latest
     steps:
+      - name: Upgrade rust
+        run: rustup upgrade
+
       - name: Checkout code
         uses: actions/checkout@v4
 
