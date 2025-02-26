@@ -9,7 +9,7 @@ mod utils;
 pub async fn one_client_can_register() {
     let _ = env_logger::try_init();
     let address = "http://127.0.0.1:9384";
-    let mut server = TestServer::start(address).await;
+    let mut server = TestServer::start("127.0.0.1:9384").await;
     let mut csprng = OsRng;
     let id_key_pair = IdentityKeyPair::generate(&mut csprng);
 
@@ -31,7 +31,7 @@ pub async fn one_client_can_register() {
 pub async fn can_upload_keys() {
     let _ = env_logger::try_init();
     let address = "http://127.0.0.1:9385";
-    let mut server = TestServer::start(address).await;
+    let mut server = TestServer::start("127.0.0.1:9385").await;
     let password = "Alice Password";
     let mut csprng = OsRng;
     let id_key_pair = IdentityKeyPair::generate(&mut csprng);
@@ -62,7 +62,7 @@ pub async fn can_upload_keys() {
 pub async fn can_delete_account() {
     let _ = env_logger::try_init();
     let address = "http://127.0.0.1:9386";
-    let mut server = TestServer::start(address).await;
+    let mut server = TestServer::start("127.0.0.1:9386").await;
     let mut csprng = OsRng;
     let id_key_pair = IdentityKeyPair::generate(&mut csprng);
 

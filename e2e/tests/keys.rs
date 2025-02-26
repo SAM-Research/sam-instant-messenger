@@ -12,7 +12,7 @@ use crate::utils::server::TestServer;
 pub async fn bob_can_fetch_alices_keys() {
     let _ = env_logger::try_init();
     let address = "http://127.0.0.1:9385";
-    let mut server = TestServer::start(address).await;
+    let mut server = TestServer::start("127.0.0.1:9385").await;
     let alice_password = "Alice Password";
     let mut csprng = OsRng;
     let alice_id_key_pair = IdentityKeyPair::generate(&mut csprng);

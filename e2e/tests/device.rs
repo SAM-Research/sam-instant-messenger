@@ -31,7 +31,7 @@ fn link_device_request(
 async fn test_device_provision() {
     let _ = env_logger::try_init();
     let address = "http://127.0.0.1:9387";
-    let mut server = TestServer::start(address).await;
+    let mut server = TestServer::start("127.0.0.1:9387").await;
     let mut csprng = OsRng;
     let id_key_pair = IdentityKeyPair::generate(&mut csprng);
 
@@ -64,7 +64,7 @@ async fn test_device_provision() {
 async fn test_link_device() {
     let _ = env_logger::try_init();
     let address = "http://127.0.0.1:9388";
-    let mut server = TestServer::start(address).await;
+    let mut server = TestServer::start("127.0.0.1:9388").await;
     let mut csprng = OsRng;
     let id_key_pair = IdentityKeyPair::generate(&mut csprng);
 
@@ -112,7 +112,7 @@ async fn test_link_device() {
 async fn test_delete_device() {
     let _ = env_logger::try_init();
     let address = "http://127.0.0.1:9389";
-    let mut server = TestServer::start(address).await;
+    let mut server = TestServer::start("127.0.0.1:9389").await;
     let mut csprng = OsRng;
     let id_key_pair = IdentityKeyPair::generate(&mut csprng);
 
