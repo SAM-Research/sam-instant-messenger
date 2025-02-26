@@ -44,7 +44,7 @@ pub trait SamApiClient {
     // TODO: What if deletion fails?
     async fn delete_account(
         self,
-        account_id: &AccountId,
+        account_id: AccountId,
         device_id: DeviceId,
         password: &str,
     ) -> Result<(), SamApiClientError>;
@@ -65,7 +65,7 @@ pub trait SamApiClient {
     /// * `Err(SamApiClientError)` if fetching pre-key bundles fails.
     async fn get_pre_keys(
         &self,
-        account_id: &AccountId,
+        account_id: AccountId,
         device_id: DeviceId,
         password: &str,
         receiver_account_id: AccountId,
@@ -87,7 +87,7 @@ pub trait SamApiClient {
     /// * `Err(SamApiClientError)` if the operation fails.
     async fn publish_pre_keys(
         &self,
-        account_id: &AccountId,
+        account_id: AccountId,
         device_id: DeviceId,
         password: &str,
         pre_keys: PublishPreKeys,
@@ -108,7 +108,7 @@ pub trait SamApiClient {
     /// * `Err(SamApiClientError)` if the provisioning fails.
     async fn provision_device(
         &self,
-        account_id: &AccountId,
+        account_id: AccountId,
         device_id: DeviceId,
         password: &str,
     ) -> Result<LinkDeviceToken, SamApiClientError>;
@@ -129,7 +129,7 @@ pub trait SamApiClient {
     /// * `Err(SamApiClientError)` if the operation fails.
     async fn link_device(
         &self,
-        account_id: &AccountId,
+        account_id: AccountId,
         device_id: DeviceId,
         password: &str,
         request: LinkDeviceRequest,
@@ -152,7 +152,7 @@ pub trait SamApiClient {
     /// * `Err(SamApiClientError)` if the deletion fails.
     async fn delete_device(
         &self,
-        account_id: &AccountId,
+        account_id: AccountId,
         device_id: DeviceId,
         password: &str,
         removed_device: DeviceId,

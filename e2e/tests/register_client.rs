@@ -52,7 +52,7 @@ pub async fn can_upload_keys() {
     let account_id = result.unwrap().account_id;
 
     assert!(client
-        .publish_pre_keys(&account_id, 1.into(), password, publish_keys(id_key_pair))
+        .publish_pre_keys(account_id, 1.into(), password, publish_keys(id_key_pair))
         .await
         .inspect_err(|err| println!("{err}"))
         .is_ok())
@@ -82,7 +82,7 @@ pub async fn can_delete_account() {
     let account_id = result.unwrap().account_id;
 
     assert!(client
-        .delete_account(&account_id, 1.into(), "Alice Password")
+        .delete_account(account_id, 1.into(), "Alice Password")
         .await
         .inspect_err(|err| println!("{err}"))
         .is_ok());

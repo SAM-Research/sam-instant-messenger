@@ -74,7 +74,7 @@ impl SamApiClient for HttpClient {
 
     async fn delete_account(
         self,
-        account_id: &AccountId,
+        account_id: AccountId,
         device_id: DeviceId,
         password: &str,
     ) -> Result<(), SamApiClientError> {
@@ -92,7 +92,7 @@ impl SamApiClient for HttpClient {
 
     async fn get_pre_keys(
         &self,
-        account_id: &AccountId,
+        account_id: AccountId,
         device_id: DeviceId,
         password: &str,
         receiver_account_id: AccountId,
@@ -119,7 +119,7 @@ impl SamApiClient for HttpClient {
 
     async fn publish_pre_keys(
         &self,
-        account_id: &AccountId,
+        account_id: AccountId,
         device_id: DeviceId,
         password: &str,
         bundle: PublishPreKeys,
@@ -142,7 +142,7 @@ impl SamApiClient for HttpClient {
 
     async fn provision_device(
         &self,
-        account_id: &AccountId,
+        account_id: AccountId,
         device_id: DeviceId,
         password: &str,
     ) -> Result<LinkDeviceToken, SamApiClientError> {
@@ -168,7 +168,7 @@ impl SamApiClient for HttpClient {
 
     async fn link_device(
         &self,
-        account_id: &AccountId,
+        account_id: AccountId,
         device_id: DeviceId,
         password: &str,
         request: LinkDeviceRequest,
@@ -196,7 +196,7 @@ impl SamApiClient for HttpClient {
 
     async fn delete_device(
         &self,
-        account_id: &AccountId,
+        account_id: AccountId,
         device_id: DeviceId,
         password: &str,
         removed_device: DeviceId,

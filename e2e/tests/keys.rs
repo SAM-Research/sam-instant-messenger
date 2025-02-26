@@ -38,7 +38,7 @@ pub async fn bob_can_fetch_alices_keys() {
 
     assert!(alice_client
         .publish_pre_keys(
-            &alice_account_id,
+            alice_account_id,
             1.into(),
             alice_password,
             publish_keys(alice_id_key_pair)
@@ -60,7 +60,7 @@ pub async fn bob_can_fetch_alices_keys() {
     let bob_account_id = bob_account_creation_result.unwrap().account_id;
 
     let get_prekeys_result = bob_client
-        .get_pre_keys(&bob_account_id, 1.into(), bob_password, alice_account_id)
+        .get_pre_keys(bob_account_id, 1.into(), bob_password, alice_account_id)
         .await;
 
     assert!(get_prekeys_result.is_ok())

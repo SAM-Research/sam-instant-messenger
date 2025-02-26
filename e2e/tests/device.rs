@@ -54,7 +54,7 @@ async fn test_device_provision() {
     let account_id = result.unwrap().account_id;
 
     let token_result = client
-        .provision_device(&account_id, 1.into(), password)
+        .provision_device(account_id, 1.into(), password)
         .await;
 
     assert!(token_result.is_ok());
@@ -87,7 +87,7 @@ async fn test_link_device() {
     let account_id = result.unwrap().account_id;
 
     let token_result = client
-        .provision_device(&account_id, 1.into(), password)
+        .provision_device(account_id, 1.into(), password)
         .await;
 
     assert!(token_result.is_ok());
@@ -99,7 +99,7 @@ async fn test_link_device() {
 
     assert!(client
         .link_device(
-            &account_id,
+            account_id,
             1.into(),
             password,
             link_device_request(token, 2.into(), registration_pre_keys)
@@ -135,7 +135,7 @@ async fn test_delete_device() {
     let account_id = result.unwrap().account_id;
 
     let token_result = client
-        .provision_device(&account_id, 1.into(), password)
+        .provision_device(account_id, 1.into(), password)
         .await;
 
     assert!(token_result.is_ok());
@@ -147,7 +147,7 @@ async fn test_delete_device() {
 
     let link_device_reponse = client
         .link_device(
-            &account_id,
+            account_id,
             1.into(),
             password,
             link_device_request(token, 2.into(), registration_pre_keys),
@@ -157,7 +157,7 @@ async fn test_delete_device() {
     assert!(link_device_reponse.is_ok());
 
     assert!(client
-        .delete_device(&account_id, 1.into(), password, 2.into())
+        .delete_device(account_id, 1.into(), password, 2.into())
         .await
         .is_ok())
 }
