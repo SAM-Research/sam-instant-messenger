@@ -11,7 +11,7 @@ use crate::utils::server::TestServer;
 #[tokio::test]
 pub async fn bob_can_fetch_alices_keys() {
     let _ = env_logger::try_init();
-    let address = "127.0.0.1:9385";
+    let address = "http://127.0.0.1:9385";
     let mut server = TestServer::start(address).await;
     let alice_password = "Alice Password";
     let mut csprng = OsRng;

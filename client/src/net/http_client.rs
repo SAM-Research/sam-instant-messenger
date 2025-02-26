@@ -55,7 +55,7 @@ impl SamApiClient for HttpClient {
         password: &str,
         registration_request: RegistrationRequest,
     ) -> Result<RegistrationResponse, SamApiClientError> {
-        let url_str = format!("http://{}/api/v1/account", self.base_url);
+        let url_str = format!("{}/api/v1/account", self.base_url);
         let url = Url::parse(&url_str).map_err(|_| SamApiClientError::CouldNotParseUrl(url_str))?;
         let request = self
             .http_client
@@ -78,7 +78,7 @@ impl SamApiClient for HttpClient {
         device_id: DeviceId,
         password: &str,
     ) -> Result<(), SamApiClientError> {
-        let url_str = format!("http://{}/api/v1/account", self.base_url);
+        let url_str = format!("{}/api/v1/account", self.base_url);
         let url = Url::parse(&url_str).map_err(|_| SamApiClientError::CouldNotParseUrl(url_str))?;
         let request = self
             .http_client
@@ -97,10 +97,7 @@ impl SamApiClient for HttpClient {
         password: &str,
         receiver_account_id: AccountId,
     ) -> Result<PreKeyBundles, SamApiClientError> {
-        let url_str = format!(
-            "http://{}/api/v1/keys/{}",
-            self.base_url, receiver_account_id
-        );
+        let url_str = format!("{}/api/v1/keys/{}", self.base_url, receiver_account_id);
         let url = Url::parse(&url_str).map_err(|_| SamApiClientError::CouldNotParseUrl(url_str))?;
 
         let request = self
@@ -127,7 +124,7 @@ impl SamApiClient for HttpClient {
         password: &str,
         bundle: PublishPreKeys,
     ) -> Result<(), SamApiClientError> {
-        let url_str = format!("http://{}/api/v1/keys", self.base_url);
+        let url_str = format!("{}/api/v1/keys", self.base_url);
         let url = Url::parse(&url_str).map_err(|_| SamApiClientError::CouldNotParseUrl(url_str))?;
 
         let request = self
@@ -149,7 +146,7 @@ impl SamApiClient for HttpClient {
         device_id: DeviceId,
         password: &str,
     ) -> Result<LinkDeviceToken, SamApiClientError> {
-        let url_str = format!("http://{}/api/v1/devices/provision", self.base_url);
+        let url_str = format!("{}/api/v1/devices/provision", self.base_url);
         let url = Url::parse(&url_str).map_err(|_| SamApiClientError::CouldNotParseUrl(url_str))?;
 
         let request = self
@@ -176,7 +173,7 @@ impl SamApiClient for HttpClient {
         password: &str,
         request: LinkDeviceRequest,
     ) -> Result<LinkDeviceResponse, SamApiClientError> {
-        let url_str = format!("http://{}/api/v1/devices/link", self.base_url);
+        let url_str = format!("{}/api/v1/devices/link", self.base_url);
         let url = Url::parse(&url_str).map_err(|_| SamApiClientError::CouldNotParseUrl(url_str))?;
 
         let request = self
@@ -204,7 +201,7 @@ impl SamApiClient for HttpClient {
         password: &str,
         removed_device: DeviceId,
     ) -> Result<(), SamApiClientError> {
-        let url_str = format!("http://{}/api/v1/device/{}", self.base_url, removed_device);
+        let url_str = format!("{}/api/v1/device/{}", self.base_url, removed_device);
         let url = Url::parse(&url_str).map_err(|_| SamApiClientError::CouldNotParseUrl(url_str))?;
 
         let request = self

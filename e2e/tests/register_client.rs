@@ -8,7 +8,7 @@ mod utils;
 #[tokio::test]
 pub async fn one_client_can_register() {
     let _ = env_logger::try_init();
-    let address = "127.0.0.1:9384";
+    let address = "http://127.0.0.1:9384";
     let mut server = TestServer::start(address).await;
     let mut csprng = OsRng;
     let id_key_pair = IdentityKeyPair::generate(&mut csprng);
@@ -30,7 +30,7 @@ pub async fn one_client_can_register() {
 #[tokio::test]
 pub async fn can_upload_keys() {
     let _ = env_logger::try_init();
-    let address = "127.0.0.1:9385";
+    let address = "http://127.0.0.1:9385";
     let mut server = TestServer::start(address).await;
     let password = "Alice Password";
     let mut csprng = OsRng;
@@ -61,7 +61,7 @@ pub async fn can_upload_keys() {
 #[tokio::test]
 pub async fn can_delete_account() {
     let _ = env_logger::try_init();
-    let address = "127.0.0.1:9386";
+    let address = "http://127.0.0.1:9386";
     let mut server = TestServer::start(address).await;
     let mut csprng = OsRng;
     let id_key_pair = IdentityKeyPair::generate(&mut csprng);

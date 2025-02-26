@@ -30,7 +30,7 @@ fn link_device_request(
 #[tokio::test]
 async fn test_device_provision() {
     let _ = env_logger::try_init();
-    let address = "127.0.0.1:9387";
+    let address = "http://127.0.0.1:9387";
     let mut server = TestServer::start(address).await;
     let mut csprng = OsRng;
     let id_key_pair = IdentityKeyPair::generate(&mut csprng);
@@ -63,7 +63,7 @@ async fn test_device_provision() {
 #[tokio::test]
 async fn test_link_device() {
     let _ = env_logger::try_init();
-    let address = "127.0.0.1:9388";
+    let address = "http://127.0.0.1:9388";
     let mut server = TestServer::start(address).await;
     let mut csprng = OsRng;
     let id_key_pair = IdentityKeyPair::generate(&mut csprng);
@@ -111,7 +111,7 @@ async fn test_link_device() {
 #[tokio::test]
 async fn test_delete_device() {
     let _ = env_logger::try_init();
-    let address = "127.0.0.1:9389";
+    let address = "http://127.0.0.1:9389";
     let mut server = TestServer::start(address).await;
     let mut csprng = OsRng;
     let id_key_pair = IdentityKeyPair::generate(&mut csprng);
