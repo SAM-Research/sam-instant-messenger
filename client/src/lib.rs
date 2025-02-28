@@ -1,5 +1,6 @@
 pub mod error;
 pub mod keygen;
+pub mod protocol;
 pub mod storage;
 pub mod time;
 
