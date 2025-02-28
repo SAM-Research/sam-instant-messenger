@@ -5,7 +5,7 @@ use std::sync::{
 
 use futures_util::{lock::Mutex, stream::SplitStream, StreamExt};
 use log::error;
-use prost::{bytes::Bytes, Message as PMessage};
+use prost::Message as PMessage;
 use sam_common::{
     address::MessageId,
     sam_message::{ClientEnvelope, ClientMessage, MessageType, ServerEnvelope, ServerMessage},
@@ -47,7 +47,7 @@ async fn protocol_handler(
 
     while let Some(Ok(msg)) = receiver.next().await {
         let res = match msg {
-            Message::Binary(b) => ServerMessage::decode(Bytes::from(b)),
+            Message::Binary(b) => ServerMessage::decode(b),
             Message::Close(_) => break,
             _ => continue,
         };
@@ -204,7 +204,7 @@ mod test {
 
     fn server_env(id: MessageId) -> ServerMessage {
         ServerMessage::builder()
-            .id(id.clone().into())
+            .id(id.into())
             .r#type(MessageType::Message as i32)
             .message(
                 ServerEnvelope::builder()
@@ -235,7 +235,7 @@ mod test {
     }
 
     fn decode_client_msg(bytes: Bytes) -> Result<ClientMessage, ()> {
-        ClientMessage::decode(Bytes::from(bytes)).map_err(|_| ())
+        ClientMessage::decode(bytes).map_err(|_| ())
     }
 
     fn client_env() -> ClientEnvelope {
@@ -274,7 +274,7 @@ mod test {
                         let id = MessageId::generate();
                         let timeout = tokio::time::timeout(
                             Duration::from_millis(300),
-                            send(&mut ws_stream, server_env(id.clone())),
+                            send(&mut ws_stream, server_env(id)),
                         )
                         .await;
                         let res = match timeout {

@@ -75,7 +75,7 @@ impl WebSocketClient {
         }
         let (ws, _) = connect_async_tls_with_config(
             req,
-            self.config.tungstenite_config.clone(),
+            self.config.tungstenite_config,
             self.config.disable_nagle,
             self.config.tls.clone(),
         )
@@ -175,15 +175,14 @@ mod test {
                  enqueue: Sender<String>,
                  connected: Arc<AtomicBool>| async move {
                     connected.store(true, Ordering::SeqCst);
-                    while let Some(Ok(msg)) = receiver.next().await {
+                    if let Some(Ok(msg)) = receiver.next().await {
                         match msg {
                             Message::Text(x) => enqueue
                                 .send(x.to_string())
                                 .await
                                 .expect("Can enqueue string"),
-                            _ => break,
+                            _ => {}
                         }
-                        break;
                     }
                     connected.store(false, Ordering::SeqCst);
                 },
