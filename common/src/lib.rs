@@ -4,6 +4,8 @@ pub mod error;
 mod proto;
 pub mod time;
 
+pub use address::{AccountId, DeviceId};
+
 pub use error::LibError;
 pub use error::Result;
 

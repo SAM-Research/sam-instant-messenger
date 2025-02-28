@@ -196,7 +196,7 @@ mod test {
     };
     use tokio_tungstenite::{accept_async, tungstenite::Message, WebSocketStream};
 
-    use crate::protocol::{
+    use crate::net::protocol::{
         client::ProtocolClient,
         traits::SamProtocolClient,
         websocket::{WebSocketClient, WebSocketClientConfig},

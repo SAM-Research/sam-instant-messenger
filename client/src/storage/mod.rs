@@ -7,9 +7,11 @@ use libsignal_protocol::{
 };
 use std::fmt::Debug;
 
+use crate::storage::key_generation::{KyberKeyGenerator, PreKeyGenerator, SignedPreKeyGenerator};
 pub use traits::{account::AccountStore, contact::ContactStore};
 
 pub mod inmem;
+pub mod key_generation;
 pub mod sqlite;
 pub mod traits;
 
@@ -35,9 +37,11 @@ pub trait StoreType {
     type ContactStore: ContactStore;
     type AccountStore: AccountStore;
     type IdentityKeyStore: IdentityKeyStore;
-    type PreKeyStore: PreKeyStore + ProvidesKeyId<PreKeyId>;
-    type SignedPreKeyStore: SignedPreKeyStore + ProvidesKeyId<SignedPreKeyId>;
-    type KyberPreKeyStore: KyberPreKeyStore + ProvidesKeyId<KyberPreKeyId>;
+    type PreKeyStore: PreKeyStore + ProvidesKeyId<PreKeyId> + PreKeyGenerator;
+    type SignedPreKeyStore: SignedPreKeyStore
+        + ProvidesKeyId<SignedPreKeyId>
+        + SignedPreKeyGenerator;
+    type KyberPreKeyStore: KyberPreKeyStore + ProvidesKeyId<KyberPreKeyId> + KyberKeyGenerator;
     type SessionStore: SessionStore;
     type SenderKeyStore: SenderKeyStore;
 }
