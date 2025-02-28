@@ -32,6 +32,21 @@ enum MessageType {
   ERROR = 3;
 }
 
+
+message DeviceList {
+  repeated uint32 ids = 1;
+}
+
+message Error {
+  required uint32 code = 1;
+  required string message = 2;
+
+  // Certain error types contain extra information about the error.
+  oneof info {
+    DeviceList device_ids = 3;
+  }
+}
+
 message ClientMessage {
   required MessageType type = 1;
   required bytes id = 2;
@@ -39,7 +54,11 @@ message ClientMessage {
 }
 
 message ServerMessage {
-  required MessageType type = 1;
-  required bytes id = 2;
-  optional ServerEnvelope message = 3;
+  required bytes id = 1;
+  required MessageType type = 2;
+
+  oneof content {
+    ServerEnvelope message = 3;
+    Error error = 4;
+  };
 }
