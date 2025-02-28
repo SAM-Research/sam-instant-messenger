@@ -164,15 +164,15 @@ impl SamProtocolClient for ProtocolClient {
             None => Err(WebSocketError::Disconnected),
         }?;
 
-        let is_match = match MessageId::try_from(response.id.clone()) {
-            Ok(res_id) => res_id == id && response.r#type() == MessageType::Ack,
-            Err(_) => Err(SamProtocolError::MalformedServerResponse)?,
-        };
-
-        if is_match {
-            Ok(())
-        } else {
-            Err(SamProtocolError::MalformedServerResponse)
+        match MessageId::try_from(response.id.clone()) {
+            Ok(res_id) => {
+                if res_id == id && response.r#type() == MessageType::Ack {
+                    Ok(())
+                } else {
+                    Err(SamProtocolError::MalformedServerResponse)
+                }
+            }
+            Err(_) => Err(SamProtocolError::MalformedServerResponse),
         }
     }
 }
@@ -272,32 +272,27 @@ mod test {
                 match action {
                     ServerAction::Send => {
                         let id = MessageId::generate();
-                        let timeout = tokio::time::timeout(
-                            Duration::from_millis(300),
-                            send(&mut ws_stream, server_env(id)),
-                        )
-                        .await;
-                        let res = match timeout {
-                            Ok(res) => res,
-                            Err(_) => {
-                                oneshot(
-                                    &mut tx,
-                                    Err("Client failed to send in time interval".to_string()),
-                                );
-                                break;
-                            }
-                        };
-                        match res {
+
+                        // server sends messages to client
+                        match send(&mut ws_stream, server_env(id)).await {
                             Ok(_) => {}
                             Err(_) => {
                                 oneshot(&mut tx, Err("Failed to send".to_string()));
                                 break;
                             }
                         }
+
+                        // server expects an ack message from client
                         if let Some(Ok(msg)) = ws_stream.next().await {
                             let msg_res = match msg {
                                 Message::Binary(b) => decode_client_msg(b),
-                                _ => return,
+                                _ => {
+                                    oneshot(
+                                        &mut tx,
+                                        Err("Only expects binary messages".to_string()),
+                                    );
+                                    break;
+                                }
                             };
 
                             let msg = match msg_res {

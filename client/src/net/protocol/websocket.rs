@@ -158,6 +158,21 @@ mod test {
         });
     }
 
+    async fn client_receiver(
+        mut receiver: SplitStream<WebSocket>,
+        enqueue: Sender<String>,
+        connected: Arc<AtomicBool>,
+    ) {
+        connected.store(true, Ordering::SeqCst);
+        if let Some(Ok(Message::Text(x))) = receiver.next().await {
+            enqueue
+                .send(x.to_string())
+                .await
+                .expect("Can enqueue string")
+        }
+        connected.store(false, Ordering::SeqCst);
+    }
+
     #[tokio::test]
     async fn test_echo_send() {
         let addr = "127.0.0.1:9080".to_string();
@@ -169,23 +184,7 @@ mod test {
             .build()
             .into();
 
-        let mut receiver = client
-            .connect(
-                |mut receiver: SplitStream<WebSocket>,
-                 enqueue: Sender<String>,
-                 connected: Arc<AtomicBool>| async move {
-                    connected.store(true, Ordering::SeqCst);
-                    if let Some(Ok(Message::Text(x))) = receiver.next().await {
-                        enqueue
-                            .send(x.to_string())
-                            .await
-                            .expect("Can enqueue string")
-                    }
-                    connected.store(false, Ordering::SeqCst);
-                },
-            )
-            .await
-            .expect("Can Connect");
+        let mut receiver = client.connect(client_receiver).await.expect("Can Connect");
 
         client
             .send(Message::Text("Hello".into()))
