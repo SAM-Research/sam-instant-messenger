@@ -175,14 +175,11 @@ mod test {
                  enqueue: Sender<String>,
                  connected: Arc<AtomicBool>| async move {
                     connected.store(true, Ordering::SeqCst);
-                    if let Some(Ok(msg)) = receiver.next().await {
-                        match msg {
-                            Message::Text(x) => enqueue
-                                .send(x.to_string())
-                                .await
-                                .expect("Can enqueue string"),
-                            _ => {}
-                        }
+                    if let Some(Ok(Message::Text(x))) = receiver.next().await {
+                        enqueue
+                            .send(x.to_string())
+                            .await
+                            .expect("Can enqueue string")
                     }
                     connected.store(false, Ordering::SeqCst);
                 },
