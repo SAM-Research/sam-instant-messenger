@@ -44,7 +44,7 @@ impl ProvidesKeyId<SignedPreKeyId> for SqliteSignedPreKeyStore {
         .fetch_one(&self.database)
         .await
         .map(|row| SignedPreKeyId::from(row.pkid as u32))
-        .map_err(ClientError::from)
+        .map_err(|err| ClientError::Database(format!("{err}")))
     }
 }
 
@@ -89,7 +89,7 @@ impl SignedPreKeyStore for SqliteSignedPreKeyStore {
             }),
             Err(err) => Err(SignalProtocolError::ApplicationCallbackError(
                 "save signed pre key",
-                Box::new(ClientError::from(err)),
+                Box::new(ClientError::Database(format!("{err}"))),
             )),
         }
     }
@@ -118,7 +118,7 @@ impl SignedPreKeyStore for SqliteSignedPreKeyStore {
         .map_err(|err| {
             SignalProtocolError::ApplicationCallbackError(
                 "save signed pre key",
-                Box::new(ClientError::from(err)),
+                Box::new(ClientError::Database(format!("{err}"))),
             )
         })
     }

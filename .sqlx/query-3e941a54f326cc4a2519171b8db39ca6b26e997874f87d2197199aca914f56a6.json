@@ -1,0 +1,12 @@
+{
+  "db_name": "SQLite",
+  "query": "\n            DELETE FROM Contacts \n            WHERE account_id=? AND device_id=?\n            ",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Right": 2
+    },
+    "nullable": []
+  },
+  "hash": "3e941a54f326cc4a2519171b8db39ca6b26e997874f87d2197199aca914f56a6"
+}

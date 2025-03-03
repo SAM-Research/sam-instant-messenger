@@ -6,6 +6,7 @@ use sam_client::storage::sqlite::{SqliteStore, SqliteStoreConfig};
 use sam_client::storage::StoreConfig;
 
 mod account;
+mod contact;
 mod identity;
 mod kyber;
 mod pre_key;
