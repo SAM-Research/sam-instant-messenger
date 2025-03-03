@@ -37,21 +37,13 @@ message DeviceList {
 }
 
 enum ErrorCode {
-  MESSAGE_ID_DECODE=1;
-  NO_ENVELOPE_IN_MESSAGE=2;
-  UNKNOWN_MESSAGE_ACKED=3;
   NOT_ENCRYPTED_FOR_ALL_DEVICES=4;
   ENCRYPTED_FOR_EXTRA_DEVICES=5;
 }
 
 message Error {
   required ErrorCode code = 1;
-  required string message = 2;
-
-  // Certain error types contain extra information about the error.
-  oneof info {
-    DeviceList device_ids = 3;
-  }
+  required DeviceList device_ids = 2;
 }
 
 message ClientMessage {

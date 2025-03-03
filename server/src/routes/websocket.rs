@@ -51,8 +51,8 @@ mod test {
     use sam_common::{
         address::{AccountId, DeviceId, MessageId},
         sam_message::{
-            error::Info, server_message::Content, ClientEnvelope, ClientMessage, DeviceList,
-            EnvelopeType, MessageType, ServerMessage,
+            server_message::Content, ClientEnvelope, ClientMessage, EnvelopeType, MessageType,
+            ServerMessage,
         },
     };
 
@@ -306,13 +306,13 @@ mod test {
             .expect("message should contain content");
 
         let missing_devices = match content {
-            Content::Error(error) => error.info,
-            _ => None,
+            Content::Error(error) => error.device_ids.ids,
+            _ => vec![],
         };
 
-        let expected = Info::DeviceIds(DeviceList { ids: vec![27u32] });
+        let expected: Vec<u32> = vec![27u32];
 
-        assert!(missing_devices.is_some_and(|devices| devices == expected))
+        assert!(missing_devices == expected)
     }
 
     #[tokio::test]
@@ -488,13 +488,13 @@ mod test {
             .expect("message should contain content");
 
         let missing_devices = match content {
-            Content::Error(error) => error.info,
-            _ => None,
+            Content::Error(error) => error.device_ids.ids,
+            _ => vec![],
         };
 
-        let expected = Info::DeviceIds(DeviceList { ids: vec![27u32] });
+        let expected: Vec<u32> = vec![27u32];
 
-        assert!(missing_devices.is_some_and(|devices| devices == expected));
+        assert!(missing_devices == expected);
         assert!(bob_received.is_ok(), "Bob timed out");
         assert!(
             bob_received.is_ok_and(|op| op.is_some_and(|res| res.is_ok())),
