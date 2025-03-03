@@ -113,7 +113,7 @@ mod test {
 
     #[rstest]
     #[case(600, StatusCode::OK, true)]
-    #[case(0, StatusCode::BAD_REQUEST, false)]
+    #[case(0, StatusCode::FORBIDDEN, false)]
     #[tokio::test]
     async fn test_get_api_v1_devices_link(
         #[case] expire_time: u64,

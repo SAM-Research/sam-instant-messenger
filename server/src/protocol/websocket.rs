@@ -23,7 +23,7 @@ use crate::{
 macro_rules! closing_err {
     ($username:expr, $err:expr) => {
         error!(
-            "User '{}' protocol encountered an error '{}' closing connection...",
+            "User '{}' websocket encountered an error '{}' closing connection...",
             $username, $err
         )
     };
@@ -71,7 +71,7 @@ async fn websocket_message_receiver<T: StateType>(
         let decode_res = match msg {
             Message::Binary(b) => {
                 info!(
-                    "Received protocol message from user '{}'",
+                    "Received websocket message from user '{}'",
                     auth_user.account().username()
                 );
                 ClientMessage::decode(b).map_err(|_| WebSocketError::WebSocketDecodeError)

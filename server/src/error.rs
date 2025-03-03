@@ -3,7 +3,7 @@ use crate::managers::error::{
     AccountManagerError, DeviceManagerError, KeyManagerError, MessageManagerError,
 };
 use crate::routes::error::RouterError;
-use axum::{http::StatusCode, response::IntoResponse};
+use axum::response::IntoResponse;
 use derive_more::derive::{Display, Error};
 use derive_more::From;
 use log::error;
@@ -14,7 +14,6 @@ pub type Result<T> = std::result::Result<T, ServerError>;
 #[derive(Debug, Display, Error, From)]
 pub enum ServerError {
     #[error(ignore)]
-    Custom(String),
     Lib(LibError),
     AccountManager(AccountManagerError),
     DeviceManager(DeviceManagerError),
@@ -28,9 +27,6 @@ impl IntoResponse for ServerError {
     fn into_response(self) -> axum::response::Response {
         error!("ServerError occured: {}", self);
         match self {
-            ServerError::Custom(error) => {
-                (StatusCode::INTERNAL_SERVER_ERROR, error).into_response()
-            }
             ServerError::Lib(error) => error.into_response(),
             ServerError::MessageManager(error) => error.into_response(),
             ServerError::AccountManager(error) => error.into_response(),

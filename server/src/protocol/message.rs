@@ -69,7 +69,7 @@ pub async fn handle_client_message<T: StateType>(
                 }
                 Err(e) => {
                     warn!(
-                        "error '{}', protocol user '{}' sent an ack with unknown id",
+                        "error '{}', websocket user '{}' sent an ack with unknown id",
                         e,
                         auth_user.account().username()
                     );

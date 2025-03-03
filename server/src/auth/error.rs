@@ -47,7 +47,7 @@ impl IntoResponse for AuthorizationError {
                 "Device signature did not match the expected signature".to_string(),
             ),
             AuthorizationError::DeviceLinkTooSlow => (
-                StatusCode::BAD_REQUEST,
+                StatusCode::FORBIDDEN,
                 "Device link took too long".to_string(),
             ),
         }

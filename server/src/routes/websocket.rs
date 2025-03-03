@@ -32,7 +32,7 @@ async fn websocket_endpoint<T: StateType>(
 }
 
 pub fn websocket_routes<T: StateType>(router: Router<ServerState<T>>) -> Router<ServerState<T>> {
-    router.route("/api/v1/protocol", get(websocket_endpoint))
+    router.route("/api/v1/websocket", get(websocket_endpoint))
 }
 
 #[cfg(test)]
@@ -96,7 +96,7 @@ mod test {
         password: &str,
         address: &str,
     ) -> WebSocketStream<MaybeTlsStream<tokio::net::TcpStream>> {
-        let mut req = format!("ws://{}/api/v1/protocol", address)
+        let mut req = format!("ws://{}/api/v1/websocket", address)
             .into_client_request()
             .expect("Can make url into ws upgrade req");
         let basic = format!(

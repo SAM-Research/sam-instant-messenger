@@ -5,7 +5,7 @@ use derive_more::{Display, Error, From};
 #[derive(Debug, Display, Error, From)]
 pub enum RouterError {
     DeviceProvisionUnAuth,
-    DeviceUnAuth, // Bør nok flyttes in authorization
+    DeviceUnAuth,
 }
 
 impl IntoResponse for RouterError {
