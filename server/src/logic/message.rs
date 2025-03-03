@@ -7,11 +7,10 @@ use crate::{
 use log::{error, warn};
 use sam_common::{
     address::MessageId,
-    sam_message::{ClientEnvelope, MessageType},
+    sam_message::{ClientEnvelope, Error, ErrorCode, MessageType},
 };
 use sam_common::{
     address::{AccountId, DeviceId},
-    protocol::error::ProtocolError,
     sam_message::{server_message::Content, ClientMessage, ServerEnvelope, ServerMessage},
 };
 
@@ -22,15 +21,7 @@ pub async fn handle_client_message<T: StateType>(
 ) -> Result<Option<ServerMessage>, ServerError> {
     let message_id = match MessageId::try_from(message.id.clone()) {
         Ok(id) => id,
-        Err(_) => {
-            return Ok(Some(
-                ServerMessage::builder()
-                    .id(message.id)
-                    .r#type(MessageType::Error.into())
-                    .content(Content::Error(ProtocolError::MessageIdDecode.into()))
-                    .build(),
-            ))
-        }
+        Err(_) => return Err(ServerError::EnvelopeMalformed),
     };
 
     match message.r#type() {
@@ -40,13 +31,7 @@ pub async fn handle_client_message<T: StateType>(
                     handle_client_evelope(state, message_id, envelope).await?,
                 ))
             } else {
-                Ok(Some(
-                    ServerMessage::builder()
-                        .id(message.id)
-                        .r#type(MessageType::Error.into())
-                        .content(Content::Error(ProtocolError::NoEnvelopeInMessage.into()))
-                        .build(),
-                ))
+                Err(ServerError::EnvelopeMalformed)
             }
         }
         MessageType::Ack => {
@@ -73,13 +58,7 @@ pub async fn handle_client_message<T: StateType>(
                         e,
                         auth_user.account().username()
                     );
-                    Ok(Some(
-                        ServerMessage::builder()
-                            .id(message.id)
-                            .r#type(MessageType::Error.into())
-                            .content(Content::Error(ProtocolError::UnknownMessageAcked.into()))
-                            .build(),
-                    ))
+                    Err(e)
                 }
             }
         }
@@ -110,13 +89,7 @@ async fn handle_client_evelope<T: StateType>(
 ) -> Result<ServerMessage, ServerError> {
     let dest_id = match AccountId::try_from(envelope.destination_account_id.clone()) {
         Ok(id) => id,
-        Err(_) => {
-            return Ok(ServerMessage::builder()
-                .r#type(MessageType::Error as i32)
-                .content(Content::Error(ProtocolError::MessageIdDecode.into()))
-                .id(message_id.into())
-                .build());
-        }
+        Err(_) => return Err(ServerError::EnvelopeMalformed),
     };
 
     let all_devices = state.devices.get_devices(dest_id).await?;
@@ -130,9 +103,10 @@ async fn handle_client_evelope<T: StateType>(
     if !missing_devices.is_empty() {
         return Ok(ServerMessage::builder()
             .r#type(MessageType::Error as i32)
-            .content(Content::Error(
-                ProtocolError::NotEncryptedForAllDevices(missing_devices).into(),
-            ))
+            .content(Content::Error(Error {
+                code: ErrorCode::NotEncryptedForAllDevices.into(),
+                device_ids: missing_devices.into(),
+            }))
             .id(message_id.into())
             .build());
     }
@@ -165,9 +139,10 @@ async fn handle_client_evelope<T: StateType>(
     if !extra_devices.is_empty() {
         return Ok(ServerMessage::builder()
             .r#type(MessageType::Error as i32)
-            .content(Content::Error(
-                ProtocolError::EncryptedForExtraDevices(extra_devices).into(),
-            ))
+            .content(Content::Error(Error {
+                code: ErrorCode::EncryptedForExtraDevices.into(),
+                device_ids: extra_devices.into(),
+            }))
             .id(message_id.into())
             .build());
     }

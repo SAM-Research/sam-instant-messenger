@@ -3,6 +3,7 @@ use std::sync::{
     Arc,
 };
 
+use derive_more::Display;
 use futures_util::{
     stream::{SplitSink, SplitStream},
     SinkExt, StreamExt,
@@ -17,7 +18,7 @@ use tokio_tungstenite::{
     Connector, MaybeTlsStream, WebSocketStream,
 };
 
-#[derive(Debug)]
+#[derive(Debug, Display)]
 pub enum WebSocketError {
     UrlError,
     ConnectionFailed,

@@ -5,7 +5,10 @@ use log::error;
 use prost::Message as PMessage;
 use sam_common::{
     address::MessageId,
-    sam_message::{ClientEnvelope, ClientMessage, MessageType, ServerEnvelope, ServerMessage},
+    sam_message::{
+        self, server_message::Content, ClientEnvelope, ClientMessage, Error, MessageType,
+        ServerEnvelope, ServerMessage,
+    },
 };
 use tokio::sync::mpsc::{channel, Receiver, Sender};
 use tokio_tungstenite::tungstenite::{
@@ -14,14 +17,14 @@ use tokio_tungstenite::tungstenite::{
 };
 
 use super::{
-    error::SamProtocolError,
+    error::ProtocolError,
     traits::SamProtocolClient,
-    websocket::{WebSocket, WebSocketClient, WebSocketError, WebSocketReceiver},
+    websocket::{WebSocket, WebSocketClient, WebSocketReceiver},
 };
 
 pub struct ProtocolClient {
     client: Arc<Mutex<WebSocketClient>>,
-    status_messages: Option<Receiver<ServerMessage>>,
+    status_messages: Option<Receiver<ServerStatus>>,
 }
 
 impl ProtocolClient {
@@ -31,35 +34,162 @@ impl ProtocolClient {
             status_messages: None,
         }
     }
-}
 
-struct SamProtocolReceiver {
-    client: Arc<Mutex<WebSocketClient>>,
-    enqueue_status: Sender<ServerMessage>,
-}
+    async fn send_client_message(
+        &mut self,
+        id: MessageId,
+        envelope: ClientEnvelope,
+    ) -> Result<(), ProtocolError> {
+        let message = ClientMessage::builder()
+            .id(id.into())
+            .r#type(MessageType::Message as i32)
+            .message(envelope)
+            .build();
+        self.client
+            .lock()
+            .await
+            .send(Message::Binary(message.encode_to_vec().into()))
+            .await
+            .map_err(|_| ProtocolError::Disconnected)
+    }
 
-impl SamProtocolReceiver {
-    fn new(client: Arc<Mutex<WebSocketClient>>, enqueue_status: Sender<ServerMessage>) -> Self {
-        Self {
-            client,
-            enqueue_status,
+    async fn handle_server_status(
+        &mut self,
+        req_id: MessageId,
+        status: ServerStatus,
+    ) -> Result<(), ProtocolError> {
+        match status {
+            ServerStatus::Ack(message_id) => self.check_id(req_id, message_id).await,
+            ServerStatus::Error(message_id, error) => {
+                self.handle_error(req_id, message_id, error).await
+            }
         }
     }
 
-    async fn send_ack(&self, id: Vec<u8>) -> Result<(), ()> {
+    async fn check_id(
+        &mut self,
+        req_id: MessageId,
+        res_id: MessageId,
+    ) -> Result<(), ProtocolError> {
+        if res_id != req_id {
+            self.client
+                .lock()
+                .await
+                .send(Message::Close(Some(CloseFrame {
+                    code: CloseCode::Error,
+                    reason: "Request and Response Id did not match".into(),
+                })))
+                .await
+                .map_err(|_| ProtocolError::Disconnected)
+        } else {
+            Ok(())
+        }
+    }
+
+    async fn handle_error(
+        &mut self,
+        req_id: MessageId,
+        res_id: MessageId,
+        error: Error,
+    ) -> Result<(), ProtocolError> {
+        self.check_id(req_id, res_id).await?;
+
+        Err(match error.code() {
+            sam_message::ErrorCode::NotEncryptedForAllDevices => ProtocolError::MissingDevices(
+                error.device_ids.ids.iter().map(|id| (*id).into()).collect(),
+            ),
+
+            sam_message::ErrorCode::EncryptedForExtraDevices => ProtocolError::ExtraDevices(
+                error.device_ids.ids.iter().map(|id| (*id).into()).collect(),
+            ),
+        })
+    }
+}
+
+enum ServerStatus {
+    Ack(MessageId),
+    Error(MessageId, sam_message::Error),
+}
+struct SamProtocolReceiver {
+    client: Arc<Mutex<WebSocketClient>>,
+    enqueue_status: Sender<ServerStatus>,
+    enqueue_envelope: Option<Sender<ServerEnvelope>>,
+}
+
+impl SamProtocolReceiver {
+    fn new(client: Arc<Mutex<WebSocketClient>>, enqueue_status: Sender<ServerStatus>) -> Self {
+        Self {
+            client,
+            enqueue_status,
+            enqueue_envelope: None,
+        }
+    }
+
+    async fn send_ack(&self, id: MessageId) -> Result<(), ProtocolError> {
         self.client
             .lock()
             .await
             .send(Message::Binary(
                 ClientMessage::builder()
-                    .id(id)
+                    .id(id.into())
                     .r#type(MessageType::Ack as i32)
                     .build()
                     .encode_to_vec()
                     .into(),
             ))
             .await
-            .map_err(|_| ())
+            .map_err(|_| ProtocolError::Disconnected)
+    }
+
+    async fn handle_server_message(
+        &mut self,
+        message: ServerMessage,
+    ) -> Result<Option<MessageId>, ProtocolError> {
+        let id = MessageId::try_from(message.id.clone())
+            .map_err(|_| ProtocolError::MalformedServerMessage)?;
+
+        let content = match message.r#type() {
+            MessageType::Message | MessageType::Error => message
+                .content
+                .ok_or(ProtocolError::MalformedServerMessage)?,
+            MessageType::Ack => {
+                return self
+                    .handle_server_status(ServerStatus::Ack(id))
+                    .await
+                    .map(|_| None);
+            }
+        };
+
+        match content {
+            Content::Message(envelope) => self
+                .handle_server_envelope(envelope)
+                .await
+                .map(|_| Some(id)),
+            Content::Error(error) => self
+                .handle_server_status(ServerStatus::Error(id, error))
+                .await
+                .map(|_| None),
+        }
+    }
+
+    async fn handle_server_envelope(
+        &mut self,
+        envelope: ServerEnvelope,
+    ) -> Result<(), ProtocolError> {
+        match &self.enqueue_envelope {
+            Some(sender) => sender
+                .send(envelope)
+                .await
+                .map_err(|_| ProtocolError::Disconnected),
+            None => Err(ProtocolError::Disconnected),
+        }
+    }
+
+    async fn handle_server_status(&mut self, status: ServerStatus) -> Result<(), ProtocolError> {
+        self.enqueue_status
+            .send(status)
+            .await
+            .map_err(|_| ProtocolError::Disconnected)
     }
 }
 
@@ -70,6 +200,7 @@ impl WebSocketReceiver<ServerEnvelope> for SamProtocolReceiver {
         mut receiver: SplitStream<WebSocket>,
         enqueue: Sender<ServerEnvelope>,
     ) {
+        self.enqueue_envelope = Some(enqueue);
         while let Some(Ok(msg)) = receiver.next().await {
             let res = match msg {
                 Message::Binary(b) => ServerMessage::decode(b),
@@ -85,41 +216,26 @@ impl WebSocketReceiver<ServerEnvelope> for SamProtocolReceiver {
                 }
             };
 
-            let envelope = match msg.r#type() {
-                MessageType::Message => msg.message,
-                _ => {
-                    match self.enqueue_status.send(msg).await {
-                        Ok(_) => continue,
-                        Err(_) => break, // disconnected
-                    }
-                }
-            };
-
-            let res = match envelope {
-                Some(envelope) => {
-                    let id = envelope.id.clone();
-                    enqueue.send(envelope).await.map(|_| id)
-                }
-                None => {
-                    error!("Malformed server message, disconnecting...");
+            let res = match self.handle_server_message(msg).await {
+                Ok(Some(id)) => self.send_ack(id).await,
+                Err(x) => {
+                    error!("Failed to handle server message '{x}', disconnecting...");
                     break;
                 }
+                Ok(None) => continue,
             };
 
-            let ack_res = match res {
-                Ok(id) => self.send_ack(id).await,
-                Err(_) => Err(()),
-            };
-            if ack_res.is_err() {
-                break; // disconnected
+            if res.is_err() {
+                break; // disconnecting
             }
         }
+        self.enqueue_envelope = None;
     }
 }
 
 #[async_trait::async_trait]
 impl SamProtocolClient for ProtocolClient {
-    async fn connect(&mut self) -> Result<Receiver<ServerEnvelope>, SamProtocolError> {
+    async fn connect(&mut self) -> Result<Receiver<ServerEnvelope>, ProtocolError> {
         let (status_sender, status_receiver) = channel(10);
 
         let handler = SamProtocolReceiver::new(self.client.clone(), status_sender);
@@ -130,9 +246,9 @@ impl SamProtocolClient for ProtocolClient {
             .await
             .connect(handler)
             .await
-            .map_err(SamProtocolError::from)
+            .map_err(|_| ProtocolError::Disconnected)
     }
-    async fn disconnect(&mut self) -> Result<(), SamProtocolError> {
+    async fn disconnect(&mut self) -> Result<(), ProtocolError> {
         self.status_messages = None;
         self.client
             .lock()
@@ -142,42 +258,26 @@ impl SamProtocolClient for ProtocolClient {
                 reason: "bye!".into(),
             })))
             .await
-            .map_err(SamProtocolError::from)
+            .map_err(|_| ProtocolError::Disconnected)
     }
 
     async fn is_connected(&self) -> bool {
         self.client.lock().await.is_connected()
     }
 
-    async fn send_message(&mut self, message: ClientEnvelope) -> Result<(), SamProtocolError> {
+    async fn send_message(&mut self, message: ClientEnvelope) -> Result<(), ProtocolError> {
         let id = MessageId::generate();
 
-        let message = ClientMessage::builder()
-            .id(id.into())
-            .r#type(MessageType::Message as i32)
-            .message(message)
-            .build();
-        self.client
-            .lock()
-            .await
-            .send(Message::Binary(message.encode_to_vec().into()))
-            .await?;
+        self.send_client_message(id, message).await?;
 
         let response = match &mut self.status_messages {
-            Some(status) => status.recv().await.ok_or(WebSocketError::Disconnected),
-            None => Err(WebSocketError::Disconnected),
+            // Client can only send one message at a time, and receive a response to that message
+            // This means that the next status in the queue is always for the current message
+            Some(status) => status.recv().await.ok_or(ProtocolError::Disconnected),
+            None => Err(ProtocolError::Disconnected),
         }?;
 
-        match MessageId::try_from(response.id.clone()) {
-            Ok(res_id) => {
-                if res_id == id && response.r#type() == MessageType::Ack {
-                    Ok(())
-                } else {
-                    Err(SamProtocolError::MalformedServerResponse)
-                }
-            }
-            Err(_) => Err(SamProtocolError::MalformedServerResponse),
-        }
+        self.handle_server_status(id, response).await
     }
 }
 
@@ -191,7 +291,8 @@ mod test {
     use sam_common::{
         address::{AccountId, MessageId},
         sam_message::{
-            ClientEnvelope, ClientMessage, EnvelopeType, MessageType, ServerEnvelope, ServerMessage,
+            server_message::Content, ClientEnvelope, ClientMessage, EnvelopeType, MessageType,
+            ServerEnvelope, ServerMessage,
         },
     };
     use tokio::{
@@ -210,7 +311,7 @@ mod test {
         ServerMessage::builder()
             .id(id.into())
             .r#type(MessageType::Message as i32)
-            .message(
+            .content(Content::Message(
                 ServerEnvelope::builder()
                     .id(id.into())
                     .r#type(EnvelopeType::PlaintextContent as i32)
@@ -220,7 +321,7 @@ mod test {
                     .source_account_id(AccountId::generate().into())
                     .source_device_id(1u32)
                     .build(),
-            )
+            ))
             .build()
     }
 
