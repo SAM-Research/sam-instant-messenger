@@ -3,6 +3,7 @@ use crate::managers::error::{
     AccountManagerError, DeviceManagerError, KeyManagerError, MessageManagerError,
 };
 use crate::routes::error::RouterError;
+use axum::http::StatusCode;
 use axum::response::IntoResponse;
 use derive_more::derive::{Display, Error};
 use derive_more::From;
@@ -21,12 +22,16 @@ pub enum ServerError {
     MessageManager(MessageManagerError),
     Authorization(AuthorizationError),
     Router(RouterError),
+    EnvelopeMalformed,
 }
 
 impl IntoResponse for ServerError {
     fn into_response(self) -> axum::response::Response {
         error!("ServerError occured: {}", self);
         match self {
+            ServerError::EnvelopeMalformed => {
+                (StatusCode::BAD_REQUEST, "Message is malformed".to_string()).into_response()
+            }
             ServerError::Lib(error) => error.into_response(),
             ServerError::MessageManager(error) => error.into_response(),
             ServerError::AccountManager(error) => error.into_response(),
