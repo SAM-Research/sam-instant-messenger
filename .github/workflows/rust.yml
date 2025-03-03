@@ -167,8 +167,8 @@ jobs:
 
       - name: Install tarpaulin if not cached
         run: |
-          if ! command -v tarpaulin &> /dev/null; then
-            cargo install tarpaulin
+          if ! cargo tarpaulin --version &> /dev/null; then
+            cargo install cargo-tarpaulin
           else
             echo "tarpaulin found in cache, skipping installation"
           fi
