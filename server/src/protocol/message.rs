@@ -1,29 +1,19 @@
 use crate::{
     auth::authenticated_user::AuthenticatedUser,
-    managers::traits::message_manager::MessageManager,
+    managers::traits::{device_manager::DeviceManager, message_manager::MessageManager},
     state::{state_type::StateType, ServerState},
     ServerError,
 };
 use log::{error, warn};
 use sam_common::{
-    address::AccountId,
-    sam_message::{ClientMessage, ServerEnvelope, ServerMessage},
-};
-use sam_common::{
     address::MessageId,
     sam_message::{ClientEnvelope, MessageType},
 };
-
-macro_rules! error_message {
-    ($msg_id:expr) => {
-        Ok(Some(
-            ServerMessage::builder()
-                .r#type(MessageType::Error as i32)
-                .id($msg_id)
-                .build(),
-        ))
-    };
-}
+use sam_common::{
+    address::{AccountId, DeviceId},
+    protocol::error::ProtocolError,
+    sam_message::{server_message::Content, ClientMessage, ServerEnvelope, ServerMessage},
+};
 
 pub async fn handle_client_message<T: StateType>(
     state: &mut ServerState<T>,
@@ -32,15 +22,31 @@ pub async fn handle_client_message<T: StateType>(
 ) -> Result<Option<ServerMessage>, ServerError> {
     let message_id = match MessageId::try_from(message.id.clone()) {
         Ok(id) => id,
-        Err(_) => return error_message!(message.id),
+        Err(_) => {
+            return Ok(Some(
+                ServerMessage::builder()
+                    .id(message.id)
+                    .r#type(MessageType::Error.into())
+                    .content(Content::Error(ProtocolError::MessageIdDecode.into()))
+                    .build(),
+            ))
+        }
     };
 
     match message.r#type() {
         MessageType::Message => {
             if let Some(envelope) = message.message {
-                handle_client_evelope(state, message_id, envelope).await
+                Ok(Some(
+                    handle_client_evelope(state, message_id, envelope).await?,
+                ))
             } else {
-                error_message!(message_id.into())
+                Ok(Some(
+                    ServerMessage::builder()
+                        .id(message.id)
+                        .r#type(MessageType::Error.into())
+                        .content(Content::Error(ProtocolError::NoEnvelopeInMessage.into()))
+                        .build(),
+                ))
             }
         }
         MessageType::Ack => {
@@ -63,11 +69,17 @@ pub async fn handle_client_message<T: StateType>(
                 }
                 Err(e) => {
                     warn!(
-                        "error '{}', websocket user '{}' sent an ack with unknown id",
+                        "error '{}', protocol user '{}' sent an ack with unknown id",
                         e,
                         auth_user.account().username()
                     );
-                    error_message!(message_id.into())
+                    Ok(Some(
+                        ServerMessage::builder()
+                            .id(message.id)
+                            .r#type(MessageType::Error.into())
+                            .content(Content::Error(ProtocolError::UnknownMessageAcked.into()))
+                            .build(),
+                    ))
                 }
             }
         }
@@ -95,11 +107,43 @@ async fn handle_client_evelope<T: StateType>(
     state: &mut ServerState<T>,
     message_id: MessageId,
     envelope: ClientEnvelope,
-) -> Result<Option<ServerMessage>, ServerError> {
+) -> Result<ServerMessage, ServerError> {
     let dest_id = match AccountId::try_from(envelope.destination_account_id.clone()) {
         Ok(id) => id,
-        Err(_) => return error_message!(message_id.into()),
+        Err(_) => {
+            return Ok(ServerMessage::builder()
+                .r#type(MessageType::Error as i32)
+                .content(Content::Error(ProtocolError::MessageIdDecode.into()))
+                .id(message_id.into())
+                .build());
+        }
     };
+
+    let all_devices = state.devices.get_devices(dest_id).await?;
+
+    let missing_devices: Vec<DeviceId> = all_devices
+        .clone()
+        .into_iter()
+        .filter(|id| !envelope.content.contains_key(id))
+        .collect();
+
+    if !missing_devices.is_empty() {
+        return Ok(ServerMessage::builder()
+            .r#type(MessageType::Error as i32)
+            .content(Content::Error(
+                ProtocolError::NotEncryptedForAllDevices(missing_devices).into(),
+            ))
+            .id(message_id.into())
+            .build());
+    }
+
+    let extra_devices: Vec<DeviceId> = envelope
+        .content
+        .keys()
+        .cloned()
+        .filter(|id| !all_devices.contains(&(*id).into()))
+        .map(|id| id.into())
+        .collect();
 
     for (device_id, cipher) in envelope.content {
         let id = MessageId::generate();
@@ -118,12 +162,20 @@ async fn handle_client_evelope<T: StateType>(
             .await?;
     }
 
-    Ok(Some(
-        ServerMessage::builder()
+    if !extra_devices.is_empty() {
+        return Ok(ServerMessage::builder()
+            .r#type(MessageType::Error as i32)
+            .content(Content::Error(
+                ProtocolError::EncryptedForExtraDevices(extra_devices).into(),
+            ))
             .id(message_id.into())
-            .r#type(MessageType::Ack as i32)
-            .build(),
-    ))
+            .build());
+    }
+
+    Ok(ServerMessage::builder()
+        .id(message_id.into())
+        .r#type(MessageType::Ack.into())
+        .build())
 }
 
 pub async fn handle_server_envelope<T: StateType>(
@@ -132,6 +184,7 @@ pub async fn handle_server_envelope<T: StateType>(
     envelope: ServerEnvelope,
 ) -> Result<Option<ServerMessage>, ServerError> {
     let id = MessageId::try_from(envelope.id.clone())?;
+
     state
         .messages
         .add_pending_message(auth_user.account().id(), auth_user.device().id(), id)
@@ -140,8 +193,8 @@ pub async fn handle_server_envelope<T: StateType>(
     Ok(Some(
         ServerMessage::builder()
             .id(id.into())
-            .message(envelope)
-            .r#type(MessageType::Message as i32)
+            .r#type(MessageType::Message.into())
+            .content(Content::Message(envelope))
             .build(),
     ))
 }

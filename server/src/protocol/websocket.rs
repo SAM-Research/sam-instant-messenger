@@ -12,8 +12,8 @@ use sam_common::{
 use tokio::sync::mpsc;
 use tokio::sync::mpsc::{Receiver, Sender};
 
-use crate::logic::message::{handle_client_message, handle_server_envelope};
-use crate::websocket::error::{WebSocketError, WebSocketSessionError};
+use crate::protocol::error::{WebSocketError, WebSocketSessionError};
+use crate::protocol::message::{handle_client_message, handle_server_envelope};
 use crate::{
     auth::authenticated_user::AuthenticatedUser,
     managers::traits::message_manager::MessageManager,
@@ -23,7 +23,7 @@ use crate::{
 macro_rules! closing_err {
     ($username:expr, $err:expr) => {
         error!(
-            "User '{}' websocket encountered an error '{}' closing connection...",
+            "User '{}' protocol encountered an error '{}' closing connection...",
             $username, $err
         )
     };
@@ -71,7 +71,7 @@ async fn websocket_message_receiver<T: StateType>(
         let decode_res = match msg {
             Message::Binary(b) => {
                 info!(
-                    "Received websocket message from user '{}'",
+                    "Received protocol message from user '{}'",
                     auth_user.account().username()
                 );
                 ClientMessage::decode(b).map_err(|_| WebSocketError::WebSocketDecodeError)

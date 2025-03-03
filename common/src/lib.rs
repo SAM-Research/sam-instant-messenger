@@ -1,6 +1,7 @@
 pub mod address;
 pub mod api;
 pub mod error;
+pub mod protocol;
 pub mod time;
 
 pub use address::{AccountId, DeviceId};

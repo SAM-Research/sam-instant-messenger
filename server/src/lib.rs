@@ -2,10 +2,10 @@ pub mod auth;
 pub mod error;
 pub mod logic;
 pub mod managers;
+pub mod protocol;
 pub mod routes;
 pub mod server;
 pub mod state;
-pub mod websocket;
 
 #[cfg(test)]
 mod test_utils;

@@ -1,6 +1,6 @@
 use libsignal_protocol::IdentityKey;
 use sam_common::{
-    address::{AccountId, DeviceId, RegistrationId},
+    address::{AccountId, DeviceId},
     api::keys::{Key, PreKeyBundle, PreKeyBundles, PublishPreKeys},
 };
 
@@ -17,9 +17,13 @@ use crate::{
 pub async fn get_keybundle<T: StateType>(
     state: &mut ServerState<T>,
     account_id: AccountId,
-    registration_id: RegistrationId,
     device_id: DeviceId,
 ) -> Result<PreKeyBundle, ServerError> {
+    let registration_id = state
+        .devices
+        .get_device(account_id, device_id)
+        .await?
+        .registration_id();
     let pre_key = state.keys.get_pre_key(account_id, device_id).await?;
     let pq_pre_key = state.keys.get_pq_pre_key(account_id, device_id).await?;
     let signed_pre_key = state.keys.get_signed_pre_key(account_id, device_id).await?;
@@ -118,9 +122,7 @@ pub async fn get_keybundles<T: StateType>(
     let bundles = {
         let mut bundle_vec = vec![];
         for device in devices {
-            bundle_vec.push(
-                get_keybundle(state, account_id, device.registration_id(), device.id()).await?,
-            );
+            bundle_vec.push(get_keybundle(state, account_id, device.id()).await?);
         }
         bundle_vec
     };
@@ -219,7 +221,32 @@ mod test {
         let mut rng = OsRng;
         let pair = IdentityKeyPair::generate(&mut rng);
 
-        let account_id = AccountId::generate();
+        let account = Account::builder()
+            .id(AccountId::generate())
+            .identity(*pair.identity_key())
+            .username("Alice".to_string())
+            .build();
+
+        state
+            .accounts
+            .add_account(&account)
+            .await
+            .expect("Can add account");
+
+        let device = Device::builder()
+            .id(1.into())
+            .name("Alice Secret Phone".to_string())
+            .password(Password::generate("dave<3".to_string()).expect("Alice can create password"))
+            .creation(0)
+            .registration_id(1.into())
+            .build();
+
+        let account_id = account.id();
+        state
+            .devices
+            .add_device(account_id, &device)
+            .await
+            .expect("Alice can add device");
 
         let key_bundle = create_publish_pre_keys(
             Some(vec![1, 2]),
@@ -241,7 +268,7 @@ mod test {
         .expect("User can create key bundle");
 
         // testing if we get keys
-        let bundle = get_keybundle(&mut state, account_id, 1.into(), 1.into())
+        let bundle = get_keybundle(&mut state, account_id, 1.into())
             .await
             .expect("User have uploaded bundles");
 
@@ -252,7 +279,7 @@ mod test {
         assert!(bundle.pq_pre_key.id() == 1);
 
         // testing if we get last resort key
-        let bundle = get_keybundle(&mut state, account_id, 1.into(), 1.into())
+        let bundle = get_keybundle(&mut state, account_id, 1.into())
             .await
             .expect("User have uploaded bundles");
         assert!(bundle.pq_pre_key.id() == 33)
