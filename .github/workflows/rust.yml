@@ -160,20 +160,25 @@ jobs:
       - name: Run Test
         run: cargo test --all
   coverage:
+    name: coverage
+
+on: [push]
+jobs:
+  test:
+    name: coverage
     runs-on: ubuntu-latest
+    container:
+      image: xd009642/tarpaulin:develop-nightly
+      options: --security-opt seccomp=unconfined
     steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
+      - name: Checkout repository
+        uses: actions/checkout@v2
 
-      - name: Install Tarpaulin
-        run: cargo install cargo-tarpaulin
+      - name: Generate code coverage
+        run: |
+          cargo +nightly tarpaulin --verbose --all-features --workspace --timeout --ignore-tests 120 --out xml
 
-      - name: Run Coverage
-        run: cargo tarpaulin --verbose --ignore-tests
-
-      - name: Upload Coverage Report
-        uses: codecov/codecov-action@v3
+      - name: Upload to codecov.io
+        uses: codecov/codecov-action@v2
         with:
-          token: ${{ secrets.CODECOV_TOKEN }}
-          files: ./cobertura.xml
           fail_ci_if_error: true
