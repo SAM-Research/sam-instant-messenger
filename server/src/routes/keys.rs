@@ -20,7 +20,7 @@ use crate::{
 };
 
 /// Returns key bundles for users devices
-pub async fn key_bundles_endpoint<T: StateType>(
+async fn key_bundles_endpoint<T: StateType>(
     Path(account_id): Path<AccountId>,
     _auth_user: AuthenticatedUser,
     State(mut state): State<ServerState<T>>,
@@ -28,7 +28,7 @@ pub async fn key_bundles_endpoint<T: StateType>(
     get_keybundles(&mut state, account_id).await.map(Json)
 }
 
-pub async fn key_bundle_endpoint<T: StateType>(
+async fn key_bundle_endpoint<T: StateType>(
     Path((account_id, device_id)): Path<(AccountId, DeviceId)>,
     State(mut state): State<ServerState<T>>,
 ) -> Result<Json<PreKeyBundle>, ServerError> {
