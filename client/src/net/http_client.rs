@@ -143,18 +143,9 @@ impl ApiClient for HttpClient {
                     .to_owned(),
             );
             return match status {
-                reqwest::StatusCode::NOT_FOUND => match text.as_str() {
-                    "Device does not exist." => {
-                        Err(ApiClientError::DeviceDoesNotExist(status.as_u16(), text))
-                    }
-                    "Account does not exist." => {
-                        Err(ApiClientError::AccountDoesNotExist(status.as_u16(), text))
-                    }
-                    "Key does not exist." => {
-                        Err(ApiClientError::KeyDoesNotExist(status.as_u16(), text))
-                    }
-                    _ => Err(ApiClientError::BadResponse(status.as_u16(), text)),
-                },
+                reqwest::StatusCode::NOT_FOUND => {
+                    Err(ApiClientError::DoesNotExist(status.as_u16(), text))
+                }
                 reqwest::StatusCode::UNAUTHORIZED => {
                     Err(ApiClientError::ClientUnauthorized(status.as_u16(), text))
                 }
@@ -203,15 +194,9 @@ impl ApiClient for HttpClient {
                     .to_owned(),
             );
             return match status {
-                reqwest::StatusCode::NOT_FOUND => match text.as_str() {
-                    "Device does not exist." => {
-                        Err(ApiClientError::DeviceDoesNotExist(status.as_u16(), text))
-                    }
-                    "Account does not exist." => {
-                        Err(ApiClientError::AccountDoesNotExist(status.as_u16(), text))
-                    }
-                    _ => Err(ApiClientError::BadResponse(status.as_u16(), text)),
-                },
+                reqwest::StatusCode::NOT_FOUND => {
+                    Err(ApiClientError::DoesNotExist(status.as_u16(), text))
+                }
                 reqwest::StatusCode::UNAUTHORIZED => {
                     Err(ApiClientError::ClientUnauthorized(status.as_u16(), text))
                 }
@@ -259,15 +244,9 @@ impl ApiClient for HttpClient {
                 reqwest::StatusCode::FORBIDDEN => {
                     Err(ApiClientError::DeviceProvisionUnAuth(status.as_u16(), text))
                 }
-                reqwest::StatusCode::NOT_FOUND => match text.as_str() {
-                    "Device does not exist." => {
-                        Err(ApiClientError::DeviceDoesNotExist(status.as_u16(), text))
-                    }
-                    "Account does not exist." => {
-                        Err(ApiClientError::AccountDoesNotExist(status.as_u16(), text))
-                    }
-                    _ => Err(ApiClientError::BadResponse(status.as_u16(), text)),
-                },
+                reqwest::StatusCode::NOT_FOUND => {
+                    Err(ApiClientError::DoesNotExist(status.as_u16(), text))
+                }
                 reqwest::StatusCode::UNAUTHORIZED => {
                     Err(ApiClientError::ClientUnauthorized(status.as_u16(), text))
                 }
@@ -316,15 +295,9 @@ impl ApiClient for HttpClient {
                     .to_owned(),
             );
             return match status {
-                reqwest::StatusCode::NOT_FOUND => match text.as_str() {
-                    "Device does not exist." => {
-                        Err(ApiClientError::DeviceDoesNotExist(status.as_u16(), text))
-                    }
-                    "Account does not exist." => {
-                        Err(ApiClientError::AccountDoesNotExist(status.as_u16(), text))
-                    }
-                    _ => Err(ApiClientError::BadResponse(status.as_u16(), text)),
-                },
+                reqwest::StatusCode::NOT_FOUND => {
+                    Err(ApiClientError::DoesNotExist(status.as_u16(), text))
+                }
                 reqwest::StatusCode::UNAUTHORIZED => {
                     Err(ApiClientError::ClientUnauthorized(status.as_u16(), text))
                 }
@@ -375,15 +348,9 @@ impl ApiClient for HttpClient {
                 reqwest::StatusCode::FORBIDDEN => {
                     Err(ApiClientError::DeviceUnAuth(status.as_u16(), text))
                 }
-                reqwest::StatusCode::NOT_FOUND => match text.as_str() {
-                    "Device does not exist." => {
-                        Err(ApiClientError::DeviceDoesNotExist(status.as_u16(), text))
-                    }
-                    "Account does not exist." => {
-                        Err(ApiClientError::AccountDoesNotExist(status.as_u16(), text))
-                    }
-                    _ => Err(ApiClientError::BadResponse(status.as_u16(), text)),
-                },
+                reqwest::StatusCode::NOT_FOUND => {
+                    Err(ApiClientError::DoesNotExist(status.as_u16(), text))
+                }
                 reqwest::StatusCode::UNAUTHORIZED => {
                     Err(ApiClientError::ClientUnauthorized(status.as_u16(), text))
                 }

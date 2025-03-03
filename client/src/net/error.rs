@@ -5,6 +5,8 @@ pub enum ApiClientError {
     CouldNotParseUrl(#[error(not(source))] String),
     CouldNotBuildRequest,
     CouldNotSendRequest,
+    #[display("HTTP Error {_0}: {_1}")]
+    DoesNotExist(u16, String),
     #[display("Got bad response from server: {_0} - {_1}")]
     BadResponse(u16, String),
     #[display("Account already exists on server: {_0} - {_1}")]

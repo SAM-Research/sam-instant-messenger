@@ -90,7 +90,7 @@ impl DeviceManager for InMemoryDeviceManager {
         let key = DeviceAddress::new(account_id, device.id());
 
         if self.devices.lock().await.contains_key(&key) {
-            return Err(DeviceManagerError::DeviceExists)?;
+            return Err(DeviceManagerError::DeviceAlreadyExists)?;
         }
 
         self.account_devices
