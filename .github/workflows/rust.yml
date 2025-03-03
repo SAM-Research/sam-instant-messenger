@@ -157,20 +157,25 @@ jobs:
       - name: Setup sqlx
         run: cd client/database/ && sqlx db create -D sqlite://dev.db && sqlx migrate run -D sqlite://dev.db && cd ../..
 
-      - name: Run Test
-        run: cargo test --all
-  coverage:
-    runs-on: ubuntu-latest
-    container:
-      image: xd009642/tarpaulin:develop-nightly
-      options: --security-opt seccomp=unconfined
-    steps:
-      - name: Checkout repository
-        uses: actions/checkout@v2
+      - name: Cache Cargo bin (for tarpaulin)
+        uses: actions/cache@v4
+        with:
+          path: ~/.cargo/bin/tarpaulin
+          key: tarpaulin-${{ runner.os }}-${{ hashFiles('**/Cargo.lock') }}
+          restore-keys: |
+            tarpaulin-${{ runner.os }}-
 
-      - name: Generate code coverage
+      - name: Install tarpaulin if not cached
         run: |
-          cargo +nightly tarpaulin --verbose --all-features --workspace --timeout 120 --out xml
+          if ! command -v tarpaulin &> /dev/null; then
+            cargo install tarpaulin
+          else
+            echo "tarpaulin found in cache, skipping installation"
+          fi
+
+      - name: Run Tarpaulin / Tests
+        run: |
+          cargo tarpaulin --verbose --all-features --workspace --out xml
 
       - name: Upload to codecov.io
         uses: codecov/codecov-action@v2
