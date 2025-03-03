@@ -83,7 +83,7 @@ async fn websocket_message_receiver<T: StateType>(
         let msg_res = match decode_res {
             Ok(msg) => handle_client_message(&mut state, &auth_user, msg)
                 .await
-                .map_err(|e| WebSocketSessionError::from(e)),
+                .map_err(WebSocketSessionError::from),
             Err(e) => Err(WebSocketSessionError::from(e)),
         };
 
@@ -160,7 +160,7 @@ async fn websocket_dispatcher<T: StateType>(
         let msg_res = match msg_res {
             Ok(envelope) => handle_server_envelope(&mut state, &auth_user, envelope)
                 .await
-                .map_err(|e| WebSocketSessionError::from(e)),
+                .map_err(WebSocketSessionError::from),
             Err(e) => Err(WebSocketSessionError::from(e)),
         };
 

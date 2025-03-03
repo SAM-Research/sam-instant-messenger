@@ -34,7 +34,7 @@ pub fn verify_token(
         .map_err(|_| AuthorizationError::DeviceSignatureDecodeError)?;
 
     if signature != expected_signature {
-        return Err(AuthorizationError::DeviceWrongSignature)?;
+        Err(AuthorizationError::DeviceWrongSignature)?;
     }
 
     let (account_id, timestamp) = decode_claims(claims)?;
