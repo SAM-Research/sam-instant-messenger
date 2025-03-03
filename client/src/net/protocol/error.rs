@@ -4,7 +4,6 @@ use sam_common::DeviceId;
 pub enum ProtocolError {
     MalformedServerMessage,
     Disconnected,
-    WrongServerAck,
     ExtraDevices(Vec<DeviceId>),
     MissingDevices(Vec<DeviceId>),
 }
@@ -16,7 +15,6 @@ impl std::fmt::Display for ProtocolError {
                 write!(f, "ProtocolError::MalformedServerMessage")
             }
             ProtocolError::Disconnected => write!(f, "ProtocolError::Disconnected"),
-            ProtocolError::WrongServerAck => write!(f, "ProtocolError::WrongServerAck"),
             ProtocolError::ExtraDevices(devices) => {
                 write!(f, "ProtocolError::ExtraDevices({:?})", devices)
             }
