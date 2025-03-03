@@ -53,6 +53,11 @@ impl From<WebSocketClientConfig> for WebSocketClient {
     }
 }
 
+#[async_trait::async_trait]
+pub trait WebSocketReceiver<T>: Send + 'static {
+    async fn handler(&mut self, receiver: SplitStream<WebSocket>, enqueue: Sender<T>);
+}
+
 impl WebSocketClient {
     pub fn new(config: WebSocketClientConfig) -> Self {
         Self {
@@ -84,13 +89,12 @@ impl WebSocketClient {
         Ok(ws)
     }
 
-    pub async fn connect<T, F, Fut>(
+    pub async fn connect<T>(
         &mut self,
-        receive_handler: F,
+        mut ws_receiver: impl WebSocketReceiver<T>,
     ) -> Result<Receiver<T>, WebSocketError>
     where
-        F: Fn(SplitStream<WebSocket>, Sender<T>, Arc<AtomicBool>) -> Fut,
-        Fut: std::future::Future<Output = ()> + Send + 'static,
+        T: Send + 'static,
     {
         if self.is_connected() {
             return Err(WebSocketError::AlreadyConnected);
@@ -100,9 +104,12 @@ impl WebSocketClient {
 
         self.sink = Some(sender);
 
-        // TODO: when async closures are allowed we need to make it so
-        // the thread is responsible for the connected bool instead of the handler
-        tokio::spawn(receive_handler(receiver, enqueue, self.connected.clone()));
+        let connected = self.connected.clone();
+        tokio::spawn(async move {
+            connected.store(true, Ordering::SeqCst);
+            ws_receiver.handler(receiver, enqueue).await;
+            connected.store(false, Ordering::SeqCst);
+        });
         Ok(queue)
     }
 
@@ -131,9 +138,6 @@ impl WebSocketClient {
 
 #[cfg(test)]
 mod test {
-    use std::sync::atomic::{AtomicBool, Ordering};
-    use std::sync::Arc;
-
     use futures_util::stream::SplitStream;
     use futures_util::{SinkExt, StreamExt};
     use tokio::net::TcpListener;
@@ -143,7 +147,7 @@ mod test {
     use crate::net::protocol::websocket::WebSocketClient;
     use crate::net::protocol::websocket::WebSocketClientConfig;
 
-    use super::WebSocket;
+    use super::{WebSocket, WebSocketReceiver};
 
     async fn test_server(addr: String) {
         let listener = TcpListener::bind(addr).await.unwrap();
@@ -158,19 +162,18 @@ mod test {
         });
     }
 
-    async fn client_receiver(
-        mut receiver: SplitStream<WebSocket>,
-        enqueue: Sender<String>,
-        connected: Arc<AtomicBool>,
-    ) {
-        connected.store(true, Ordering::SeqCst);
-        if let Some(Ok(Message::Text(x))) = receiver.next().await {
-            enqueue
-                .send(x.to_string())
-                .await
-                .expect("Can enqueue string")
+    struct WSReceiver;
+
+    #[async_trait::async_trait]
+    impl WebSocketReceiver<String> for WSReceiver {
+        async fn handler(&mut self, mut receiver: SplitStream<WebSocket>, enqueue: Sender<String>) {
+            if let Some(Ok(Message::Text(x))) = receiver.next().await {
+                enqueue
+                    .send(x.to_string())
+                    .await
+                    .expect("Can enqueue string")
+            }
         }
-        connected.store(false, Ordering::SeqCst);
     }
 
     #[tokio::test]
@@ -184,7 +187,7 @@ mod test {
             .build()
             .into();
 
-        let mut receiver = client.connect(client_receiver).await.expect("Can Connect");
+        let mut receiver = client.connect(WSReceiver {}).await.expect("Can Connect");
 
         client
             .send(Message::Text("Hello".into()))

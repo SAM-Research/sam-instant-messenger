@@ -1,7 +1,4 @@
-use std::sync::{
-    atomic::{AtomicBool, Ordering},
-    Arc,
-};
+use std::sync::Arc;
 
 use futures_util::{lock::Mutex, stream::SplitStream, StreamExt};
 use log::error;
@@ -19,7 +16,7 @@ use tokio_tungstenite::tungstenite::{
 use super::{
     error::SamProtocolError,
     traits::SamProtocolClient,
-    websocket::{WebSocket, WebSocketClient, WebSocketError},
+    websocket::{WebSocket, WebSocketClient, WebSocketError, WebSocketReceiver},
 };
 
 pub struct ProtocolClient {
@@ -36,73 +33,88 @@ impl ProtocolClient {
     }
 }
 
-async fn protocol_handler(
-    mut receiver: SplitStream<WebSocket>,
-    enqueue: Sender<ServerEnvelope>,
+struct SamProtocolReceiver {
     client: Arc<Mutex<WebSocketClient>>,
     enqueue_status: Sender<ServerMessage>,
-    connected: Arc<AtomicBool>,
-) {
-    connected.store(true, Ordering::SeqCst);
+}
 
-    while let Some(Ok(msg)) = receiver.next().await {
-        let res = match msg {
-            Message::Binary(b) => ServerMessage::decode(b),
-            Message::Close(_) => break,
-            _ => continue,
-        };
-
-        let msg = match res {
-            Ok(msg) => msg,
-            Err(e) => {
-                error!("Failed to decode message from server '{e}', disconnecting...");
-                break;
-            }
-        };
-
-        let envelope = match msg.r#type() {
-            MessageType::Message => msg.message,
-            _ => {
-                match enqueue_status.send(msg).await {
-                    Ok(_) => continue,
-                    Err(_) => break, // disconnected
-                }
-            }
-        };
-
-        let res = match envelope {
-            Some(envelope) => {
-                let id = envelope.id.clone();
-                enqueue.send(envelope).await.map(|_| id)
-            }
-            None => {
-                error!("Malformed server message, disconnecting...");
-                break;
-            }
-        };
-
-        let ack_res = match res {
-            Ok(id) => client
-                .lock()
-                .await
-                .send(Message::Binary(
-                    ClientMessage::builder()
-                        .id(id)
-                        .r#type(MessageType::Ack as i32)
-                        .build()
-                        .encode_to_vec()
-                        .into(),
-                ))
-                .await
-                .map_err(|_| ()),
-            Err(_) => Err(()),
-        };
-        if ack_res.is_err() {
-            break; // disconnected
+impl SamProtocolReceiver {
+    fn new(client: Arc<Mutex<WebSocketClient>>, enqueue_status: Sender<ServerMessage>) -> Self {
+        Self {
+            client,
+            enqueue_status,
         }
     }
 
-    connected.store(false, Ordering::SeqCst);
+    async fn send_ack(&self, id: Vec<u8>) -> Result<(), ()> {
+        self.client
+            .lock()
+            .await
+            .send(Message::Binary(
+                ClientMessage::builder()
+                    .id(id)
+                    .r#type(MessageType::Ack as i32)
+                    .build()
+                    .encode_to_vec()
+                    .into(),
+            ))
+            .await
+            .map_err(|_| ())
+    }
+}
+
+#[async_trait::async_trait]
+impl WebSocketReceiver<ServerEnvelope> for SamProtocolReceiver {
+    async fn handler(
+        &mut self,
+        mut receiver: SplitStream<WebSocket>,
+        enqueue: Sender<ServerEnvelope>,
+    ) {
+        while let Some(Ok(msg)) = receiver.next().await {
+            let res = match msg {
+                Message::Binary(b) => ServerMessage::decode(b),
+                Message::Close(_) => break,
+                _ => continue,
+            };
+
+            let msg = match res {
+                Ok(msg) => msg,
+                Err(e) => {
+                    error!("Failed to decode message from server '{e}', disconnecting...");
+                    break;
+                }
+            };
+
+            let envelope = match msg.r#type() {
+                MessageType::Message => msg.message,
+                _ => {
+                    match self.enqueue_status.send(msg).await {
+                        Ok(_) => continue,
+                        Err(_) => break, // disconnected
+                    }
+                }
+            };
+
+            let res = match envelope {
+                Some(envelope) => {
+                    let id = envelope.id.clone();
+                    enqueue.send(envelope).await.map(|_| id)
+                }
+                None => {
+                    error!("Malformed server message, disconnecting...");
+                    break;
+                }
+            };
+
+            let ack_res = match res {
+                Ok(id) => self.send_ack(id).await,
+                Err(_) => Err(()),
+            };
+            if ack_res.is_err() {
+                break; // disconnected
+            }
+        }
+    }
 }
 
 #[async_trait::async_trait]
@@ -110,15 +122,7 @@ impl SamProtocolClient for ProtocolClient {
     async fn connect(&mut self) -> Result<Receiver<ServerEnvelope>, SamProtocolError> {
         let (status_sender, status_receiver) = channel(10);
 
-        let client = self.client.clone();
-
-        let handler = move |receiver: SplitStream<WebSocket>,
-                            enqueue: Sender<ServerEnvelope>,
-                            connected: Arc<AtomicBool>| {
-            let status_sender = status_sender.clone();
-            let client = client.clone();
-            async move { protocol_handler(receiver, enqueue, client, status_sender, connected).await }
-        };
+        let handler = SamProtocolReceiver::new(self.client.clone(), status_sender);
 
         self.status_messages = Some(status_receiver);
         self.client
@@ -260,7 +264,7 @@ mod test {
         Send,
     }
 
-    async fn test_server(addr: String, msg_seq: Vec<ServerAction>) -> Receiver<Result<(), String>> {
+    async fn test_server(addr: String, actions: Vec<ServerAction>) -> Receiver<Result<(), String>> {
         let listener = TcpListener::bind(addr).await.unwrap();
 
         let (tx, rx) = oneshot::channel();
@@ -268,112 +272,126 @@ mod test {
             let (stream, _) = listener.accept().await.unwrap();
             let mut ws_stream = accept_async(stream).await.unwrap();
             let mut tx = Some(tx);
-            for (i, action) in msg_seq.iter().enumerate() {
-                match action {
-                    ServerAction::Send => {
-                        let id = MessageId::generate();
-
-                        // server sends messages to client
-                        match send(&mut ws_stream, server_env(id)).await {
-                            Ok(_) => {}
-                            Err(_) => {
-                                oneshot(&mut tx, Err("Failed to send".to_string()));
-                                break;
-                            }
-                        }
-
-                        // server expects an ack message from client
-                        if let Some(Ok(msg)) = ws_stream.next().await {
-                            let msg_res = match msg {
-                                Message::Binary(b) => decode_client_msg(b),
-                                _ => {
-                                    oneshot(
-                                        &mut tx,
-                                        Err("Only expects binary messages".to_string()),
-                                    );
-                                    break;
-                                }
-                            };
-
-                            let msg = match msg_res {
-                                Ok(msg) => msg,
-                                Err(_) => {
-                                    oneshot(
-                                        &mut tx,
-                                        Err("Failed to decode client message when receiving"
-                                            .to_string()),
-                                    );
-                                    break;
-                                }
-                            };
-
-                            if msg.r#type() != MessageType::Ack {
-                                oneshot(
-                                    &mut tx,
-                                    Err("Expected Ack message got something else".to_string()),
-                                );
-                                break;
-                            }
-
-                            if id.into_bytes() != *msg.id {
-                                oneshot(
-                                    &mut tx,
-                                    Err("Ack Id is not the same as sent Id".to_string()),
-                                );
-                                break;
-                            }
-                        }
-                    }
-                    ServerAction::Receive => {
-                        if let Some(Ok(msg)) = ws_stream.next().await {
-                            let msg_res = match msg {
-                                Message::Binary(b) => decode_client_msg(b),
-                                _ => return,
-                            };
-
-                            let id = match msg_res {
-                                Ok(msg) => msg.id,
-                                Err(_) => {
-                                    oneshot(
-                                        &mut tx,
-                                        Err("Failed to decode client message when receiving"
-                                            .to_string()),
-                                    );
-                                    break;
-                                }
-                            };
-
-                            let timeout = tokio::time::timeout(
-                                Duration::from_millis(300),
-                                send(&mut ws_stream, server_ack(id)),
-                            )
-                            .await;
-                            let res = match timeout {
-                                Ok(res) => res,
-                                Err(_) => {
-                                    oneshot(
-                                        &mut tx,
-                                        Err("Client failed to send in time interval".to_string()),
-                                    );
-                                    break;
-                                }
-                            };
-                            match res {
-                                Ok(_) => {}
-                                Err(_) => {
-                                    oneshot(&mut tx, Err("Failed to send".to_string()));
-                                    break;
-                                }
-                            };
-                        }
-                    }
-                }
-                if i == msg_seq.len() - 1 {
-                    oneshot(&mut tx, Ok(()));
+            for action in actions {
+                let success = match action {
+                    ServerAction::Send => server_send(&mut ws_stream, &mut tx).await,
+                    ServerAction::Receive => server_receive(&mut ws_stream, &mut tx).await,
+                };
+                if !success {
+                    break;
                 }
             }
+            oneshot(&mut tx, Ok(()))
         });
         rx
+    }
+
+    async fn server_send(
+        mut ws_stream: &mut WebSocketStream<TcpStream>,
+        mut tx: &mut Option<Sender<Result<(), String>>>,
+    ) -> bool {
+        let id = MessageId::generate();
+
+        // server sends messages to client
+        match send(&mut ws_stream, server_env(id)).await {
+            Ok(_) => {}
+            Err(_) => {
+                oneshot(&mut tx, Err("Failed to send".to_string()));
+                return false;
+            }
+        }
+
+        // server expects an ack message from client
+        if let Some(Ok(msg)) = ws_stream.next().await {
+            let msg_res = match msg {
+                Message::Binary(b) => decode_client_msg(b),
+                _ => {
+                    oneshot(&mut tx, Err("Only expects binary messages".to_string()));
+                    return false;
+                }
+            };
+
+            let msg = match msg_res {
+                Ok(msg) => msg,
+                Err(_) => {
+                    oneshot(
+                        &mut tx,
+                        Err("Failed to decode client message when receiving".to_string()),
+                    );
+                    return false;
+                }
+            };
+
+            if msg.r#type() != MessageType::Ack {
+                oneshot(
+                    &mut tx,
+                    Err("Expected Ack message got something else".to_string()),
+                );
+                return false;
+            }
+
+            if id.into_bytes() != *msg.id {
+                oneshot(
+                    &mut tx,
+                    Err("Ack Id is not the same as sent Id".to_string()),
+                );
+                return false;
+            }
+        }
+        true
+    }
+
+    async fn server_receive(
+        mut ws_stream: &mut WebSocketStream<TcpStream>,
+        mut tx: &mut Option<Sender<Result<(), String>>>,
+    ) -> bool {
+        if let Some(Ok(msg)) = ws_stream.next().await {
+            let msg_res = match msg {
+                Message::Binary(b) => decode_client_msg(b),
+                frame => {
+                    oneshot(
+                        &mut tx,
+                        Err(format!("Received '{}' expected Message::Binary", frame)),
+                    );
+                    return false;
+                }
+            };
+
+            let id = match msg_res {
+                Ok(msg) => msg.id,
+                Err(_) => {
+                    oneshot(
+                        &mut tx,
+                        Err("Failed to decode client message when receiving".to_string()),
+                    );
+                    return false;
+                }
+            };
+
+            let timeout = tokio::time::timeout(
+                Duration::from_millis(300),
+                send(&mut ws_stream, server_ack(id)),
+            )
+            .await;
+            let res = match timeout {
+                Ok(res) => res,
+                Err(_) => {
+                    oneshot(
+                        &mut tx,
+                        Err("Client failed to send in time interval".to_string()),
+                    );
+                    return false;
+                }
+            };
+            match res {
+                Ok(_) => {}
+                Err(_) => {
+                    oneshot(&mut tx, Err("Failed to send".to_string()));
+                    return false;
+                }
+            };
+        }
+        true
     }
 
     #[rstest]
