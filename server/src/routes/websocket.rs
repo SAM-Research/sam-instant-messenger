@@ -297,11 +297,8 @@ mod test {
         };
 
         let missing_devices = match msg.content {
-            Some(content) => match content {
-                Content::Error(error) => error.info,
-                _ => None,
-            },
-            None => None,
+            Some(Content::Error(error)) => error.info,
+            _ => None,
         };
 
         let expected = Info::DeviceIds(DeviceList { ids: vec![27u32] });
@@ -346,7 +343,7 @@ mod test {
             .r#type(EnvelopeType::PlaintextContent as i32)
             .content(hashmap! {
                 bob_device.into() => "hi bob<3".into(),
-                27u32.into() => "Hello, World!".into()
+                27u32 => "Hello, World!".into()
             })
             .build();
 
@@ -409,7 +406,7 @@ mod test {
             .r#type(EnvelopeType::PlaintextContent as i32)
             .content(hashmap! {
                 bob_device.into() => "hi bob<3".into(),
-                27u32.into() => "Hello, World!".into()
+                27u32 => "Hello, World!".into()
             })
             .build();
 
@@ -453,11 +450,8 @@ mod test {
         };
 
         let missing_devices = match msg.content {
-            Some(content) => match content {
-                Content::Error(error) => error.info,
-                _ => None,
-            },
-            None => None,
+            Some(Content::Error(error)) => error.info,
+            _ => None,
         };
 
         let expected = Info::DeviceIds(DeviceList { ids: vec![27u32] });
