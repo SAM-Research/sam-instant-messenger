@@ -22,90 +22,6 @@ use super::{
     websocket::{WebSocket, WebSocketClient, WebSocketReceiver},
 };
 
-pub struct ProtocolClient {
-    client: Arc<Mutex<WebSocketClient>>,
-    status_messages: Option<Receiver<ServerStatus>>,
-}
-
-impl ProtocolClient {
-    pub fn new(client: WebSocketClient) -> Self {
-        Self {
-            client: Arc::new(Mutex::new(client)),
-            status_messages: None,
-        }
-    }
-
-    async fn send_client_message(
-        &mut self,
-        id: MessageId,
-        envelope: ClientEnvelope,
-    ) -> Result<(), ProtocolError> {
-        let message = ClientMessage::builder()
-            .id(id.into())
-            .r#type(MessageType::Message as i32)
-            .message(envelope)
-            .build();
-        self.client
-            .lock()
-            .await
-            .send(Message::Binary(message.encode_to_vec().into()))
-            .await
-            .map_err(|_| ProtocolError::Disconnected)
-    }
-
-    async fn handle_server_status(
-        &mut self,
-        req_id: MessageId,
-        status: ServerStatus,
-    ) -> Result<(), ProtocolError> {
-        match status {
-            ServerStatus::Ack(message_id) => self.check_id(req_id, message_id).await,
-            ServerStatus::Error(message_id, error) => {
-                self.handle_error(req_id, message_id, error).await
-            }
-        }
-    }
-
-    async fn check_id(
-        &mut self,
-        req_id: MessageId,
-        res_id: MessageId,
-    ) -> Result<(), ProtocolError> {
-        if res_id != req_id {
-            self.client
-                .lock()
-                .await
-                .send(Message::Close(Some(CloseFrame {
-                    code: CloseCode::Error,
-                    reason: "Request and Response Id did not match".into(),
-                })))
-                .await
-                .map_err(|_| ProtocolError::Disconnected)
-        } else {
-            Ok(())
-        }
-    }
-
-    async fn handle_error(
-        &mut self,
-        req_id: MessageId,
-        res_id: MessageId,
-        error: Error,
-    ) -> Result<(), ProtocolError> {
-        self.check_id(req_id, res_id).await?;
-
-        Err(match error.code() {
-            sam_message::ErrorCode::NotEncryptedForAllDevices => ProtocolError::MissingDevices(
-                error.device_ids.ids.iter().map(|id| (*id).into()).collect(),
-            ),
-
-            sam_message::ErrorCode::EncryptedForExtraDevices => ProtocolError::ExtraDevices(
-                error.device_ids.ids.iter().map(|id| (*id).into()).collect(),
-            ),
-        })
-    }
-}
-
 enum ServerStatus {
     Ack(MessageId),
     Error(MessageId, sam_message::Error),
@@ -190,6 +106,90 @@ impl SamProtocolReceiver {
             .send(status)
             .await
             .map_err(|_| ProtocolError::Disconnected)
+    }
+}
+
+pub struct ProtocolClient {
+    client: Arc<Mutex<WebSocketClient>>,
+    status_messages: Option<Receiver<ServerStatus>>,
+}
+
+impl ProtocolClient {
+    pub fn new(client: WebSocketClient) -> Self {
+        Self {
+            client: Arc::new(Mutex::new(client)),
+            status_messages: None,
+        }
+    }
+
+    async fn send_client_message(
+        &mut self,
+        id: MessageId,
+        envelope: ClientEnvelope,
+    ) -> Result<(), ProtocolError> {
+        let message = ClientMessage::builder()
+            .id(id.into())
+            .r#type(MessageType::Message as i32)
+            .message(envelope)
+            .build();
+        self.client
+            .lock()
+            .await
+            .send(Message::Binary(message.encode_to_vec().into()))
+            .await
+            .map_err(|_| ProtocolError::Disconnected)
+    }
+
+    async fn handle_server_status(
+        &mut self,
+        req_id: MessageId,
+        status: ServerStatus,
+    ) -> Result<(), ProtocolError> {
+        match status {
+            ServerStatus::Ack(message_id) => self.check_id(req_id, message_id).await,
+            ServerStatus::Error(message_id, error) => {
+                self.handle_error(req_id, message_id, error).await
+            }
+        }
+    }
+
+    async fn check_id(
+        &mut self,
+        req_id: MessageId,
+        res_id: MessageId,
+    ) -> Result<(), ProtocolError> {
+        if res_id != req_id {
+            self.client
+                .lock()
+                .await
+                .send(Message::Close(Some(CloseFrame {
+                    code: CloseCode::Error,
+                    reason: "Request and Response Id did not match".into(),
+                })))
+                .await
+                .map_err(|_| ProtocolError::Disconnected)
+        } else {
+            Ok(())
+        }
+    }
+
+    async fn handle_error(
+        &mut self,
+        req_id: MessageId,
+        res_id: MessageId,
+        error: Error,
+    ) -> Result<(), ProtocolError> {
+        self.check_id(req_id, res_id).await?;
+
+        Err(match error.code() {
+            sam_message::ErrorCode::NotEncryptedForAllDevices => ProtocolError::MissingDevices(
+                error.device_ids.ids.iter().map(|id| (*id).into()).collect(),
+            ),
+
+            sam_message::ErrorCode::EncryptedForExtraDevices => ProtocolError::ExtraDevices(
+                error.device_ids.ids.iter().map(|id| (*id).into()).collect(),
+            ),
+        })
     }
 }
 
