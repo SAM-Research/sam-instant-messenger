@@ -49,7 +49,7 @@ mod test {
     use prost::Message as _;
     use rand::rngs::OsRng;
     use sam_common::{
-        address::{AccountId, MessageId},
+        address::{AccountId, DeviceId, MessageId},
         sam_message::{
             error::Info, server_message::Content, ClientEnvelope, ClientMessage, DeviceList,
             EnvelopeType, MessageType, ServerMessage,
@@ -91,6 +91,7 @@ mod test {
 
     async fn connect_user(
         account_id: AccountId,
+        device_id: DeviceId,
         username: &str,
         password: &str,
         address: &str,
@@ -100,14 +101,16 @@ mod test {
             .expect("Can make url into ws upgrade req");
         let basic = format!(
             "Basic {}",
-            BASE64_STANDARD.encode(format!("{}.1:{}", account_id, password))
+            BASE64_STANDARD.encode(format!("{}.{}:{}", account_id, device_id, password))
         );
         req.headers_mut()
             .insert("Authorization", basic.parse().unwrap());
         let (ws, _) = connect_async(req)
             .await
             .inspect_err(|e| println!("{}", e))
-            .unwrap_or_else(|_| panic!("{} can make connection", username));
+            .unwrap_or_else(|_| {
+                panic!("{} can make connection with device {}", username, device_id)
+            });
         ws
     }
 
@@ -138,8 +141,8 @@ mod test {
             .r#type(MessageType::Message as i32)
             .build();
 
-        let mut alice = connect_user(alice_id, "alice", "bob", &address).await;
-        let mut bob = connect_user(bob_id, "bob", "cheeseburger", &address).await;
+        let mut alice = connect_user(alice_id, 1.into(), "alice", "bob", &address).await;
+        let mut bob = connect_user(bob_id, 1.into(), "bob", "cheeseburger", &address).await;
 
         let alice_send = tokio::time::timeout(
             Duration::from_millis(300),
@@ -147,10 +150,10 @@ mod test {
                 msg.encode_to_vec().into(),
             )),
         );
-        let alice_sent = alice_send.await;
 
         let bob_recv = tokio::time::timeout(Duration::from_millis(300), bob.next());
 
+        let alice_sent = alice_send.await;
         let bob_received = bob_recv.await;
 
         axum.shutdown();
@@ -195,7 +198,7 @@ mod test {
             .r#type(MessageType::Message as i32)
             .build();
 
-        let mut alice = connect_user(alice_id, "alice", "bob", &address).await;
+        let mut alice = connect_user(alice_id, 1.into(), "alice", "bob", &address).await;
 
         let alice_send = tokio::time::timeout(
             Duration::from_millis(300),
@@ -206,7 +209,7 @@ mod test {
         let alice_sent = alice_send.await;
 
         // bob goes online to receive message
-        let mut bob = connect_user(bob_id, "bob", "cheeseburger", &address).await;
+        let mut bob = connect_user(bob_id, 1.into(), "bob", "cheeseburger", &address).await;
         let bob_recv = tokio::time::timeout(Duration::from_millis(300), bob.next());
         let bob_received = bob_recv.await;
 
@@ -269,7 +272,7 @@ mod test {
             .r#type(MessageType::Message as i32)
             .build();
 
-        let mut alice = connect_user(alice_id, "alice", "bob", &address).await;
+        let mut alice = connect_user(alice_id, 1.into(), "alice", "bob", &address).await;
 
         let alice_send = tokio::time::timeout(
             Duration::from_millis(300),
@@ -291,13 +294,19 @@ mod test {
         );
         assert!(alice_received.is_ok(), "Alice timed out while receiving");
 
-        let msg = match alice_received.unwrap().unwrap().unwrap() {
-            Message::Binary(msg) => ServerMessage::decode(msg).unwrap(),
-            _ => todo!(),
-        };
+        let msg = match alice_received {
+            Ok(Some(Ok(Message::Binary(msg)))) => Some(msg),
+            _ => None,
+        }
+        .expect("alice should recieve a binary WebSocketMessage");
 
-        let missing_devices = match msg.content {
-            Some(Content::Error(error)) => error.info,
+        let content = ServerMessage::decode(msg)
+            .expect("should be able to decode message")
+            .content
+            .expect("message should contain content");
+
+        let missing_devices = match content {
+            Content::Error(error) => error.info,
             _ => None,
         };
 
@@ -321,7 +330,7 @@ mod test {
                 &Device::builder()
                     .creation(0)
                     .id(27.into())
-                    .registration_id(1.into())
+                    .registration_id(43284.into())
                     .name("Device 27".to_string())
                     .password(
                         Password::generate("password".to_string())
@@ -354,7 +363,7 @@ mod test {
             .r#type(MessageType::Message as i32)
             .build();
 
-        let mut alice = connect_user(alice_id, "alice", "bob", &address).await;
+        let mut alice = connect_user(alice_id, 1.into(), "alice", "bob", &address).await;
 
         let alice_send = tokio::time::timeout(
             Duration::from_millis(300),
@@ -367,6 +376,14 @@ mod test {
         let alice_recv = tokio::time::timeout(Duration::from_millis(300), alice.next());
         let alice_received = alice_recv.await;
 
+        let mut bob1 = connect_user(bob_id, 1.into(), "bob", "cheeseburger", &address).await;
+        let bob_recv1 = tokio::time::timeout(Duration::from_millis(300), bob1.next());
+        let bob_received1 = bob_recv1.await;
+
+        let mut bob27 = connect_user(bob_id, 27.into(), "bob", "password", &address).await;
+        let bob_recv27 = tokio::time::timeout(Duration::from_millis(300), bob27.next());
+        let bob_received27 = bob_recv27.await;
+
         axum.shutdown();
         let _ = thread.await;
         assert!(alice_sent.is_ok(), "Alice timed out while sending");
@@ -376,12 +393,27 @@ mod test {
         );
         assert!(alice_received.is_ok(), "Alice timed out while receiving");
 
-        let msg = match alice_received.unwrap().unwrap().unwrap() {
-            Message::Binary(msg) => ServerMessage::decode(msg).unwrap(),
-            _ => todo!(),
-        };
+        let ws_msg = match alice_received {
+            Ok(Some(Ok(Message::Binary(msg)))) => Some(msg),
+            _ => None,
+        }
+        .expect("alice should recieve a binary WebSocketMessage");
 
-        assert!(matches!(msg.r#type(), MessageType::Ack));
+        let serv_msg = ServerMessage::decode(ws_msg).expect("should be able to decode message");
+
+        assert!(matches!(serv_msg.r#type(), MessageType::Ack));
+
+        assert!(bob_received1.is_ok(), "Bob device 1 timed out");
+        assert!(
+            bob_received1.is_ok_and(|op| op.is_some_and(|res| res.is_ok())),
+            "Bob device 1 could not received"
+        );
+
+        assert!(bob_received27.is_ok(), "Bob device 27 timed out");
+        assert!(
+            bob_received27.is_ok_and(|op| op.is_some_and(|res| res.is_ok())),
+            "Bob device 27 could not received"
+        );
     }
 
     /// Alice sends a message to bob's device 1 and 27, but Bob does not have a device 27.
@@ -417,7 +449,7 @@ mod test {
             .r#type(MessageType::Message as i32)
             .build();
 
-        let mut alice = connect_user(alice_id, "alice", "bob", &address).await;
+        let mut alice = connect_user(alice_id, 1.into(), "alice", "bob", &address).await;
 
         let alice_send = tokio::time::timeout(
             Duration::from_millis(300),
@@ -431,7 +463,7 @@ mod test {
         let alice_received = alice_recv.await;
 
         // bob goes online to receive message
-        let mut bob = connect_user(bob_id, "bob", "cheeseburger", &address).await;
+        let mut bob = connect_user(bob_id, 1.into(), "bob", "cheeseburger", &address).await;
         let bob_recv = tokio::time::timeout(Duration::from_millis(300), bob.next());
         let bob_received = bob_recv.await;
 
@@ -444,13 +476,19 @@ mod test {
         );
         assert!(alice_received.is_ok(), "Alice timed out while receiving");
 
-        let msg = match alice_received.unwrap().unwrap().unwrap() {
-            Message::Binary(msg) => ServerMessage::decode(msg).unwrap(),
-            _ => todo!(),
-        };
+        let msg = match alice_received {
+            Ok(Some(Ok(Message::Binary(msg)))) => Some(msg),
+            _ => None,
+        }
+        .expect("alice should recieve a binary WebSocketMessage");
 
-        let missing_devices = match msg.content {
-            Some(Content::Error(error)) => error.info,
+        let content = ServerMessage::decode(msg)
+            .expect("should be able to decode message")
+            .content
+            .expect("message should contain content");
+
+        let missing_devices = match content {
+            Content::Error(error) => error.info,
             _ => None,
         };
 
