@@ -5,23 +5,36 @@ use axum::{
 };
 use sam_common::{
     address::AccountId,
-    api::keys::{PreKeyBundles, PublishPreKeys},
+    api::{
+        keys::{PreKeyBundles, PublishPreKeys},
+        PreKeyBundle,
+    },
+    DeviceId,
 };
 
 use crate::{
     auth::authenticated_user::AuthenticatedUser,
-    logic::keys::{get_keybundles, publish_keybundle},
+    logic::keys::{get_keybundle, get_keybundles, publish_keybundle},
     state::{state_type::StateType, ServerState},
     ServerError,
 };
 
 /// Returns key bundles for users devices
-pub async fn keys_bundles_endpoint<T: StateType>(
+pub async fn key_bundles_endpoint<T: StateType>(
     Path(account_id): Path<AccountId>,
     _auth_user: AuthenticatedUser,
     State(mut state): State<ServerState<T>>,
 ) -> Result<Json<PreKeyBundles>, ServerError> {
     get_keybundles(&mut state, account_id).await.map(Json)
+}
+
+pub async fn key_bundle_endpoint<T: StateType>(
+    Path((account_id, device_id)): Path<(AccountId, DeviceId)>,
+    State(mut state): State<ServerState<T>>,
+) -> Result<Json<PreKeyBundle>, ServerError> {
+    get_keybundle(&mut state, account_id, device_id)
+        .await
+        .map(Json)
 }
 
 /// Handle publish of new key bundles
@@ -41,7 +54,11 @@ async fn publish_keys_endpoint<T: StateType>(
 
 pub fn key_routes<T: StateType>(router: Router<ServerState<T>>) -> Router<ServerState<T>> {
     router
-        .route("/api/v1/keys/{account_id}", get(keys_bundles_endpoint))
+        .route("/api/v1/keys/{account_id}", get(key_bundles_endpoint))
+        .route(
+            "/api/v1/keys/{account_id}/{device_id}",
+            get(key_bundle_endpoint),
+        )
         .route("/api/v1/keys", put(publish_keys_endpoint))
 }
 
@@ -131,6 +148,53 @@ mod test {
                 pq_pre_key: keys.pq_pre_keys.unwrap().first().cloned().unwrap(),
                 signed_pre_key: keys.signed_pre_key.unwrap(),
             }],
+        };
+
+        res.assert_status_ok();
+        res.assert_json(&expected);
+    }
+
+    #[tokio::test]
+    async fn test_get_api_v1_keys_account_device() {
+        let mut state = ServerState::in_memory_test();
+        let (pair, account_id, device_id) =
+            create_user(&mut state, "alice", "phone", "bob", OsRng).await;
+
+        let keys = create_publish_pre_keys(
+            Some(vec![1]),
+            Some(3),
+            Some(vec![4]),
+            Some(33),
+            &pair,
+            OsRng,
+        );
+        add_keybundle(
+            &mut state,
+            pair.identity_key(),
+            account_id,
+            device_id,
+            keys.clone(),
+        )
+        .await
+        .expect("Can add keys");
+
+        let server = test_server(state, key_routes);
+        let basic = format!(
+            "Basic {}",
+            BASE64_STANDARD.encode(format!("{}.1:{}", account_id, "bob"))
+        );
+
+        let res = server
+            .get(&format!("/api/v1/keys/{account_id}/{device_id}"))
+            .add_header(http::header::AUTHORIZATION, basic)
+            .await;
+
+        let expected = PreKeyBundle {
+            device_id: 1,
+            registration_id: 1,
+            pre_key: keys.pre_keys.unwrap().first().cloned(),
+            pq_pre_key: keys.pq_pre_keys.unwrap().first().cloned().unwrap(),
+            signed_pre_key: keys.signed_pre_key.unwrap(),
         };
 
         res.assert_status_ok();
