@@ -35,7 +35,7 @@ impl SqliteIdentityKeyStore {
         .execute(&self.database)
         .await
         .map(|_| ())
-        .map_err(ClientError::from)
+        .map_err(|err| ClientError::Database(format!("{err}")))
     }
 
     async fn insert_account_key_information(
@@ -58,7 +58,7 @@ impl SqliteIdentityKeyStore {
         .execute(&self.database)
         .await
         .map(|_| ())
-        .map_err(ClientError::from)
+        .map_err(|err| ClientError::Database(format!("{err}")))
     }
 
     pub async fn create(
@@ -122,7 +122,7 @@ impl IdentityKeyStore for SqliteIdentityKeyStore {
             )),
             Err(err) => Err(SignalProtocolError::ApplicationCallbackError(
                 "Could not fetch Identity Key bundle from database",
-                Box::new(ClientError::from(err)),
+                Box::new(ClientError::Database(format!("{err}"))),
             )),
         }
     }
@@ -142,7 +142,7 @@ impl IdentityKeyStore for SqliteIdentityKeyStore {
         .map_err(|err| {
             SignalProtocolError::ApplicationCallbackError(
                 "Could not Retrieve local registration id",
-                Box::new(ClientError::from(err)),
+                Box::new(ClientError::Database(format!("{err}"))),
             )
         })
     }

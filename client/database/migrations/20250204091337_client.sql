@@ -55,12 +55,7 @@ CREATE TABLE DeviceSenderKeyStore (
 
 CREATE TABLE Contacts (
   id INTEGER PRIMARY KEY,
-  service_id TEXT NOT NULL UNIQUE,
-  device_ids TEXT NOT NULL
+  account_id TEXT NOT NULL,
+  device_id  INTEGER NOT NULL
 );
 
-CREATE TABLE Nicknames (
-  id INTEGER PRIMARY KEY,
-  name TEXT NOT NULL UNIQUE,
-  service_id TEXT NOT NULL
-)

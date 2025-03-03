@@ -31,7 +31,7 @@ impl AccountStore for SqliteAccountStore {
         .execute(&self.database)
         .await
         .map(|_| ())
-        .map_err(ClientError::from)
+        .map_err(|err| ClientError::Database(format!("{err}")))
     }
 
     async fn get_account_id(&self) -> Result<AccountId, ClientError> {
@@ -47,7 +47,7 @@ impl AccountStore for SqliteAccountStore {
             Ok(rec) => {
                 AccountId::from_str(&rec.aci).map_err(|_| ClientError::InvalidServiceId(rec.aci))
             }
-            Err(err) => Err(ClientError::from(err)),
+            Err(err) => Err(ClientError::Database(format!("{err}"))),
         }
     }
 
@@ -63,7 +63,7 @@ impl AccountStore for SqliteAccountStore {
         .execute(&self.database)
         .await
         .map(|_| ())
-        .map_err(ClientError::from)
+        .map_err(|err| ClientError::Database(format!("{err}")))
     }
 
     async fn get_password(&self) -> Result<String, ClientError> {
@@ -77,7 +77,7 @@ impl AccountStore for SqliteAccountStore {
         {
             Err(SqlxError::RowNotFound) => Err(ClientError::NoPassword),
             Ok(rec) => Ok(rec.password),
-            Err(err) => Err(ClientError::from(err)),
+            Err(err) => Err(ClientError::Database(format!("{err}"))),
         }
     }
 
@@ -93,7 +93,7 @@ impl AccountStore for SqliteAccountStore {
         .execute(&self.database)
         .await
         .map(|_| ())
-        .map_err(ClientError::from)
+        .map_err(|err| ClientError::Database(format!("{err}")))
     }
 
     async fn get_username(&self) -> Result<String, ClientError> {
@@ -107,7 +107,7 @@ impl AccountStore for SqliteAccountStore {
         {
             Err(SqlxError::RowNotFound) => Err(ClientError::NoUsername),
             Ok(rec) => Ok(rec.username),
-            Err(err) => Err(ClientError::from(err)),
+            Err(err) => Err(ClientError::Database(format!("{err}"))),
         }
     }
 }
