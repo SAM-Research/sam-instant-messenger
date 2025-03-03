@@ -287,16 +287,16 @@ mod test {
     }
 
     async fn server_send(
-        mut ws_stream: &mut WebSocketStream<TcpStream>,
-        mut tx: &mut Option<Sender<Result<(), String>>>,
+        ws_stream: &mut WebSocketStream<TcpStream>,
+        tx: &mut Option<Sender<Result<(), String>>>,
     ) -> bool {
         let id = MessageId::generate();
 
         // server sends messages to client
-        match send(&mut ws_stream, server_env(id)).await {
+        match send(ws_stream, server_env(id)).await {
             Ok(_) => {}
             Err(_) => {
-                oneshot(&mut tx, Err("Failed to send".to_string()));
+                oneshot(tx, Err("Failed to send".to_string()));
                 return false;
             }
         }
@@ -306,7 +306,7 @@ mod test {
             let msg_res = match msg {
                 Message::Binary(b) => decode_client_msg(b),
                 _ => {
-                    oneshot(&mut tx, Err("Only expects binary messages".to_string()));
+                    oneshot(tx, Err("Only expects binary messages".to_string()));
                     return false;
                 }
             };
@@ -315,7 +315,7 @@ mod test {
                 Ok(msg) => msg,
                 Err(_) => {
                     oneshot(
-                        &mut tx,
+                        tx,
                         Err("Failed to decode client message when receiving".to_string()),
                     );
                     return false;
@@ -324,17 +324,14 @@ mod test {
 
             if msg.r#type() != MessageType::Ack {
                 oneshot(
-                    &mut tx,
+                    tx,
                     Err("Expected Ack message got something else".to_string()),
                 );
                 return false;
             }
 
             if id.into_bytes() != *msg.id {
-                oneshot(
-                    &mut tx,
-                    Err("Ack Id is not the same as sent Id".to_string()),
-                );
+                oneshot(tx, Err("Ack Id is not the same as sent Id".to_string()));
                 return false;
             }
         }
@@ -342,15 +339,15 @@ mod test {
     }
 
     async fn server_receive(
-        mut ws_stream: &mut WebSocketStream<TcpStream>,
-        mut tx: &mut Option<Sender<Result<(), String>>>,
+        ws_stream: &mut WebSocketStream<TcpStream>,
+        tx: &mut Option<Sender<Result<(), String>>>,
     ) -> bool {
         if let Some(Ok(msg)) = ws_stream.next().await {
             let msg_res = match msg {
                 Message::Binary(b) => decode_client_msg(b),
                 frame => {
                     oneshot(
-                        &mut tx,
+                        tx,
                         Err(format!("Received '{}' expected Message::Binary", frame)),
                     );
                     return false;
@@ -361,23 +358,21 @@ mod test {
                 Ok(msg) => msg.id,
                 Err(_) => {
                     oneshot(
-                        &mut tx,
+                        tx,
                         Err("Failed to decode client message when receiving".to_string()),
                     );
                     return false;
                 }
             };
 
-            let timeout = tokio::time::timeout(
-                Duration::from_millis(300),
-                send(&mut ws_stream, server_ack(id)),
-            )
-            .await;
+            let timeout =
+                tokio::time::timeout(Duration::from_millis(300), send(ws_stream, server_ack(id)))
+                    .await;
             let res = match timeout {
                 Ok(res) => res,
                 Err(_) => {
                     oneshot(
-                        &mut tx,
+                        tx,
                         Err("Client failed to send in time interval".to_string()),
                     );
                     return false;
@@ -386,7 +381,7 @@ mod test {
             match res {
                 Ok(_) => {}
                 Err(_) => {
-                    oneshot(&mut tx, Err("Failed to send".to_string()));
+                    oneshot(tx, Err("Failed to send".to_string()));
                     return false;
                 }
             };
