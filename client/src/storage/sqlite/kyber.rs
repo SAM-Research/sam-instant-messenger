@@ -44,7 +44,7 @@ impl ProvidesKeyId<KyberPreKeyId> for SqliteKyberPreKeyStore {
         .fetch_one(&self.database)
         .await
         .map(|row| KyberPreKeyId::from(row.spkid as u32))
-        .map_err(ClientError::from)
+        .map_err(|err| ClientError::Database(format!("{err}")))
     }
 }
 
@@ -109,7 +109,7 @@ impl KyberPreKeyStore for SqliteKyberPreKeyStore {
         .map_err(|err| {
             SignalProtocolError::ApplicationCallbackError(
                 "save kyber pre key",
-                Box::new(ClientError::from(err)),
+                Box::new(ClientError::Database(format!("{err}"))),
             )
         })
     }

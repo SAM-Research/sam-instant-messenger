@@ -77,7 +77,7 @@ impl SessionStore for SqliteSessionStore {
         .map_err(|err| {
             SignalProtocolError::ApplicationCallbackError(
                 "store session",
-                Box::new(ClientError::from(err)),
+                Box::new(ClientError::Database(format!("{err}"))),
             )
         })
     }

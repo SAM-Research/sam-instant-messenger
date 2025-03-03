@@ -1,0 +1,12 @@
+{
+  "db_name": "SQLite",
+  "query": "\n            INSERT INTO Contacts (account_id, device_id)\n            SELECT ?, ?\n            WHERE NOT EXISTS (\n                SELECT 1 FROM Contacts \n                WHERE account_id = ? AND device_id = ?\n            )\n            ",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Right": 4
+    },
+    "nullable": []
+  },
+  "hash": "dfd29f2cba25e6c46ca516c509526ff06fa4f4785aa4e646e52908add12b47a4"
+}

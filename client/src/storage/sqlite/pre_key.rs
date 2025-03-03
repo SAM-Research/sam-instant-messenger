@@ -41,7 +41,7 @@ impl ProvidesKeyId<PreKeyId> for SqlitePreKeyStore {
         .fetch_one(&self.database)
         .await
         .map(|row| PreKeyId::from(row.pkid as u32))
-        .map_err(ClientError::from)
+        .map_err(|err| ClientError::Database(format!("{err}")))
     }
 }
 
@@ -84,7 +84,7 @@ impl PreKeyStore for SqlitePreKeyStore {
 
             Err(err) => Err(SignalProtocolError::ApplicationCallbackError(
                 "save pre key",
-                Box::new(ClientError::from(err)),
+                Box::new(ClientError::Database(format!("{err}"))),
             )),
         }
     }
@@ -113,7 +113,7 @@ impl PreKeyStore for SqlitePreKeyStore {
         .map_err(|err| {
             SignalProtocolError::ApplicationCallbackError(
                 "save pre key",
-                Box::new(ClientError::from(err)),
+                Box::new(ClientError::Database(format!("{err}"))),
             )
         })
     }
@@ -136,7 +136,7 @@ impl PreKeyStore for SqlitePreKeyStore {
         .map_err(|err| {
             SignalProtocolError::ApplicationCallbackError(
                 "remove pre key",
-                Box::new(ClientError::from(err)),
+                Box::new(ClientError::Database(format!("{err}"))),
             )
         })
     }

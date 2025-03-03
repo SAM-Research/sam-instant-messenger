@@ -44,7 +44,7 @@ impl SenderKeyStore for SqliteSenderKeyStore {
         .map_err(|err| {
             SignalProtocolError::ApplicationCallbackError(
                 "store sender key",
-                Box::new(ClientError::from(err)),
+                Box::new(ClientError::Database(format!("{err}"))),
             )
         })
     }

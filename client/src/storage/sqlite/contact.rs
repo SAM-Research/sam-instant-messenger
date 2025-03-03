@@ -1,88 +1,88 @@
+use std::collections::HashSet;
+
+use async_trait::async_trait;
+use sam_common::{AccountId, DeviceId};
 use sqlx::{Pool, Sqlite};
 
-use crate::storage::ContactStore;
+use crate::{storage::ContactStore, ClientError};
 
 #[derive(Debug)]
 pub struct SqliteContactStore {
-    _database: Pool<Sqlite>,
+    database: Pool<Sqlite>,
 }
 
 impl SqliteContactStore {
     pub fn new(database: Pool<Sqlite>) -> Self {
-        Self {
-            _database: database,
-        }
+        Self { database }
     }
 }
 
-impl ContactStore for SqliteContactStore {}
+#[async_trait(?Send)]
+impl ContactStore for SqliteContactStore {
+    async fn get_all_devices(
+        &self,
+        account_id: AccountId,
+    ) -> Result<HashSet<DeviceId>, ClientError> {
+        let aci_str = account_id.to_string();
+        let ids = sqlx::query!(
+            r#"
+            SELECT device_id FROM Contacts WHERE account_id = ?
+            "#,
+            aci_str
+        )
+        .fetch_all(&self.database)
+        .await
+        .map_err(|err| ClientError::Database(format!("{err}")))?
+        .into_iter()
+        .map(|rec| (rec.device_id as u32).into());
 
-/*
+        Ok(HashSet::from_iter(ids))
+    }
+    async fn add_device(
+        &mut self,
+        account_id: AccountId,
+        device_id: DeviceId,
+    ) -> Result<(), ClientError> {
+        let aci_str = account_id.to_string();
+        let dev_str = device_id.to_string();
+        sqlx::query!(
+            r#"
+            INSERT INTO Contacts (account_id, device_id)
+            SELECT ?, ?
+            WHERE NOT EXISTS (
+                SELECT 1 FROM Contacts 
+                WHERE account_id = ? AND device_id = ?
+            )
+            "#,
+            aci_str,
+            dev_str,
+            aci_str,
+            dev_str,
+        )
+        .execute(&self.database)
+        .await
+        .map(|_| ())
+        .map_err(|err| ClientError::Database(format!("{err}")))
+    }
 
-   #[tokio::test]
-   async fn store_and_load_contact() {
-       // store_contact
-       // load_contact
-       let device = Device::new(connect().await);
-
-       let contacts = vec![new_contact(), new_contact(), new_contact()];
-
-       device.store_contact(&contacts[0]).await.unwrap();
-       device.store_contact(&contacts[1]).await.unwrap();
-       device.store_contact(&contacts[2]).await.unwrap();
-
-       let retrived_contacts = device.load_contacts().await.unwrap();
-
-       assert_eq!(contacts, retrived_contacts);
-   }
-
-   #[tokio::test]
-   async fn insert_and_get_address_by_nickname() {
-       // insert_address_for_nickname
-       // get_address_by_nickname
-       let device = Device::new(connect().await);
-
-       let nicknames = vec!["Alice", "Bob", "Charlie"];
-
-       let nickname_map = HashMap::from([
-           (nicknames[0], new_service_id()),
-           (nicknames[1], new_service_id()),
-           (nicknames[2], new_service_id()),
-       ]);
-
-       device
-           .insert_service_id_for_nickname(nicknames[0], &nickname_map[nicknames[0]])
-           .await
-           .unwrap();
-       device
-           .insert_service_id_for_nickname(nicknames[1], &nickname_map[nicknames[1]])
-           .await
-           .unwrap();
-       device
-           .insert_service_id_for_nickname(nicknames[2], &nickname_map[nicknames[2]])
-           .await
-           .unwrap();
-
-       assert_eq!(
-           device
-               .get_service_id_by_nickname(nicknames[0])
-               .await
-               .unwrap(),
-           nickname_map[nicknames[0]]
-       );
-       assert_eq!(
-           device
-               .get_service_id_by_nickname(nicknames[1])
-               .await
-               .unwrap(),
-           nickname_map[nicknames[1]]
-       );
-       assert_eq!(
-           device
-               .get_service_id_by_nickname(nicknames[2])
-               .await
-               .unwrap(),
-           nickname_map[nicknames[2]]
-       );
-   }
-*/
+    async fn remove_device(
+        &mut self,
+        account_id: AccountId,
+        device_id: DeviceId,
+    ) -> Result<(), ClientError> {
+        let aci_str = account_id.to_string();
+        let dev_str = device_id.to_string();
+        sqlx::query!(
+            r#"
+            DELETE FROM Contacts 
+            WHERE account_id=? AND device_id=?
+            "#,
+            aci_str,
+            dev_str,
+        )
+        .execute(&self.database)
+        .await
+        .map(|_| ())
+        .map_err(|err| ClientError::Database(format!("{err}")))
+    }
+}
