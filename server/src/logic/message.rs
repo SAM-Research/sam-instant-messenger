@@ -131,11 +131,7 @@ pub async fn handle_server_envelope<T: StateType>(
     auth_user: &AuthenticatedUser,
     envelope: ServerEnvelope,
 ) -> Result<Option<ServerMessage>, ServerError> {
-    let id = match MessageId::try_from(envelope.id.clone()) {
-        Ok(id) => id,
-        Err(_) => return Err(ServerError::EnvelopeMalformed),
-    };
-
+    let id = MessageId::try_from(envelope.id.clone())?;
     state
         .messages
         .add_pending_message(auth_user.account().id(), auth_user.device().id(), id)

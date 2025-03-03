@@ -5,9 +5,9 @@ use axum::{
     Router,
 };
 
+use crate::websocket::websocket::init_websocket;
 use crate::{
     auth::authenticated_user::AuthenticatedUser,
-    logic::websocket::init_websocket,
     managers::traits::message_manager::MessageManager,
     state::{state_type::StateType, ServerState},
     ServerError,

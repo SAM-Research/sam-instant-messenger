@@ -10,6 +10,7 @@ use axum_extra::{
 };
 use sam_common::api::account::{RegistrationRequest, RegistrationResponse};
 
+use crate::routes::error::RouterError;
 use crate::{
     auth::authenticated_user::AuthenticatedUser,
     logic::account::{create_account, delete_account},
@@ -39,7 +40,7 @@ async fn delete_account_endpoint<T: StateType>(
     auth_user: AuthenticatedUser,
 ) -> Result<(), ServerError> {
     if *auth_user.device().id() != 1 {
-        return Err(ServerError::DeviceUnAuth);
+        return Err(RouterError::DeviceUnAuth)?;
     }
     delete_account(&mut state, auth_user.account().id()).await
 }

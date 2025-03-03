@@ -6,6 +6,7 @@ use std::{
 
 use tokio::sync::Mutex;
 
+use crate::managers::error::DeviceManagerError;
 use crate::{
     managers::{entities::device::Device, traits::device_manager::DeviceManager},
     ServerError,
@@ -34,12 +35,13 @@ impl InMemoryDeviceManager {
 impl DeviceManager for InMemoryDeviceManager {
     async fn get_device(&self, account_id: AccountId, id: DeviceId) -> Result<Device, ServerError> {
         let key = DeviceAddress::new(account_id, id);
-        self.devices
+        Ok(self
+            .devices
             .lock()
             .await
             .get(&key)
-            .ok_or(ServerError::DeviceNotExist)
             .cloned()
+            .ok_or(DeviceManagerError::DeviceDoesNotExist)?)
     }
 
     async fn get_devices(&self, account_id: AccountId) -> Result<Vec<DeviceId>, ServerError> {
@@ -51,12 +53,12 @@ impl DeviceManager for InMemoryDeviceManager {
                     .lock()
                     .await
                     .get(key)
-                    .ok_or(ServerError::DeviceNotExist)
-                    .map(|d| d.id())?;
+                    .map(|d| d.id())
+                    .ok_or(DeviceManagerError::DeviceDoesNotExist)?;
                 devices.push(id);
             }
         } else {
-            return Err(ServerError::AccountNotExist);
+            return Err(DeviceManagerError::AccountDoesNotExist)?;
         }
         Ok(devices)
     }
@@ -88,7 +90,7 @@ impl DeviceManager for InMemoryDeviceManager {
         let key = DeviceAddress::new(account_id, device.id());
 
         if self.devices.lock().await.contains_key(&key) {
-            return Err(ServerError::DeviceExists);
+            return Err(DeviceManagerError::DeviceExists)?;
         }
 
         self.account_devices
@@ -116,11 +118,12 @@ impl DeviceManager for InMemoryDeviceManager {
             x.remove(&key);
         }
 
-        self.devices
+        let _ = self
+            .devices
             .lock()
             .await
             .remove(&key)
-            .ok_or(ServerError::AccountNotExist)
-            .map(|_| ())
+            .ok_or(DeviceManagerError::DeviceDoesNotExist)?;
+        Ok(())
     }
 }

@@ -13,6 +13,7 @@ use sam_common::{
     api::device::{LinkDeviceRequest, LinkDeviceResponse, LinkDeviceToken},
 };
 
+use crate::routes::error::RouterError;
 use crate::{
     auth::authenticated_user::AuthenticatedUser,
     logic::device::{create_device_token, link_device, unlink_device},
@@ -26,7 +27,7 @@ async fn device_provision_token_endpoint<T: StateType>(
     auth_user: AuthenticatedUser,
 ) -> Result<Json<LinkDeviceToken>, ServerError> {
     if auth_user.device().id() != 1.into() {
-        return Err(ServerError::DeviceProvisionUnAuth);
+        return Err(RouterError::DeviceProvisionUnAuth)?;
     }
     create_device_token(&state, auth_user.account().id())
         .await
@@ -51,7 +52,7 @@ async fn delete_device_endpoint<T: StateType>(
     auth_user: AuthenticatedUser,
 ) -> Result<(), ServerError> {
     if *device_id == 1 {
-        return Err(ServerError::DeviceUnAuth);
+        return Err(RouterError::DeviceUnAuth)?;
     }
 
     unlink_device(&mut state, auth_user.account().id(), device_id).await
@@ -112,7 +113,7 @@ mod test {
 
     #[rstest]
     #[case(600, StatusCode::OK, true)]
-    #[case(0, StatusCode::FORBIDDEN, false)]
+    #[case(0, StatusCode::BAD_REQUEST, false)]
     #[tokio::test]
     async fn test_get_api_v1_devices_link(
         #[case] expire_time: u64,

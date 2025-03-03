@@ -12,14 +12,13 @@ use sam_common::{
 use tokio::sync::mpsc;
 use tokio::sync::mpsc::{Receiver, Sender};
 
+use crate::logic::message::{handle_client_message, handle_server_envelope};
+use crate::websocket::error::{WebSocketError, WebSocketSessionError};
 use crate::{
     auth::authenticated_user::AuthenticatedUser,
     managers::traits::message_manager::MessageManager,
     state::{state_type::StateType, ServerState},
-    ServerError,
 };
-
-use super::message::{handle_client_message, handle_server_envelope};
 
 macro_rules! closing_err {
     ($username:expr, $err:expr) => {
@@ -65,7 +64,7 @@ pub async fn init_websocket<T: StateType>(
 async fn websocket_message_receiver<T: StateType>(
     mut state: ServerState<T>,
     mut receiver: SplitStream<WebSocket>,
-    message_producer: Sender<Result<Option<ServerMessage>, ServerError>>,
+    message_producer: Sender<Result<Option<ServerMessage>, WebSocketSessionError>>,
     auth_user: AuthenticatedUser,
 ) {
     while let Some(Ok(msg)) = receiver.next().await {
@@ -75,15 +74,17 @@ async fn websocket_message_receiver<T: StateType>(
                     "Received websocket message from user '{}'",
                     auth_user.account().username()
                 );
-                ClientMessage::decode(b).map_err(|_| ServerError::WebSocketDecodeError)
+                ClientMessage::decode(b).map_err(|_| WebSocketError::WebSocketDecodeError)
             }
-            Message::Close(_) => Err(ServerError::WebSocketDisconnected),
+            Message::Close(_) => Err(WebSocketError::WebSocketDisconnected),
             _ => continue,
         };
 
         let msg_res = match decode_res {
-            Ok(msg) => handle_client_message(&mut state, &auth_user, msg).await,
-            Err(e) => Err(e),
+            Ok(msg) => handle_client_message(&mut state, &auth_user, msg)
+                .await
+                .map_err(|e| WebSocketSessionError::from(e)),
+            Err(e) => Err(WebSocketSessionError::from(e)),
         };
 
         let is_msg_res_err = msg_res.is_err();
@@ -96,7 +97,7 @@ async fn websocket_message_receiver<T: StateType>(
 async fn websocket_message_sender<T: StateType>(
     mut state: ServerState<T>,
     mut sender: SplitSink<WebSocket, Message>,
-    mut message_consumer: Receiver<Result<Option<ServerMessage>, ServerError>>,
+    mut message_consumer: Receiver<Result<Option<ServerMessage>, WebSocketSessionError>>,
     auth_user: AuthenticatedUser,
 ) {
     while let Some(msg_res) = message_consumer.recv().await {
@@ -104,8 +105,10 @@ async fn websocket_message_sender<T: StateType>(
             Ok(Some(msg)) => sender
                 .send(Message::Binary(msg.encode_to_vec().into()))
                 .await
-                .map_err(|_| ServerError::WebSocketSendError),
-            Err(ServerError::WebSocketDisconnected) => Err(ServerError::WebSocketDisconnected),
+                .map_err(|_| WebSocketSessionError::from(WebSocketError::WebSocketSendError)),
+            Err(WebSocketSessionError::WebSocket(WebSocketError::WebSocketDisconnected)) => Err(
+                WebSocketSessionError::from(WebSocketError::WebSocketDisconnected),
+            ),
             Err(err) => {
                 let res = sender
                     .send(Message::Close(Some(CloseFrame {
@@ -113,10 +116,10 @@ async fn websocket_message_sender<T: StateType>(
                         reason: "Internal Server Error".into(),
                     })))
                     .await
-                    .map_err(|_| ServerError::WebSocketSendError);
+                    .map_err(|_| WebSocketError::WebSocketSendError);
                 match res {
                     Ok(_) => Err(err),
-                    Err(x) => Err(x),
+                    Err(x) => Err(WebSocketSessionError::from(x)),
                 }
             }
             Ok(None) => continue,
@@ -126,7 +129,9 @@ async fn websocket_message_sender<T: StateType>(
             Ok(_) => continue,
             Err(err) => {
                 match err {
-                    ServerError::WebSocketDisconnected => break,
+                    WebSocketSessionError::WebSocket(WebSocketError::WebSocketDisconnected) => {
+                        break
+                    }
                     _ => closing_err!(auth_user.account().username(), err),
                 }
                 break;
@@ -143,7 +148,7 @@ async fn websocket_message_sender<T: StateType>(
 async fn websocket_dispatcher<T: StateType>(
     mut state: ServerState<T>,
     mut dispatch: Receiver<MessageId>,
-    message_producer: Sender<Result<Option<ServerMessage>, ServerError>>,
+    message_producer: Sender<Result<Option<ServerMessage>, WebSocketSessionError>>,
     auth_user: AuthenticatedUser,
 ) {
     while let Some(msg_id) = dispatch.recv().await {
@@ -153,8 +158,10 @@ async fn websocket_dispatcher<T: StateType>(
             .await;
 
         let msg_res = match msg_res {
-            Ok(envelope) => handle_server_envelope(&mut state, &auth_user, envelope).await,
-            Err(e) => Err(e),
+            Ok(envelope) => handle_server_envelope(&mut state, &auth_user, envelope)
+                .await
+                .map_err(|e| WebSocketSessionError::from(e)),
+            Err(e) => Err(WebSocketSessionError::from(e)),
         };
 
         let is_msg_res_err = msg_res.is_err();

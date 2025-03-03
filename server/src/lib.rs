@@ -5,6 +5,7 @@ pub mod managers;
 pub mod routes;
 pub mod server;
 pub mod state;
+pub mod websocket;
 
 #[cfg(test)]
 mod test_utils;
