@@ -135,7 +135,7 @@ jobs:
           wget https://github.com/protocolbuffers/protobuf/releases/download/v21.3/protoc-21.3-linux-x86_64.zip
           unzip -o protoc-21.3-linux-x86_64.zip -d ~/.local
 
-      - name: Cache Cargo bin (for sqlx-cli)
+      - name: Cache Cargo bin
         uses: actions/cache@v4
         with:
           path: ~/.cargo/bin/sqlx
@@ -157,25 +157,16 @@ jobs:
       - name: Setup sqlx
         run: cd client/database/ && sqlx db create -D sqlite://dev.db && sqlx migrate run -D sqlite://dev.db && cd ../..
 
-      - name: Cache Cargo bin (for tarpaulin)
-        uses: actions/cache@v4
-        with:
-          path: ~/.cargo/bin/cargo-tarpaulin
-          key: tarpaulin-${{ runner.os }}-${{ hashFiles('**/Cargo.lock') }}
-          restore-keys: |
-            tarpaulin-${{ runner.os }}-
-
-      - name: Install tarpaulin if not cached
+      - name: Install cargo-llvm-cov if not cached
         run: |
-          if ! cargo tarpaulin --version &> /dev/null; then
-            cargo install cargo-tarpaulin
+          if ! command -v cargo-llvm-cov &> /dev/null; then
+            cargo install cargo-llvm-cov
           else
-            echo "tarpaulin found in cache, skipping installation"
+            echo "cargo-llvm-cov found in cache, skipping installation"
           fi
 
-      - name: Run Tarpaulin / Tests
-        run: |
-          cargo tarpaulin --verbose --all-features --workspace --out xml
+      - name: Test & Coverage
+        run: cargo llvm-cov --workspace --lcov --output-path lcov.info
 
       - name: Upload coverage reports to Codecov
         uses: codecov/codecov-action@v5
