@@ -160,7 +160,7 @@ jobs:
       - name: Cache Cargo bin (for tarpaulin)
         uses: actions/cache@v4
         with:
-          path: ~/.cargo/bin/tarpaulin
+          path: ~/.cargo/bin/cargo-tarpaulin
           key: tarpaulin-${{ runner.os }}-${{ hashFiles('**/Cargo.lock') }}
           restore-keys: |
             tarpaulin-${{ runner.os }}-
@@ -177,8 +177,8 @@ jobs:
         run: |
           cargo tarpaulin --verbose --all-features --workspace --out xml
 
-      - name: Upload to codecov.io
-        uses: codecov/codecov-action@v2
+      - name: Upload coverage reports to Codecov
+        uses: codecov/codecov-action@v5
         with:
           token: ${{ secrets.CODECOV_TOKEN }}
-          fail_ci_if_error: true
+          slug: SAM-Research/sam-instant-messenger
