@@ -7,7 +7,7 @@ use sam_common::LibError;
 pub enum ClientError {
     #[display("Failed to parse an invalid ServiceId: {_0}")]
     #[error(ignore)]
-    InvalidServiceId(String),
+    InvalidAccountId(String),
     SignalProtocol(SignalProtocolError),
     #[from(ignore)]
     Database(#[error(not(source))] String),
@@ -16,4 +16,5 @@ pub enum ClientError {
     NoAccountId,
     NoPassword,
     NoUsername,
+    NoSession,
 }

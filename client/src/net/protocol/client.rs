@@ -181,14 +181,21 @@ impl ProtocolClient {
     ) -> Result<(), ProtocolError> {
         self.check_id(req_id, res_id).await?;
 
-        Err(match error.code() {
-            sam_message::ErrorCode::NotEncryptedForAllDevices => ProtocolError::MissingDevices(
-                error.device_ids.ids.iter().map(|id| (*id).into()).collect(),
-            ),
+        let device_lists = error
+            .device_lists
+            .clone()
+            .into_iter()
+            .map_while(|list| list.try_into().ok())
+            .collect();
 
-            sam_message::ErrorCode::EncryptedForExtraDevices => ProtocolError::ExtraDevices(
-                error.device_ids.ids.iter().map(|id| (*id).into()).collect(),
-            ),
+        Err(match error.code() {
+            sam_message::ErrorCode::NotEncryptedForAllDevices => {
+                ProtocolError::MissingDevices(device_lists)
+            }
+
+            sam_message::ErrorCode::EncryptedForExtraDevices => {
+                ProtocolError::ExtraDevices(device_lists)
+            }
         })
     }
 }
@@ -283,7 +290,7 @@ impl SamProtocolClient for ProtocolClient {
 
 #[cfg(test)]
 mod test {
-    use std::{collections::HashMap, time::Duration};
+    use std::time::Duration;
 
     use futures_util::{SinkExt, StreamExt};
     use prost::{bytes::Bytes, Message as PMessage};
@@ -291,7 +298,7 @@ mod test {
     use sam_common::{
         address::{AccountId, MessageId},
         sam_message::{
-            server_message::Content, ClientEnvelope, ClientMessage, EnvelopeType, MessageType,
+            server_message::Content, ClientEnvelope, ClientMessage, MessageType, SamMessageType,
             ServerEnvelope, ServerMessage,
         },
     };
@@ -314,7 +321,7 @@ mod test {
             .content(Content::Message(
                 ServerEnvelope::builder()
                     .id(id.into())
-                    .r#type(EnvelopeType::PlaintextContent as i32)
+                    .r#type(SamMessageType::PlaintextContent as i32)
                     .content(vec![1, 2, 3])
                     .destination_account_id(AccountId::generate().into())
                     .destination_device_id(1u32)
@@ -344,13 +351,7 @@ mod test {
     }
 
     fn client_env() -> ClientEnvelope {
-        ClientEnvelope::builder()
-            .r#type(MessageType::Message as i32)
-            .content(HashMap::new())
-            .destination_account_id(AccountId::generate().into())
-            .source_device_id(1u32)
-            .source_account_id(AccountId::generate().into())
-            .build()
+        ClientEnvelope::builder().messages(vec![]).build()
     }
 
     fn oneshot(tx: &mut Option<Sender<Result<(), String>>>, msg: Result<(), String>) {

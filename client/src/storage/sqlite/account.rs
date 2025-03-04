@@ -45,7 +45,7 @@ impl AccountStore for SqliteAccountStore {
         {
             Err(SqlxError::RowNotFound) => Err(ClientError::NoAccountId),
             Ok(rec) => {
-                AccountId::from_str(&rec.aci).map_err(|_| ClientError::InvalidServiceId(rec.aci))
+                AccountId::from_str(&rec.aci).map_err(|_| ClientError::InvalidAccountId(rec.aci))
             }
             Err(err) => Err(ClientError::Database(format!("{err}"))),
         }

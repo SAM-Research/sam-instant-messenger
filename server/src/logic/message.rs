@@ -1,3 +1,5 @@
+use std::collections::HashMap;
+
 use crate::{
     auth::authenticated_user::AuthenticatedUser,
     managers::traits::{device_manager::DeviceManager, message_manager::MessageManager},
@@ -7,7 +9,7 @@ use crate::{
 use log::{error, warn};
 use sam_common::{
     address::MessageId,
-    sam_message::{ClientEnvelope, Error, ErrorCode, MessageType},
+    sam_message::{ClientEnvelope, DeviceList, Error, ErrorCode, MessageType, SamMessage},
 };
 use sam_common::{
     address::{AccountId, DeviceId},
@@ -28,7 +30,14 @@ pub async fn handle_client_message<T: StateType>(
         MessageType::Message => {
             if let Some(envelope) = message.message {
                 Ok(Some(
-                    handle_client_evelope(state, message_id, envelope).await?,
+                    handle_client_envelope(
+                        state,
+                        message_id,
+                        envelope,
+                        auth_user.account().id(),
+                        auth_user.device().id(),
+                    )
+                    .await?,
                 ))
             } else {
                 Err(ServerError::EnvelopeMalformed)
@@ -82,66 +91,84 @@ pub async fn handle_client_message<T: StateType>(
     }
 }
 
-async fn handle_client_evelope<T: StateType>(
+async fn handle_client_envelope<T: StateType>(
     state: &mut ServerState<T>,
     message_id: MessageId,
     envelope: ClientEnvelope,
+    source_account_id: AccountId,
+    source_device_id: DeviceId,
 ) -> Result<ServerMessage, ServerError> {
-    let dest_id = match AccountId::try_from(envelope.destination_account_id.clone()) {
-        Ok(id) => id,
-        Err(_) => return Err(ServerError::EnvelopeMalformed),
-    };
+    let dest_acc_ids = envelope
+        .recipients()
+        .ok_or(ServerError::EnvelopeMalformed)?;
 
-    let all_devices = state.devices.get_devices(dest_id).await?;
-
-    let missing_devices: Vec<DeviceId> = all_devices
-        .clone()
-        .into_iter()
-        .filter(|id| !envelope.content.contains_key(id))
-        .collect();
-
-    if !missing_devices.is_empty() {
-        return Ok(ServerMessage::builder()
-            .r#type(MessageType::Error as i32)
-            .content(Content::Error(Error {
-                code: ErrorCode::NotEncryptedForAllDevices.into(),
-                device_ids: missing_devices.into(),
-            }))
-            .id(message_id.into())
-            .build());
-    }
-
-    let extra_devices: Vec<DeviceId> = envelope
-        .content
-        .keys()
-        .cloned()
-        .filter(|id| !all_devices.contains(&(*id).into()))
-        .map(|id| id.into())
-        .collect();
-
-    for (device_id, cipher) in envelope.content {
-        let id = MessageId::generate();
-        let server_envelope = ServerEnvelope::builder()
-            .r#type(envelope.r#type)
-            .destination_account_id(envelope.destination_account_id.clone())
-            .destination_device_id(device_id)
-            .source_account_id(envelope.source_account_id.clone())
-            .source_device_id(envelope.source_device_id)
-            .content(cipher)
-            .id(id.into_bytes().to_vec())
-            .build();
-        state
+    let mut extra_devices: HashMap<AccountId, Vec<DeviceId>> = HashMap::new();
+    for (recipient, devices) in dest_acc_ids {
+        let all_devices = state.devices.get_devices(recipient).await?;
+        let all_messages: HashMap<DeviceId, &SamMessage> = envelope
             .messages
-            .insert_envelope(dest_id, device_id.into(), id, server_envelope)
-            .await?;
-    }
+            .iter()
+            .filter(|message| message.destination_account_id == Into::<Vec<u8>>::into(recipient))
+            .map(|message| (message.destination_device_id.into(), message))
+            .collect();
 
-    if !extra_devices.is_empty() {
+        let missing_devices: Vec<DeviceId> = all_devices
+            .clone()
+            .into_iter()
+            .filter(|id| !devices.contains(id))
+            .collect();
+
+        if !missing_devices.is_empty() {
+            return Ok(ServerMessage::builder()
+                .r#type(MessageType::Error as i32)
+                .content(Content::Error(Error {
+                    code: ErrorCode::NotEncryptedForAllDevices.into(),
+                    device_lists: vec![DeviceList {
+                        account_id: recipient.into(),
+                        device_ids: missing_devices.into_iter().map(|id| id.into()).collect(),
+                    }],
+                }))
+                .id(message_id.into())
+                .build());
+        }
+
+        extra_devices.insert(
+            recipient,
+            devices
+                .into_iter()
+                .filter(|id| !all_devices.contains(id))
+                .collect(),
+        );
+
+        for (device_id, message) in all_messages {
+            let id = MessageId::generate();
+            let server_envelope = ServerEnvelope::builder()
+                .r#type(message.r#type)
+                .destination_account_id(message.destination_account_id.clone())
+                .destination_device_id(message.destination_device_id)
+                .source_account_id(source_account_id.into())
+                .source_device_id(source_device_id.into())
+                .content(message.content.clone())
+                .id(id.into_bytes().to_vec())
+                .build();
+            state
+                .messages
+                .insert_envelope(recipient, device_id, id, server_envelope)
+                .await?;
+        }
+    }
+    if !extra_devices.iter().all(|(_, list)| list.is_empty()) {
         return Ok(ServerMessage::builder()
             .r#type(MessageType::Error as i32)
             .content(Content::Error(Error {
                 code: ErrorCode::EncryptedForExtraDevices.into(),
-                device_ids: extra_devices.into(),
+                device_lists: extra_devices
+                    .into_iter()
+                    .map(|(account_id, device_ids)| DeviceList {
+                        account_id: account_id.into(),
+                        device_ids: device_ids.into_iter().map(|id| id.into()).collect(),
+                    })
+                    .collect(),
             }))
             .id(message_id.into())
             .build());
