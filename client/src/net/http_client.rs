@@ -24,17 +24,17 @@ impl HttpClient {
     }
 
     async fn make_request(&self, request: Request) -> Result<Response, ApiClientError> {
-        let reponse = self
+        let response = self
             .http_client
             .execute(request)
             .await
             .map_err(|_| ApiClientError::CouldNotSendRequest)?;
-        let status = reponse.status();
+        let status = response.status();
 
         if !status.is_success() {
-            return Err(ApiClientError::BadResponse(
+            return Err(ApiClientError::ErrorResponse(
                 status.as_u16(),
-                reponse.text().await.unwrap_or(
+                response.text().await.unwrap_or(
                     status
                         .canonical_reason()
                         .unwrap_or("Unknown reason")
@@ -42,8 +42,7 @@ impl HttpClient {
                 ),
             ));
         };
-
-        Ok(reponse)
+        Ok(response)
     }
 }
 
@@ -64,6 +63,7 @@ impl ApiClient for HttpClient {
             .basic_auth(username, Some(password))
             .build()
             .map_err(|_| ApiClientError::CouldNotBuildRequest)?;
+
         let response = self.make_request(request).await?;
 
         Ok(response
@@ -86,7 +86,9 @@ impl ApiClient for HttpClient {
             .basic_auth(format!("{}.{}", account_id, device_id), Some(password))
             .build()
             .map_err(|_| ApiClientError::CouldNotBuildRequest)?;
+
         let _ = self.make_request(request).await?;
+
         Ok(())
     }
 

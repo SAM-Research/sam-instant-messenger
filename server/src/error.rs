@@ -1,78 +1,44 @@
-use axum::{http::StatusCode, response::IntoResponse};
+use crate::auth::error::AuthorizationError;
+use crate::managers::error::{
+    AccountManagerError, DeviceManagerError, KeyManagerError, MessageManagerError,
+};
+use crate::routes::error::RouterError;
+use axum::http::StatusCode;
+use axum::response::IntoResponse;
 use derive_more::derive::{Display, Error};
+use derive_more::From;
 use log::error;
 use sam_common::LibError;
 
 pub type Result<T> = std::result::Result<T, ServerError>;
 
-#[derive(Debug, Display, Error)]
+#[derive(Debug, Display, Error, From)]
 pub enum ServerError {
     #[error(ignore)]
-    Custom(String),
     Lib(LibError),
-    KeyVerification,
-    DeviceTokenMalformed,
-    DeviceSignatureDecodeError,
-    DeviceWrongSignature,
-    DeviceLinkTooSlow,
-    DeviceProvisionUnAuth,
-    DeviceUnAuth,
-    AccountIDUnParsable,
-    PasswordHashError,
-    WrongPassword,
-    AuthBasicParseError,
-    AccountNotExist,
-    AccountExists,
-    DeviceNotExist,
-    DeviceExists,
-    KeyNotExist,
-    EnvelopeExists,
-    EnvelopeNotExists,
-    MessageSubscriberExists,
-    MessageSubscriberNotExists,
-    WebSocketDecodeError,
-    WebSocketDisconnected,
-    WebSocketSendError,
-    MessageAlreadyPending,
-    MessageNotPending,
+    AccountManager(AccountManagerError),
+    DeviceManager(DeviceManagerError),
+    KeyManager(KeyManagerError),
+    MessageManager(MessageManagerError),
+    Authorization(AuthorizationError),
+    Router(RouterError),
     EnvelopeMalformed,
-    MessageSubscriberSendErorr,
 }
 
 impl IntoResponse for ServerError {
     fn into_response(self) -> axum::response::Response {
         error!("ServerError occured: {}", self);
         match self {
-            ServerError::Custom(_) => StatusCode::INTERNAL_SERVER_ERROR,
-            ServerError::Lib(_) => StatusCode::INTERNAL_SERVER_ERROR,
-            ServerError::KeyVerification => StatusCode::INTERNAL_SERVER_ERROR,
-            ServerError::DeviceTokenMalformed => StatusCode::INTERNAL_SERVER_ERROR,
-            ServerError::DeviceSignatureDecodeError => StatusCode::INTERNAL_SERVER_ERROR,
-            ServerError::DeviceWrongSignature => StatusCode::INTERNAL_SERVER_ERROR,
-            ServerError::DeviceLinkTooSlow => StatusCode::FORBIDDEN,
-            ServerError::DeviceProvisionUnAuth => StatusCode::INTERNAL_SERVER_ERROR,
-            ServerError::AccountIDUnParsable => StatusCode::INTERNAL_SERVER_ERROR,
-            ServerError::PasswordHashError => StatusCode::INTERNAL_SERVER_ERROR,
-            ServerError::WrongPassword => StatusCode::INTERNAL_SERVER_ERROR,
-            ServerError::AuthBasicParseError => StatusCode::INTERNAL_SERVER_ERROR,
-            ServerError::AccountNotExist => StatusCode::INTERNAL_SERVER_ERROR,
-            ServerError::AccountExists => StatusCode::INTERNAL_SERVER_ERROR,
-            ServerError::DeviceNotExist => StatusCode::INTERNAL_SERVER_ERROR,
-            ServerError::DeviceExists => StatusCode::INTERNAL_SERVER_ERROR,
-            ServerError::KeyNotExist => StatusCode::INTERNAL_SERVER_ERROR,
-            ServerError::EnvelopeExists => StatusCode::INTERNAL_SERVER_ERROR,
-            ServerError::EnvelopeNotExists => StatusCode::INTERNAL_SERVER_ERROR,
-            ServerError::MessageSubscriberExists => StatusCode::INTERNAL_SERVER_ERROR,
-            ServerError::MessageSubscriberNotExists => StatusCode::INTERNAL_SERVER_ERROR,
-            ServerError::WebSocketDecodeError => StatusCode::INTERNAL_SERVER_ERROR,
-            ServerError::WebSocketDisconnected => StatusCode::INTERNAL_SERVER_ERROR,
-            ServerError::WebSocketSendError => StatusCode::INTERNAL_SERVER_ERROR,
-            ServerError::MessageAlreadyPending => StatusCode::INTERNAL_SERVER_ERROR,
-            ServerError::MessageNotPending => StatusCode::INTERNAL_SERVER_ERROR,
-            ServerError::EnvelopeMalformed => StatusCode::INTERNAL_SERVER_ERROR,
-            ServerError::MessageSubscriberSendErorr => StatusCode::INTERNAL_SERVER_ERROR,
-            ServerError::DeviceUnAuth => StatusCode::UNAUTHORIZED,
+            ServerError::EnvelopeMalformed => {
+                (StatusCode::BAD_REQUEST, "Message is malformed".to_string()).into_response()
+            }
+            ServerError::Lib(error) => error.into_response(),
+            ServerError::MessageManager(error) => error.into_response(),
+            ServerError::AccountManager(error) => error.into_response(),
+            ServerError::KeyManager(error) => error.into_response(),
+            ServerError::DeviceManager(error) => error.into_response(),
+            ServerError::Authorization(error) => error.into_response(),
+            ServerError::Router(error) => error.into_response(),
         }
-        .into_response()
     }
 }

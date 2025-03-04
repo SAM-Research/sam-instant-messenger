@@ -1,12 +1,6 @@
 use std::str::FromStr;
 
-use axum::extract::FromRequestParts;
-use axum::http::request::Parts;
-use axum_extra::headers::authorization::Basic;
-use axum_extra::headers::Authorization;
-use axum_extra::TypedHeader;
-use sam_common::address::AccountId;
-
+use crate::auth::error::AuthorizationError;
 use crate::managers::entities::account::Account;
 use crate::managers::entities::device::Device;
 use crate::managers::traits::account_manager::AccountManager;
@@ -14,6 +8,12 @@ use crate::managers::traits::device_manager::DeviceManager;
 use crate::state::state_type::StateType;
 use crate::state::ServerState;
 use crate::ServerError;
+use axum::extract::FromRequestParts;
+use axum::http::request::Parts;
+use axum_extra::headers::authorization::Basic;
+use axum_extra::headers::Authorization;
+use axum_extra::TypedHeader;
+use sam_common::address::AccountId;
 
 #[derive(Clone)]
 pub struct AuthenticatedUser {
@@ -42,17 +42,17 @@ impl<T: StateType> FromRequestParts<ServerState<T>> for AuthenticatedUser {
             let TypedHeader(basic) =
                 TypedHeader::<Authorization<Basic>>::from_request_parts(parts, &state)
                     .await
-                    .map_err(|_| ServerError::AuthBasicParseError)?;
+                    .map_err(|_| AuthorizationError::AuthBasicParseError)?;
             (basic.username().to_string(), basic.password().to_string())
         };
         let (account_id, device_id) = userinfo
             .split_once(".")
-            .ok_or(ServerError::AuthBasicParseError)?;
+            .ok_or(AuthorizationError::AuthBasicParseError)?;
         let account_id =
-            AccountId::from_str(account_id).map_err(|_| ServerError::AuthBasicParseError)?;
+            AccountId::from_str(account_id).map_err(|_| AuthorizationError::AuthBasicParseError)?;
         let device_id = device_id
             .parse()
-            .map_err(|_| ServerError::AuthBasicParseError)?;
+            .map_err(|_| AuthorizationError::AuthBasicParseError)?;
 
         let account = { state.accounts.get_account(account_id).await? };
         let device = { state.devices.get_device(account_id, device_id).await? };

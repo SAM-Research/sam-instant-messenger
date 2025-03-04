@@ -1,11 +1,11 @@
-use derive_more::{Display, Error};
+use derive_more::Display;
 
-#[derive(Debug, Display, Error)]
+#[derive(Debug, Display)]
 pub enum ApiClientError {
-    CouldNotParseUrl(#[error(not(source))] String),
+    CouldNotParseUrl(String),
     CouldNotBuildRequest,
     CouldNotSendRequest,
     #[display("Got bad response from server: {_0} - {_1}")]
-    BadResponse(u16, String),
+    ErrorResponse(u16, String),
     CouldNotParseResponse,
 }

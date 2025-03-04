@@ -158,8 +158,7 @@ pub async fn handle_server_envelope<T: StateType>(
     auth_user: &AuthenticatedUser,
     envelope: ServerEnvelope,
 ) -> Result<Option<ServerMessage>, ServerError> {
-    let id =
-        MessageId::try_from(envelope.id.clone()).map_err(|_| ServerError::EnvelopeMalformed)?;
+    let id = MessageId::try_from(envelope.id.clone())?;
 
     state
         .messages

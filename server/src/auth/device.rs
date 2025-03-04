@@ -1,5 +1,7 @@
 use std::{str::FromStr, time::Duration};
 
+use crate::auth::error::AuthorizationError;
+use crate::ServerError;
 use base64::{
     prelude::{BASE64_STANDARD_NO_PAD, BASE64_URL_SAFE},
     Engine,
@@ -7,8 +9,6 @@ use base64::{
 use hkdf::hmac::{Hmac, Mac};
 use sam_common::{address::AccountId, api::device::LinkDeviceToken, time_now_millis};
 use sha2::{Digest, Sha256};
-
-use crate::ServerError;
 
 pub fn create_token(secret: &str, account_id: AccountId) -> LinkDeviceToken {
     let claims = encode_claims(account_id);
@@ -26,30 +26,30 @@ pub fn verify_token(
     let (claims, b64_signature) = token
         .token()
         .split_once(":")
-        .ok_or(ServerError::DeviceTokenMalformed)?;
+        .ok_or(AuthorizationError::DeviceTokenMalformed)?;
 
     let expected_signature = create_signature(secret, claims);
     let signature = BASE64_URL_SAFE
         .decode(b64_signature)
-        .map_err(|_| ServerError::DeviceSignatureDecodeError)?;
+        .map_err(|_| AuthorizationError::DeviceSignatureDecodeError)?;
 
     if signature != expected_signature {
-        return Err(ServerError::DeviceWrongSignature);
+        Err(AuthorizationError::DeviceWrongSignature)?;
     }
 
     let (account_id, timestamp) = decode_claims(claims)?;
     let account_id =
-        AccountId::from_str(account_id).map_err(|_| ServerError::DeviceTokenMalformed)?;
+        AccountId::from_str(account_id).map_err(|_| AuthorizationError::DeviceTokenMalformed)?;
 
     let time_then = Duration::from_millis(
         timestamp
             .parse()
-            .map_err(|_| ServerError::DeviceTokenMalformed)?,
+            .map_err(|_| AuthorizationError::DeviceTokenMalformed)?,
     );
     let time_now = Duration::from_millis(time_now_millis() as u64);
     let elapsed = time_now - time_then;
     if elapsed.as_secs() > expire_seconds {
-        return Err(ServerError::DeviceLinkTooSlow);
+        return Err(ServerError::from(AuthorizationError::DeviceLinkTooSlow));
     }
     Ok(account_id)
 }
@@ -61,7 +61,7 @@ fn encode_claims(account_id: AccountId) -> String {
 fn decode_claims(claims: &str) -> Result<(&str, &str), ServerError> {
     claims
         .split_once(".")
-        .ok_or(ServerError::DeviceTokenMalformed)
+        .ok_or(ServerError::from(AuthorizationError::DeviceTokenMalformed))
 }
 
 fn create_signature(secret: &str, claims: &str) -> Vec<u8> {
