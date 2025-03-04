@@ -6,8 +6,8 @@ use prost::Message as PMessage;
 use sam_common::{
     address::MessageId,
     sam_message::{
-        self, server_message::Content, ClientEnvelope, ClientMessage, Error, MessageType,
-        ServerEnvelope, ServerMessage,
+        server_message::Content, ClientEnvelope, ClientMessage, MessageType, ServerEnvelope,
+        ServerMessage, Status, StatusCode,
     },
 };
 use tokio::sync::mpsc::{channel, Receiver, Sender};
@@ -24,7 +24,7 @@ use super::{
 
 enum ServerStatus {
     Ack(MessageId),
-    Error(MessageId, sam_message::Error),
+    Status(MessageId, Status),
 }
 struct SamProtocolReceiver {
     client: Arc<Mutex<WebSocketClient>>,
@@ -65,7 +65,7 @@ impl SamProtocolReceiver {
             .map_err(|_| ProtocolError::MalformedServerMessage)?;
 
         let content = match message.r#type() {
-            MessageType::Message | MessageType::Error => message
+            MessageType::Message | MessageType::Status => message
                 .content
                 .ok_or(ProtocolError::MalformedServerMessage)?,
             MessageType::Ack => {
@@ -81,8 +81,8 @@ impl SamProtocolReceiver {
                 .handle_server_envelope(envelope)
                 .await
                 .map(|_| Some(id)),
-            Content::Error(error) => self
-                .handle_server_status(ServerStatus::Error(id, error))
+            Content::Status(status) => self
+                .handle_server_status(ServerStatus::Status(id, status))
                 .await
                 .map(|_| None),
         }
@@ -144,11 +144,11 @@ impl ProtocolClient {
         &mut self,
         req_id: MessageId,
         status: ServerStatus,
-    ) -> Result<(), ProtocolError> {
+    ) -> Result<bool, ProtocolError> {
         match status {
-            ServerStatus::Ack(message_id) => self.check_id(req_id, message_id).await,
-            ServerStatus::Error(message_id, error) => {
-                self.handle_error(req_id, message_id, error).await
+            ServerStatus::Ack(message_id) => self.check_id(req_id, message_id).await.map(|_| false),
+            ServerStatus::Status(message_id, status) => {
+                self.handle_status(req_id, message_id, status).await
             }
         }
     }
@@ -173,23 +173,34 @@ impl ProtocolClient {
         }
     }
 
-    async fn handle_error(
+    async fn handle_status(
         &mut self,
         req_id: MessageId,
         res_id: MessageId,
-        error: Error,
-    ) -> Result<(), ProtocolError> {
+        status: Status,
+    ) -> Result<bool, ProtocolError> {
         self.check_id(req_id, res_id).await?;
-
-        Err(match error.code() {
-            sam_message::ErrorCode::NotEncryptedForAllDevices => ProtocolError::MissingDevices(
-                error.device_ids.ids.iter().map(|id| (*id).into()).collect(),
-            ),
-
-            sam_message::ErrorCode::EncryptedForExtraDevices => ProtocolError::ExtraDevices(
-                error.device_ids.ids.iter().map(|id| (*id).into()).collect(),
-            ),
-        })
+        match status.code() {
+            StatusCode::NotEncryptedForAllDevices => Err(ProtocolError::MissingDevices(
+                status
+                    .device_ids
+                    .ok_or(ProtocolError::MalformedServerMessage)?
+                    .ids
+                    .iter()
+                    .map(|id| (*id).into())
+                    .collect(),
+            )),
+            StatusCode::EncryptedForExtraDevices => Err(ProtocolError::ExtraDevices(
+                status
+                    .device_ids
+                    .ok_or(ProtocolError::MalformedServerMessage)?
+                    .ids
+                    .iter()
+                    .map(|id| (*id).into())
+                    .collect(),
+            )),
+            StatusCode::NeedsSync => Ok(true),
+        }
     }
 }
 
@@ -265,7 +276,7 @@ impl SamProtocolClient for ProtocolClient {
         self.client.lock().await.is_connected()
     }
 
-    async fn send_message(&mut self, message: ClientEnvelope) -> Result<(), ProtocolError> {
+    async fn send_message(&mut self, message: ClientEnvelope) -> Result<bool, ProtocolError> {
         let id = MessageId::generate();
 
         self.send_client_message(id, message).await?;

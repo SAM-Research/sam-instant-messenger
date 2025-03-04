@@ -7,5 +7,5 @@ pub trait SamProtocolClient {
     async fn connect(&mut self) -> Result<Receiver<ServerEnvelope>, ProtocolError>;
     async fn disconnect(&mut self) -> Result<(), ProtocolError>;
     async fn is_connected(&self) -> bool;
-    async fn send_message(&mut self, message: ClientEnvelope) -> Result<(), ProtocolError>;
+    async fn send_message(&mut self, message: ClientEnvelope) -> Result<bool, ProtocolError>;
 }
