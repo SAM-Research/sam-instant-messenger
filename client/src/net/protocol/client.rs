@@ -6,8 +6,8 @@ use prost::Message as PMessage;
 use sam_common::{
     address::MessageId,
     sam_message::{
-        self, server_message::Content, ClientEnvelope, ClientMessage, Error, MessageType,
-        ServerEnvelope, ServerMessage,
+        server_message::Content, ClientEnvelope, ClientMessage, MessageType, ServerEnvelope,
+        ServerMessage, Status, StatusCode,
     },
 };
 use tokio::sync::mpsc::{channel, Receiver, Sender};
@@ -24,7 +24,7 @@ use super::{
 
 enum ServerStatus {
     Ack(MessageId),
-    Error(MessageId, sam_message::Error),
+    Status(MessageId, Status),
 }
 struct SamProtocolReceiver {
     client: Arc<Mutex<WebSocketClient>>,
@@ -65,7 +65,7 @@ impl SamProtocolReceiver {
             .map_err(|_| ProtocolError::MalformedServerMessage)?;
 
         let content = match message.r#type() {
-            MessageType::Message | MessageType::Error => message
+            MessageType::Message | MessageType::Status => message
                 .content
                 .ok_or(ProtocolError::MalformedServerMessage)?,
             MessageType::Ack => {
@@ -81,8 +81,8 @@ impl SamProtocolReceiver {
                 .handle_server_envelope(envelope)
                 .await
                 .map(|_| Some(id)),
-            Content::Error(error) => self
-                .handle_server_status(ServerStatus::Error(id, error))
+            Content::Status(status) => self
+                .handle_server_status(ServerStatus::Status(id, status))
                 .await
                 .map(|_| None),
         }
@@ -147,7 +147,7 @@ impl ProtocolClient {
     ) -> Result<(), ProtocolError> {
         match status {
             ServerStatus::Ack(message_id) => self.check_id(req_id, message_id).await,
-            ServerStatus::Error(message_id, error) => {
+            ServerStatus::Status(message_id, error) => {
                 self.handle_error(req_id, message_id, error).await
             }
         }
@@ -177,11 +177,11 @@ impl ProtocolClient {
         &mut self,
         req_id: MessageId,
         res_id: MessageId,
-        error: Error,
+        error: Status,
     ) -> Result<(), ProtocolError> {
         self.check_id(req_id, res_id).await?;
         Err(match error.code() {
-            sam_message::ErrorCode::NotEncryptedForAllDevices => ProtocolError::MissingDevices(
+            StatusCode::NotEncryptedForAllDevices => ProtocolError::MissingDevices(
                 error
                     .device_ids
                     .ok_or(ProtocolError::MalformedServerMessage)?
@@ -190,7 +190,7 @@ impl ProtocolClient {
                     .map(|id| (*id).into())
                     .collect(),
             ),
-            sam_message::ErrorCode::EncryptedForExtraDevices => ProtocolError::ExtraDevices(
+            StatusCode::EncryptedForExtraDevices => ProtocolError::ExtraDevices(
                 error
                     .device_ids
                     .ok_or(ProtocolError::MalformedServerMessage)?
@@ -199,7 +199,7 @@ impl ProtocolClient {
                     .map(|id| (*id).into())
                     .collect(),
             ),
-            sam_message::ErrorCode::NeedsSync => ProtocolError::NeedsSync,
+            StatusCode::NeedsSync => ProtocolError::NeedsSync,
         })
     }
 }

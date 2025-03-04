@@ -51,8 +51,8 @@ mod test {
     use sam_common::{
         address::{AccountId, DeviceId, MessageId},
         sam_message::{
-            self, server_message::Content, ClientEnvelope, ClientMessage, EnvelopeType, ErrorCode,
-            MessageType, ServerMessage,
+            server_message::Content, ClientEnvelope, ClientMessage, EnvelopeType, MessageType,
+            ServerMessage, StatusCode,
         },
     };
 
@@ -306,7 +306,7 @@ mod test {
             .expect("message should contain content");
 
         let missing_devices = match content {
-            Content::Error(error) => error.device_ids.expect("Server Sends Correct errors").ids,
+            Content::Status(status) => status.device_ids.expect("Server Sends Correct errors").ids,
             _ => vec![],
         };
 
@@ -488,7 +488,7 @@ mod test {
             .expect("message should contain content");
 
         let missing_devices = match content {
-            Content::Error(error) => error.device_ids.expect("Server Sends Correct errors").ids,
+            Content::Status(status) => status.device_ids.expect("Server Sends Correct errors").ids,
             _ => vec![],
         };
 
@@ -578,11 +578,11 @@ mod test {
         let server_msg =
             ServerMessage::decode(ws_msg.into_data()).expect("Server sends wellformed data");
 
-        assert!(server_msg.r#type() == MessageType::Error);
+        assert!(server_msg.r#type() == MessageType::Status);
         match server_msg.content.expect("Has content") {
             Content::Message(_) => panic!("Server Sends Error"),
-            Content::Error(error) => {
-                assert!(error.code() == ErrorCode::NeedsSync)
+            Content::Status(status) => {
+                assert!(status.code() == StatusCode::NeedsSync)
             }
         }
     }

@@ -7,7 +7,7 @@ use crate::{
 use log::{error, warn};
 use sam_common::{
     address::MessageId,
-    sam_message::{ClientEnvelope, Error, ErrorCode, MessageType},
+    sam_message::{ClientEnvelope, MessageType, Status, StatusCode},
 };
 use sam_common::{
     address::{AccountId, DeviceId},
@@ -62,7 +62,7 @@ pub async fn handle_client_message<T: StateType>(
                 }
             }
         }
-        MessageType::Error => {
+        MessageType::Status => {
             let account_id = auth_user.account().id();
             let device_id = auth_user.device().id();
             let pending_res = state
@@ -125,10 +125,10 @@ async fn handle_client_evelope<T: StateType>(
 
     if !missing_devices.is_empty() {
         return Ok(ServerMessage::builder()
-            .r#type(MessageType::Error as i32)
-            .content(Content::Error(
-                Error::builder()
-                    .code(ErrorCode::NotEncryptedForAllDevices.into())
+            .r#type(MessageType::Status as i32)
+            .content(Content::Status(
+                Status::builder()
+                    .code(StatusCode::NotEncryptedForAllDevices.into())
                     .device_ids(missing_devices.into())
                     .build(),
             ))
@@ -163,10 +163,10 @@ async fn handle_client_evelope<T: StateType>(
 
     if !extra_devices.is_empty() {
         return Ok(ServerMessage::builder()
-            .r#type(MessageType::Error as i32)
-            .content(Content::Error(
-                Error::builder()
-                    .code(ErrorCode::EncryptedForExtraDevices.into())
+            .r#type(MessageType::Status as i32)
+            .content(Content::Status(
+                Status::builder()
+                    .code(StatusCode::EncryptedForExtraDevices.into())
                     .device_ids(extra_devices.into())
                     .build(),
             ))
@@ -176,9 +176,9 @@ async fn handle_client_evelope<T: StateType>(
 
     if needs_sync {
         return Ok(ServerMessage::builder()
-            .r#type(MessageType::Error as i32)
-            .content(Content::Error(
-                Error::builder().code(ErrorCode::NeedsSync.into()).build(),
+            .r#type(MessageType::Status as i32)
+            .content(Content::Status(
+                Status::builder().code(StatusCode::NeedsSync.into()).build(),
             ))
             .id(message_id.into())
             .build());
