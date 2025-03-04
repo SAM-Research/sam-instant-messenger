@@ -101,7 +101,8 @@ async fn handle_client_evelope<T: StateType>(
             .get_devices(dest_id)
             .await?
             .iter()
-            .filter(|id| **id != auth_user.device().id()).copied()
+            .filter(|id| **id != auth_user.device().id())
+            .copied()
             .collect();
         (devices, false)
     } else {
