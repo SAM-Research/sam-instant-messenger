@@ -37,13 +37,14 @@ message DeviceList {
 }
 
 enum ErrorCode {
-  NOT_ENCRYPTED_FOR_ALL_DEVICES=4;
-  ENCRYPTED_FOR_EXTRA_DEVICES=5;
+  NEEDS_SYNC = 1;
+  NOT_ENCRYPTED_FOR_ALL_DEVICES=2;
+  ENCRYPTED_FOR_EXTRA_DEVICES=3;
 }
 
 message Error {
   required ErrorCode code = 1;
-  required DeviceList device_ids = 2;
+  optional DeviceList device_ids = 2;
 }
 
 message ClientMessage {

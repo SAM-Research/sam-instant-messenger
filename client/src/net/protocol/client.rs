@@ -180,15 +180,26 @@ impl ProtocolClient {
         error: Error,
     ) -> Result<(), ProtocolError> {
         self.check_id(req_id, res_id).await?;
-
         Err(match error.code() {
             sam_message::ErrorCode::NotEncryptedForAllDevices => ProtocolError::MissingDevices(
-                error.device_ids.ids.iter().map(|id| (*id).into()).collect(),
+                error
+                    .device_ids
+                    .ok_or(ProtocolError::MalformedServerMessage)?
+                    .ids
+                    .iter()
+                    .map(|id| (*id).into())
+                    .collect(),
             ),
-
             sam_message::ErrorCode::EncryptedForExtraDevices => ProtocolError::ExtraDevices(
-                error.device_ids.ids.iter().map(|id| (*id).into()).collect(),
+                error
+                    .device_ids
+                    .ok_or(ProtocolError::MalformedServerMessage)?
+                    .ids
+                    .iter()
+                    .map(|id| (*id).into())
+                    .collect(),
             ),
+            sam_message::ErrorCode::NeedsSync => ProtocolError::NeedsSync,
         })
     }
 }

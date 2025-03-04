@@ -28,7 +28,7 @@ pub async fn handle_client_message<T: StateType>(
         MessageType::Message => {
             if let Some(envelope) = message.message {
                 Ok(Some(
-                    handle_client_evelope(state, message_id, envelope).await?,
+                    handle_client_evelope(state, auth_user, message_id, envelope).await?,
                 ))
             } else {
                 Err(ServerError::EnvelopeMalformed)
@@ -84,6 +84,7 @@ pub async fn handle_client_message<T: StateType>(
 
 async fn handle_client_evelope<T: StateType>(
     state: &mut ServerState<T>,
+    auth_user: &AuthenticatedUser,
     message_id: MessageId,
     envelope: ClientEnvelope,
 ) -> Result<ServerMessage, ServerError> {
@@ -92,7 +93,29 @@ async fn handle_client_evelope<T: StateType>(
         Err(_) => return Err(ServerError::EnvelopeMalformed),
     };
 
-    let all_devices = state.devices.get_devices(dest_id).await?;
+    let is_sync = auth_user.account().id() == dest_id;
+
+    let (all_devices, needs_sync) = if is_sync {
+        let devices = state
+            .devices
+            .get_devices(dest_id)
+            .await?
+            .iter()
+            .filter(|id| **id != auth_user.device().id())
+            .map(|id| (*id).clone())
+            .collect();
+        (devices, false)
+    } else {
+        let devices = state.devices.get_devices(dest_id).await?;
+
+        let needs_sync = state
+            .devices
+            .get_devices(auth_user.account().id())
+            .await?
+            .len()
+            > 1;
+        (devices, needs_sync)
+    };
 
     let missing_devices: Vec<DeviceId> = all_devices
         .clone()
@@ -103,10 +126,12 @@ async fn handle_client_evelope<T: StateType>(
     if !missing_devices.is_empty() {
         return Ok(ServerMessage::builder()
             .r#type(MessageType::Error as i32)
-            .content(Content::Error(Error {
-                code: ErrorCode::NotEncryptedForAllDevices.into(),
-                device_ids: missing_devices.into(),
-            }))
+            .content(Content::Error(
+                Error::builder()
+                    .code(ErrorCode::NotEncryptedForAllDevices.into())
+                    .device_ids(missing_devices.into())
+                    .build(),
+            ))
             .id(message_id.into())
             .build());
     }
@@ -139,10 +164,22 @@ async fn handle_client_evelope<T: StateType>(
     if !extra_devices.is_empty() {
         return Ok(ServerMessage::builder()
             .r#type(MessageType::Error as i32)
-            .content(Content::Error(Error {
-                code: ErrorCode::EncryptedForExtraDevices.into(),
-                device_ids: extra_devices.into(),
-            }))
+            .content(Content::Error(
+                Error::builder()
+                    .code(ErrorCode::EncryptedForExtraDevices.into())
+                    .device_ids(extra_devices.into())
+                    .build(),
+            ))
+            .id(message_id.into())
+            .build());
+    }
+
+    if needs_sync {
+        return Ok(ServerMessage::builder()
+            .r#type(MessageType::Error as i32)
+            .content(Content::Error(
+                Error::builder().code(ErrorCode::NeedsSync.into()).build(),
+            ))
             .id(message_id.into())
             .build());
     }
