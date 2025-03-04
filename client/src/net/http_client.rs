@@ -1,6 +1,6 @@
 use super::{api_trait::ApiClient, ApiClientError};
 use async_trait::async_trait;
-use reqwest::{Client as ReqwestClient, Method, Url};
+use reqwest::{Client as ReqwestClient, Method, Request, Response, Url};
 use sam_common::{
     api::{
         keys::PreKeyBundles, LinkDeviceRequest, LinkDeviceResponse, LinkDeviceToken,
@@ -22,6 +22,28 @@ impl HttpClient {
             base_url,
         }
     }
+
+    async fn make_request(&self, request: Request) -> Result<Response, ApiClientError> {
+        let response = self
+            .http_client
+            .execute(request)
+            .await
+            .map_err(|_| ApiClientError::CouldNotSendRequest)?;
+        let status = response.status();
+
+        if !status.is_success() {
+            return Err(ApiClientError::ErrorResponse(
+                status.as_u16(),
+                response.text().await.unwrap_or(
+                    status
+                        .canonical_reason()
+                        .unwrap_or("Unknown reason")
+                        .to_owned(),
+                ),
+            ));
+        };
+        Ok(response)
+    }
 }
 
 #[async_trait(?Send)]
@@ -41,27 +63,8 @@ impl ApiClient for HttpClient {
             .basic_auth(username, Some(password))
             .build()
             .map_err(|_| ApiClientError::CouldNotBuildRequest)?;
-        let response = self
-            .http_client
-            .execute(request)
-            .await
-            .map_err(|_| ApiClientError::CouldNotSendRequest)?;
-        let status = response.status();
 
-        if !status.is_success() {
-            let text = response.text().await.unwrap_or(
-                status
-                    .canonical_reason()
-                    .unwrap_or("Unknown reason")
-                    .to_owned(),
-            );
-            return match status {
-                reqwest::StatusCode::CONFLICT => {
-                    Err(ApiClientError::AccountAlreadyExists(status.as_u16(), text))
-                }
-                _ => Err(ApiClientError::BadResponse(status.as_u16(), text)),
-            };
-        }
+        let response = self.make_request(request).await?;
 
         Ok(response
             .json()
@@ -84,30 +87,7 @@ impl ApiClient for HttpClient {
             .build()
             .map_err(|_| ApiClientError::CouldNotBuildRequest)?;
 
-        let response = self
-            .http_client
-            .execute(request)
-            .await
-            .map_err(|_| ApiClientError::CouldNotSendRequest)?;
-        let status = response.status();
-
-        if !status.is_success() {
-            let text = response.text().await.unwrap_or(
-                status
-                    .canonical_reason()
-                    .unwrap_or("Unknown Reason")
-                    .to_owned(),
-            );
-            return match status {
-                reqwest::StatusCode::NOT_FOUND => {
-                    Err(ApiClientError::AccountDoesNotExist(status.as_u16(), text))
-                }
-                reqwest::StatusCode::UNAUTHORIZED => {
-                    Err(ApiClientError::ClientUnauthorized(status.as_u16(), text))
-                }
-                _ => Err(ApiClientError::BadResponse(status.as_u16(), text)),
-            };
-        }
+        let _ = self.make_request(request).await?;
 
         Ok(())
     }
@@ -128,30 +108,8 @@ impl ApiClient for HttpClient {
             .basic_auth(format!("{}.{}", account_id, device_id), Some(password))
             .build()
             .map_err(|_| ApiClientError::CouldNotBuildRequest)?;
-        let response = self
-            .http_client
-            .execute(request)
-            .await
-            .map_err(|_| ApiClientError::CouldNotSendRequest)?;
-        let status = response.status();
 
-        if !status.is_success() {
-            let text = response.text().await.unwrap_or(
-                status
-                    .canonical_reason()
-                    .unwrap_or("Unknown Reason")
-                    .to_owned(),
-            );
-            return match status {
-                reqwest::StatusCode::NOT_FOUND => {
-                    Err(ApiClientError::DoesNotExist(status.as_u16(), text))
-                }
-                reqwest::StatusCode::UNAUTHORIZED => {
-                    Err(ApiClientError::ClientUnauthorized(status.as_u16(), text))
-                }
-                _ => Err(ApiClientError::BadResponse(status.as_u16(), text)),
-            };
-        }
+        let response = self.make_request(request).await?;
 
         let prekey_bundles = response
             .json::<PreKeyBundles>()
@@ -179,30 +137,7 @@ impl ApiClient for HttpClient {
             .build()
             .map_err(|_| ApiClientError::CouldNotBuildRequest)?;
 
-        let response = self
-            .http_client
-            .execute(request)
-            .await
-            .map_err(|_| ApiClientError::CouldNotSendRequest)?;
-        let status = response.status();
-
-        if !status.is_success() {
-            let text = response.text().await.unwrap_or(
-                status
-                    .canonical_reason()
-                    .unwrap_or("Unknown Reason")
-                    .to_owned(),
-            );
-            return match status {
-                reqwest::StatusCode::NOT_FOUND => {
-                    Err(ApiClientError::DoesNotExist(status.as_u16(), text))
-                }
-                reqwest::StatusCode::UNAUTHORIZED => {
-                    Err(ApiClientError::ClientUnauthorized(status.as_u16(), text))
-                }
-                _ => Err(ApiClientError::BadResponse(status.as_u16(), text)),
-            };
-        }
+        let _ = self.make_request(request).await?;
 
         Ok(())
     }
@@ -223,36 +158,7 @@ impl ApiClient for HttpClient {
             .build()
             .map_err(|_| ApiClientError::CouldNotBuildRequest)?;
 
-        let response = self
-            .http_client
-            .execute(request)
-            .await
-            .map_err(|_| ApiClientError::CouldNotSendRequest)?;
-        let status = response.status();
-
-        if !status.is_success() {
-            let text = response.text().await.unwrap_or(
-                status
-                    .canonical_reason()
-                    .unwrap_or("Unknown Reason")
-                    .to_owned(),
-            );
-            return match status {
-                reqwest::StatusCode::BAD_REQUEST => {
-                    Err(ApiClientError::DeviceLinkTookTooLong(status.as_u16(), text))
-                }
-                reqwest::StatusCode::FORBIDDEN => {
-                    Err(ApiClientError::DeviceProvisionUnAuth(status.as_u16(), text))
-                }
-                reqwest::StatusCode::NOT_FOUND => {
-                    Err(ApiClientError::DoesNotExist(status.as_u16(), text))
-                }
-                reqwest::StatusCode::UNAUTHORIZED => {
-                    Err(ApiClientError::ClientUnauthorized(status.as_u16(), text))
-                }
-                _ => Err(ApiClientError::BadResponse(status.as_u16(), text)),
-            };
-        }
+        let response = self.make_request(request).await?;
 
         let token = response
             .json::<LinkDeviceToken>()
@@ -280,30 +186,7 @@ impl ApiClient for HttpClient {
             .build()
             .map_err(|_| ApiClientError::CouldNotBuildRequest)?;
 
-        let response = self
-            .http_client
-            .execute(request)
-            .await
-            .map_err(|_| ApiClientError::CouldNotSendRequest)?;
-        let status = response.status();
-
-        if !status.is_success() {
-            let text = response.text().await.unwrap_or(
-                status
-                    .canonical_reason()
-                    .unwrap_or("Unknown Reason")
-                    .to_owned(),
-            );
-            return match status {
-                reqwest::StatusCode::NOT_FOUND => {
-                    Err(ApiClientError::DoesNotExist(status.as_u16(), text))
-                }
-                reqwest::StatusCode::UNAUTHORIZED => {
-                    Err(ApiClientError::ClientUnauthorized(status.as_u16(), text))
-                }
-                _ => Err(ApiClientError::BadResponse(status.as_u16(), text)),
-            };
-        }
+        let response = self.make_request(request).await?;
 
         let link_device_response = response
             .json::<LinkDeviceResponse>()
@@ -330,33 +213,7 @@ impl ApiClient for HttpClient {
             .build()
             .map_err(|_| ApiClientError::CouldNotBuildRequest)?;
 
-        let response = self
-            .http_client
-            .execute(request)
-            .await
-            .map_err(|_| ApiClientError::CouldNotSendRequest)?;
-        let status = response.status();
-
-        if !status.is_success() {
-            let text = response.text().await.unwrap_or(
-                status
-                    .canonical_reason()
-                    .unwrap_or("Unknown Reason")
-                    .to_owned(),
-            );
-            return match status {
-                reqwest::StatusCode::FORBIDDEN => {
-                    Err(ApiClientError::DeviceUnAuth(status.as_u16(), text))
-                }
-                reqwest::StatusCode::NOT_FOUND => {
-                    Err(ApiClientError::DoesNotExist(status.as_u16(), text))
-                }
-                reqwest::StatusCode::UNAUTHORIZED => {
-                    Err(ApiClientError::ClientUnauthorized(status.as_u16(), text))
-                }
-                _ => Err(ApiClientError::BadResponse(status.as_u16(), text)),
-            };
-        }
+        let _ = self.make_request(request).await?;
 
         Ok(())
     }
