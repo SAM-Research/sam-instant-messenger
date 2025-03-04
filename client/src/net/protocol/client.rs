@@ -144,11 +144,11 @@ impl ProtocolClient {
         &mut self,
         req_id: MessageId,
         status: ServerStatus,
-    ) -> Result<(), ProtocolError> {
+    ) -> Result<bool, ProtocolError> {
         match status {
-            ServerStatus::Ack(message_id) => self.check_id(req_id, message_id).await,
-            ServerStatus::Status(message_id, error) => {
-                self.handle_error(req_id, message_id, error).await
+            ServerStatus::Ack(message_id) => self.check_id(req_id, message_id).await.map(|_| false),
+            ServerStatus::Status(message_id, status) => {
+                self.handle_status(req_id, message_id, status).await
             }
         }
     }
@@ -173,34 +173,34 @@ impl ProtocolClient {
         }
     }
 
-    async fn handle_error(
+    async fn handle_status(
         &mut self,
         req_id: MessageId,
         res_id: MessageId,
-        error: Status,
-    ) -> Result<(), ProtocolError> {
+        status: Status,
+    ) -> Result<bool, ProtocolError> {
         self.check_id(req_id, res_id).await?;
-        Err(match error.code() {
-            StatusCode::NotEncryptedForAllDevices => ProtocolError::MissingDevices(
-                error
+        match status.code() {
+            StatusCode::NotEncryptedForAllDevices => Err(ProtocolError::MissingDevices(
+                status
                     .device_ids
                     .ok_or(ProtocolError::MalformedServerMessage)?
                     .ids
                     .iter()
                     .map(|id| (*id).into())
                     .collect(),
-            ),
-            StatusCode::EncryptedForExtraDevices => ProtocolError::ExtraDevices(
-                error
+            )),
+            StatusCode::EncryptedForExtraDevices => Err(ProtocolError::ExtraDevices(
+                status
                     .device_ids
                     .ok_or(ProtocolError::MalformedServerMessage)?
                     .ids
                     .iter()
                     .map(|id| (*id).into())
                     .collect(),
-            ),
-            StatusCode::NeedsSync => ProtocolError::NeedsSync,
-        })
+            )),
+            StatusCode::NeedsSync => Ok(true),
+        }
     }
 }
 
@@ -276,7 +276,7 @@ impl SamProtocolClient for ProtocolClient {
         self.client.lock().await.is_connected()
     }
 
-    async fn send_message(&mut self, message: ClientEnvelope) -> Result<(), ProtocolError> {
+    async fn send_message(&mut self, message: ClientEnvelope) -> Result<bool, ProtocolError> {
         let id = MessageId::generate();
 
         self.send_client_message(id, message).await?;
