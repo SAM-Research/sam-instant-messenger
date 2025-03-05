@@ -181,20 +181,13 @@ impl ProtocolClient {
     ) -> Result<bool, ProtocolError> {
         self.check_id(req_id, res_id).await?;
 
-        let device_lists = status
-            .device_lists
-            .clone()
-            .into_iter()
-            .map_while(|list| list.try_into().ok())
-            .collect();
-
         match status.code() {
             sam_message::StatusCode::NotEncryptedForAllDevices => {
-                Err(ProtocolError::MissingDevices(device_lists))
+                Err(ProtocolError::MissingDevices(status.device_lists))
             }
 
             sam_message::StatusCode::EncryptedForExtraDevices => {
-                Err(ProtocolError::ExtraDevices(device_lists))
+                Err(ProtocolError::ExtraDevices(status.device_lists))
             }
 
             sam_message::StatusCode::NeedsSync => Ok(true),

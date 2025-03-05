@@ -28,15 +28,7 @@ pub async fn handle_client_message<T: StateType>(
         MessageType::Message => {
             if let Some(envelope) = message.message {
                 Ok(Some(
-                    handle_client_envelope(
-                        state,
-                        auth_user,
-                        message_id,
-                        envelope,
-                        auth_user.account().id(),
-                        auth_user.device().id(),
-                    )
-                    .await?,
+                    handle_client_envelope(state, auth_user, message_id, envelope).await?,
                 ))
             } else {
                 Err(ServerError::EnvelopeMalformed)
@@ -95,25 +87,23 @@ async fn handle_client_envelope<T: StateType>(
     auth_user: &AuthenticatedUser,
     message_id: MessageId,
     envelope: ClientEnvelope,
-    source_account_id: AccountId,
-    source_device_id: DeviceId,
 ) -> Result<ServerMessage, ServerError> {
     let dest_acc_ids = envelope
         .recipients()
         .ok_or(ServerError::EnvelopeMalformed)?;
 
-    let sender_acc = auth_user.account().id();
-    let sender_dev = auth_user.device().id();
+    let sender_acc_id = auth_user.account().id();
+    let sender_dev_id = auth_user.device().id();
 
     let is_sync = dest_acc_ids.contains_key(&auth_user.account().id());
 
     let needs_sync = !is_sync
         && !state
             .devices
-            .get_devices(sender_acc)
+            .get_devices(sender_acc_id)
             .await?
             .into_iter()
-            .filter(|id| *id != sender_dev)
+            .filter(|id| *id != sender_dev_id)
             .collect::<Vec<DeviceId>>()
             .is_empty();
 
@@ -121,14 +111,16 @@ async fn handle_client_envelope<T: StateType>(
     for (recipient, devices) in dest_acc_ids {
         let mut all_devices = state.devices.get_devices(recipient).await?;
 
-        if recipient == sender_acc {
-            all_devices.retain(|id| *id != sender_dev);
+        if recipient == sender_acc_id {
+            all_devices.retain(|id| *id != sender_dev_id);
         }
+
+        let recipient_id_as_vec = Into::<Vec<u8>>::into(recipient);
 
         let all_messages: HashMap<DeviceId, &SamMessage> = envelope
             .messages
             .iter()
-            .filter(|message| message.destination_account_id == Into::<Vec<u8>>::into(recipient))
+            .filter(|message| message.destination_account_id == recipient_id_as_vec)
             .map(|message| (message.destination_device_id.into(), message))
             .collect();
 
@@ -166,8 +158,8 @@ async fn handle_client_envelope<T: StateType>(
                 .r#type(message.r#type)
                 .destination_account_id(message.destination_account_id.clone())
                 .destination_device_id(message.destination_device_id)
-                .source_account_id(source_account_id.into())
-                .source_device_id(source_device_id.into())
+                .source_account_id(sender_acc_id.into())
+                .source_device_id(sender_dev_id.into())
                 .content(message.content.clone())
                 .id(id.into_bytes().to_vec())
                 .build();
