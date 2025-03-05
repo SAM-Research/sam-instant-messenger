@@ -45,14 +45,13 @@ mod test {
     use bon::vec;
     use futures_util::{SinkExt, StreamExt};
 
-    use maplit::hashmap;
     use prost::Message as _;
     use rand::rngs::OsRng;
     use sam_common::{
         address::{AccountId, DeviceId, MessageId},
         sam_message::{
-            server_message::Content, ClientEnvelope, ClientMessage, EnvelopeType, MessageType,
-            ServerMessage, StatusCode,
+            server_message::Content, ClientEnvelope, ClientMessage, MessageType, SamMessage,
+            SamMessageType, ServerMessage, StatusCode,
         },
     };
 
@@ -117,8 +116,7 @@ mod test {
     #[tokio::test]
     async fn test_websocket_alice_send_to_bob() {
         let mut state = ServerState::in_memory_test();
-        let (_, alice_id, alice_device) =
-            create_user(&mut state, "alice", "phone", "bob", OsRng).await;
+        let (_, alice_id, _) = create_user(&mut state, "alice", "phone", "bob", OsRng).await;
         let (_, bob_id, bob_device) =
             create_user(&mut state, "bob", "laptop", "cheeseburger", OsRng).await;
 
@@ -126,13 +124,15 @@ mod test {
         let (thread, axum, started) = start_websocket_server(state.clone(), address.clone());
         started.await.expect("Server can start");
 
-        let envelope = ClientEnvelope::builder()
+        let message = SamMessage::builder()
+            .r#type(SamMessageType::PlaintextContent.into())
             .destination_account_id(bob_id.into())
-            .source_account_id(alice_id.into())
-            .source_device_id(alice_device.into())
-            .r#type(EnvelopeType::PlaintextContent as i32)
-            .content(hashmap! {bob_device.into() => "hi bob<3".into()})
+            .destination_device_id(bob_device.into())
+            .content("hi bob<3".into())
             .build();
+        let messages = vec![message];
+
+        let envelope = ClientEnvelope::builder().messages(messages).build();
 
         let msg_id = MessageId::generate();
         let msg = ClientMessage::builder()
@@ -174,8 +174,7 @@ mod test {
     #[tokio::test]
     async fn test_websocket_alice_send_to_bob_offline() {
         let mut state = ServerState::in_memory_test();
-        let (_, alice_id, alice_device) =
-            create_user(&mut state, "alice", "phone", "bob", OsRng).await;
+        let (_, alice_id, _) = create_user(&mut state, "alice", "phone", "bob", OsRng).await;
         let (_, bob_id, bob_device) =
             create_user(&mut state, "bob", "laptop", "cheeseburger", OsRng).await;
 
@@ -183,13 +182,15 @@ mod test {
         let (thread, axum, started) = start_websocket_server(state.clone(), address.clone());
         started.await.expect("Server can start");
 
-        let envelope = ClientEnvelope::builder()
+        let message = SamMessage::builder()
+            .r#type(SamMessageType::PlaintextContent.into())
             .destination_account_id(bob_id.into())
-            .source_account_id(alice_id.into())
-            .source_device_id(alice_device.into())
-            .r#type(EnvelopeType::PlaintextContent as i32)
-            .content(hashmap! {bob_device.into() => "hi bob<3".into()})
+            .destination_device_id(bob_device.into())
+            .content("hi bob<3".into())
             .build();
+        let messages = vec![message];
+
+        let envelope = ClientEnvelope::builder().messages(messages).build();
 
         let msg_id = MessageId::generate();
         let msg = ClientMessage::builder()
@@ -230,8 +231,7 @@ mod test {
     #[tokio::test]
     async fn alice_send_to_bob_missing_devices() {
         let mut state = ServerState::in_memory_test();
-        let (_, alice_id, alice_device) =
-            create_user(&mut state, "alice", "phone", "bob", OsRng).await;
+        let (_, alice_id, _) = create_user(&mut state, "alice", "phone", "bob", OsRng).await;
         let (_, bob_id, bob_device) =
             create_user(&mut state, "bob", "laptop", "cheeseburger", OsRng).await;
 
@@ -257,13 +257,15 @@ mod test {
         let (thread, axum, started) = start_websocket_server(state.clone(), address.clone());
         started.await.expect("Server can start");
 
-        let envelope = ClientEnvelope::builder()
+        let message = SamMessage::builder()
+            .r#type(SamMessageType::PlaintextContent.into())
             .destination_account_id(bob_id.into())
-            .source_account_id(alice_id.into())
-            .source_device_id(alice_device.into())
-            .r#type(EnvelopeType::PlaintextContent as i32)
-            .content(hashmap! {bob_device.into() => "hi bob<3".into()})
+            .destination_device_id(bob_device.into())
+            .content("hi bob<3".into())
             .build();
+        let messages = vec![message];
+
+        let envelope = ClientEnvelope::builder().messages(messages).build();
 
         let msg_id = MessageId::generate();
         let msg = ClientMessage::builder()
@@ -306,7 +308,11 @@ mod test {
             .expect("message should contain content");
 
         let missing_devices = match content {
-            Content::Status(status) => status.device_ids.expect("Server Sends Correct errors").ids,
+            Content::Status(error) => error
+                .device_lists
+                .first()
+                .map(|list| list.device_ids.clone())
+                .unwrap_or_default(),
             _ => vec![],
         };
 
@@ -318,8 +324,7 @@ mod test {
     #[tokio::test]
     async fn alice_send_to_bob_two_devices() {
         let mut state = ServerState::in_memory_test();
-        let (_, alice_id, alice_device) =
-            create_user(&mut state, "alice", "phone", "bob", OsRng).await;
+        let (_, alice_id, _) = create_user(&mut state, "alice", "phone", "bob", OsRng).await;
         let (_, bob_id, bob_device) =
             create_user(&mut state, "bob", "laptop", "cheeseburger", OsRng).await;
 
@@ -345,16 +350,21 @@ mod test {
         let (thread, axum, started) = start_websocket_server(state.clone(), address.clone());
         started.await.expect("Server can start");
 
-        let envelope = ClientEnvelope::builder()
+        let message1 = SamMessage::builder()
+            .r#type(SamMessageType::PlaintextContent.into())
             .destination_account_id(bob_id.into())
-            .source_account_id(alice_id.into())
-            .source_device_id(alice_device.into())
-            .r#type(EnvelopeType::PlaintextContent as i32)
-            .content(hashmap! {
-                bob_device.into() => "hi bob<3".into(),
-                27u32 => "Hello, World!".into()
-            })
+            .destination_device_id(bob_device.into())
+            .content("hi bob<3".into())
             .build();
+        let message27 = SamMessage::builder()
+            .r#type(SamMessageType::PlaintextContent.into())
+            .destination_account_id(bob_id.into())
+            .destination_device_id(27u32)
+            .content("Hello, World!".into())
+            .build();
+        let messages = vec![message1, message27];
+
+        let envelope = ClientEnvelope::builder().messages(messages).build();
 
         let msg_id = MessageId::generate();
         let msg = ClientMessage::builder()
@@ -401,7 +411,11 @@ mod test {
 
         let serv_msg = ServerMessage::decode(ws_msg).expect("should be able to decode message");
 
-        assert!(matches!(serv_msg.r#type(), MessageType::Ack));
+        assert!(
+            matches!(serv_msg.r#type(), MessageType::Ack),
+            "recieved bad message: {:?}",
+            serv_msg
+        );
 
         assert!(bob_received1.is_ok(), "Bob device 1 timed out");
         assert!(
@@ -422,8 +436,7 @@ mod test {
     #[tokio::test]
     async fn alice_send_to_bob_extra_device() {
         let mut state = ServerState::in_memory_test();
-        let (_, alice_id, alice_device) =
-            create_user(&mut state, "alice", "phone", "bob", OsRng).await;
+        let (_, alice_id, _) = create_user(&mut state, "alice", "phone", "bob", OsRng).await;
         let (_, bob_id, bob_device) =
             create_user(&mut state, "bob", "laptop", "cheeseburger", OsRng).await;
 
@@ -431,16 +444,21 @@ mod test {
         let (thread, axum, started) = start_websocket_server(state.clone(), address.clone());
         started.await.expect("Server can start");
 
-        let envelope = ClientEnvelope::builder()
+        let message1 = SamMessage::builder()
+            .r#type(SamMessageType::PlaintextContent.into())
             .destination_account_id(bob_id.into())
-            .source_account_id(alice_id.into())
-            .source_device_id(alice_device.into())
-            .r#type(EnvelopeType::PlaintextContent as i32)
-            .content(hashmap! {
-                bob_device.into() => "hi bob<3".into(),
-                27u32 => "Hello, World!".into()
-            })
+            .destination_device_id(bob_device.into())
+            .content("hi bob<3".into())
             .build();
+        let message27 = SamMessage::builder()
+            .r#type(SamMessageType::PlaintextContent.into())
+            .destination_account_id(bob_id.into())
+            .destination_device_id(27u32)
+            .content("Hello, World!".into())
+            .build();
+        let messages = vec![message1, message27];
+
+        let envelope = ClientEnvelope::builder().messages(messages).build();
 
         let msg_id = MessageId::generate();
         let msg = ClientMessage::builder()
@@ -488,13 +506,21 @@ mod test {
             .expect("message should contain content");
 
         let missing_devices = match content {
-            Content::Status(status) => status.device_ids.expect("Server Sends Correct errors").ids,
+            Content::Status(error) => error
+                .device_lists
+                .first()
+                .map(|list| list.device_ids.clone())
+                .unwrap_or_default(),
             _ => vec![],
         };
 
         let expected: Vec<u32> = vec![27u32];
 
-        assert!(missing_devices == expected);
+        assert_eq!(
+            missing_devices, expected,
+            "{:?} != {:?}",
+            missing_devices, expected
+        );
         assert!(bob_received.is_ok(), "Bob timed out");
         assert!(
             bob_received.is_ok_and(|op| op.is_some_and(|res| res.is_ok())),
@@ -505,8 +531,7 @@ mod test {
     #[tokio::test]
     async fn alice_send_to_bob_needs_sync() {
         let mut state = ServerState::in_memory_test();
-        let (_, alice_id, alice_device) =
-            create_user(&mut state, "alice", "phone", "bob", OsRng).await;
+        let (_, alice_id, _) = create_user(&mut state, "alice", "phone", "bob", OsRng).await;
         let (_, bob_id, bob_device) =
             create_user(&mut state, "bob", "laptop", "cheeseburger", OsRng).await;
 
@@ -532,13 +557,15 @@ mod test {
         let (thread, axum, started) = start_websocket_server(state.clone(), address.clone());
         started.await.expect("Server can start");
 
-        let envelope = ClientEnvelope::builder()
+        let message = SamMessage::builder()
+            .r#type(SamMessageType::PlaintextContent.into())
             .destination_account_id(bob_id.into())
-            .source_account_id(alice_id.into())
-            .source_device_id(alice_device.into())
-            .r#type(EnvelopeType::PlaintextContent as i32)
-            .content(hashmap! {bob_device.into() => "hi bob<3".into()})
+            .destination_device_id(bob_device.into())
+            .content("hi bob<3".into())
             .build();
+        let messages = vec![message];
+
+        let envelope = ClientEnvelope::builder().messages(messages).build();
 
         let msg_id = MessageId::generate();
         let msg = ClientMessage::builder()
@@ -585,5 +612,93 @@ mod test {
                 assert!(status.code() == StatusCode::NeedsSync)
             }
         }
+    }
+
+    #[tokio::test]
+    async fn alice_send_to_bob_does_not_need_sync() {
+        let mut state = ServerState::in_memory_test();
+        let (_, alice_id, _) = create_user(&mut state, "alice", "phone", "bob", OsRng).await;
+        let (_, bob_id, bob_device) =
+            create_user(&mut state, "bob", "laptop", "cheeseburger", OsRng).await;
+
+        state
+            .devices
+            .add_device(
+                alice_id,
+                &Device::builder()
+                    .creation(0)
+                    .id(27.into())
+                    .registration_id(43284.into())
+                    .name("Device 27".to_string())
+                    .password(
+                        Password::generate("password".to_string())
+                            .expect("Password can be generated"),
+                    )
+                    .build(),
+            )
+            .await
+            .expect("can add extra device");
+
+        let address = "127.0.0.1:8007".to_string();
+        let (thread, axum, started) = start_websocket_server(state.clone(), address.clone());
+        started.await.expect("Server can start");
+
+        let message = SamMessage::builder()
+            .r#type(SamMessageType::PlaintextContent.into())
+            .destination_account_id(bob_id.into())
+            .destination_device_id(bob_device.into())
+            .content("hi bob<3".into())
+            .build();
+        let sync_message = SamMessage::builder()
+            .r#type(SamMessageType::PlaintextContent.into())
+            .destination_account_id(alice_id.into())
+            .destination_device_id(27)
+            .content("hi bob<3".into())
+            .build();
+        let messages = vec![message, sync_message];
+
+        let envelope = ClientEnvelope::builder().messages(messages).build();
+
+        let msg_id = MessageId::generate();
+        let msg = ClientMessage::builder()
+            .id(msg_id.into())
+            .message(envelope)
+            .r#type(MessageType::Message as i32)
+            .build();
+
+        let mut alice = connect_user(alice_id, 1.into(), "alice", "bob", &address).await;
+
+        let alice_send = tokio::time::timeout(
+            Duration::from_millis(300),
+            alice.send(tokio_tungstenite::tungstenite::Message::Binary(
+                msg.encode_to_vec().into(),
+            )),
+        );
+        let alice_sent = alice_send.await;
+
+        let alice_recv = tokio::time::timeout(Duration::from_millis(300), alice.next());
+        let alice_received = alice_recv.await;
+
+        axum.shutdown();
+        let _ = thread.await;
+        assert!(alice_sent.is_ok(), "Alice timed out");
+        assert!(alice_received.is_ok(), "Alice receive time out");
+        assert!(
+            alice_sent.is_ok_and(|res| res.is_ok()),
+            "Alice could not send"
+        );
+
+        let ws_msg = alice_received
+            .unwrap()
+            .expect("Alices connection is open")
+            .expect("Alice receives message");
+        assert!(ws_msg.is_binary());
+
+        let server_msg =
+            ServerMessage::decode(ws_msg.into_data()).expect("Server sends wellformed data");
+
+        println!("MESSAGE: {:?}", server_msg);
+
+        assert_eq!(server_msg.r#type(), MessageType::Ack);
     }
 }

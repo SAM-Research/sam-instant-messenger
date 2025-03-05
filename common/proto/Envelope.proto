@@ -1,29 +1,32 @@
 package sam_message;
 
 
-enum EnvelopeType {
+enum SamMessageType {
   SIGNAL_MESSAGE = 1;
   PRE_KEY_SIGNAL_MESSAGE = 2;
   SENDER_KEY_MESSAGE = 3;
-  PLAINTEXT_CONTENT = 4;
+  PLAINTEXT_CONTENT  = 4;
+}
+
+message SamMessage {
+  required SamMessageType type = 1;
+  required bytes  destination_account_id = 2;
+  required uint32 destination_device_id = 3;
+  required bytes  content = 4;
 }
 
 message ClientEnvelope {
-  required EnvelopeType type = 1;
-  map<uint32, bytes> content = 2;
-  required bytes  destination_account_id = 3;
-  required bytes  source_account_id = 4;
-  required uint32 source_device_id  = 5;
+  repeated SamMessage messages = 1;
 }
 
 message ServerEnvelope {
-  required EnvelopeType type = 1;
-  required bytes content = 2;
+  required SamMessageType type = 1;
+  required bytes  content = 2;
   required bytes  destination_account_id = 3;
   required uint32 destination_device_id  = 4;
   required bytes  source_account_id = 5;
   required uint32 source_device_id  = 6;
-  required bytes id = 7;
+  required bytes  id = 7;
 }
 
 enum MessageType {
@@ -33,8 +36,10 @@ enum MessageType {
 }
 
 message DeviceList {
-  repeated uint32 ids = 1;
+  required bytes  account_id = 1;
+  repeated uint32 device_ids = 2;
 }
+
 
 enum StatusCode {
   NEEDS_SYNC = 1;
@@ -44,7 +49,7 @@ enum StatusCode {
 
 message Status {
   required StatusCode code = 1;
-  optional DeviceList device_ids = 2;
+  repeated DeviceList device_lists = 2;
 }
 
 message ClientMessage {

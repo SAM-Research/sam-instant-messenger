@@ -6,8 +6,8 @@ use prost::Message as PMessage;
 use sam_common::{
     address::MessageId,
     sam_message::{
-        server_message::Content, ClientEnvelope, ClientMessage, MessageType, ServerEnvelope,
-        ServerMessage, Status, StatusCode,
+        self, server_message::Content, ClientEnvelope, ClientMessage, MessageType, ServerEnvelope,
+        ServerMessage, Status,
     },
 };
 use tokio::sync::mpsc::{channel, Receiver, Sender};
@@ -180,26 +180,17 @@ impl ProtocolClient {
         status: Status,
     ) -> Result<bool, ProtocolError> {
         self.check_id(req_id, res_id).await?;
+
         match status.code() {
-            StatusCode::NotEncryptedForAllDevices => Err(ProtocolError::MissingDevices(
-                status
-                    .device_ids
-                    .ok_or(ProtocolError::MalformedServerMessage)?
-                    .ids
-                    .iter()
-                    .map(|id| (*id).into())
-                    .collect(),
-            )),
-            StatusCode::EncryptedForExtraDevices => Err(ProtocolError::ExtraDevices(
-                status
-                    .device_ids
-                    .ok_or(ProtocolError::MalformedServerMessage)?
-                    .ids
-                    .iter()
-                    .map(|id| (*id).into())
-                    .collect(),
-            )),
-            StatusCode::NeedsSync => Ok(true),
+            sam_message::StatusCode::NotEncryptedForAllDevices => {
+                Err(ProtocolError::MissingDevices(status.device_lists))
+            }
+
+            sam_message::StatusCode::EncryptedForExtraDevices => {
+                Err(ProtocolError::ExtraDevices(status.device_lists))
+            }
+
+            sam_message::StatusCode::NeedsSync => Ok(true),
         }
     }
 }
@@ -294,7 +285,7 @@ impl SamProtocolClient for ProtocolClient {
 
 #[cfg(test)]
 mod test {
-    use std::{collections::HashMap, time::Duration};
+    use std::time::Duration;
 
     use futures_util::{SinkExt, StreamExt};
     use prost::{bytes::Bytes, Message as PMessage};
@@ -302,7 +293,7 @@ mod test {
     use sam_common::{
         address::{AccountId, MessageId},
         sam_message::{
-            server_message::Content, ClientEnvelope, ClientMessage, EnvelopeType, MessageType,
+            server_message::Content, ClientEnvelope, ClientMessage, MessageType, SamMessageType,
             ServerEnvelope, ServerMessage,
         },
     };
@@ -325,7 +316,7 @@ mod test {
             .content(Content::Message(
                 ServerEnvelope::builder()
                     .id(id.into())
-                    .r#type(EnvelopeType::PlaintextContent as i32)
+                    .r#type(SamMessageType::PlaintextContent as i32)
                     .content(vec![1, 2, 3])
                     .destination_account_id(AccountId::generate().into())
                     .destination_device_id(1u32)
@@ -355,13 +346,7 @@ mod test {
     }
 
     fn client_env() -> ClientEnvelope {
-        ClientEnvelope::builder()
-            .r#type(MessageType::Message as i32)
-            .content(HashMap::new())
-            .destination_account_id(AccountId::generate().into())
-            .source_device_id(1u32)
-            .source_account_id(AccountId::generate().into())
-            .build()
+        ClientEnvelope::builder().messages(vec![]).build()
     }
 
     fn oneshot(tx: &mut Option<Sender<Result<(), String>>>, msg: Result<(), String>) {

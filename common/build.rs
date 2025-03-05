@@ -1,7 +1,7 @@
 fn main() -> Result<(), Box<dyn std::error::Error>> {
     prost_build::Config::new()
+        .type_attribute("SamMessage", "#[derive(bon::Builder)]")
         .type_attribute("ClientEnvelope", "#[derive(bon::Builder)]")
-        .type_attribute("Status", "#[derive(bon::Builder)]")
         .type_attribute("ServerEnvelope", "#[derive(bon::Builder)]")
         .type_attribute("ClientMessage", "#[derive(bon::Builder)]")
         .type_attribute("ServerMessage", "#[derive(bon::Builder)]")
