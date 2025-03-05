@@ -22,7 +22,6 @@ pub async fn one_client_can_register() {
 
     let client = Client::from_registration()
         .username("Alice")
-        .password("Alice's Password")
         .device_name("Alice's Device")
         .store_config(SqliteStoreConfig::in_memory().await)
         .api_client_config(HttpClientConfig::new(address.clone()))

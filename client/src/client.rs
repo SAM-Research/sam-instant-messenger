@@ -34,6 +34,7 @@ pub struct Client<T: StoreType, U: ApiClient, V: SamProtocolClient> {
     _api_client: U,
     _protocol_client: V,
 }
+
 const PASSWORD_LENGTH: usize = 16;
 
 fn generate_password<R: Rng>(rng: &mut R) -> String {
@@ -42,6 +43,7 @@ fn generate_password<R: Rng>(rng: &mut R) -> String {
     let password = BASE64_STANDARD.encode(password);
     password[0..password.len() - 2].to_owned()
 }
+
 #[bon]
 impl<T: StoreType, U: ApiClient, V: SamProtocolClient> Client<T, U, V> {
     /// Creates a new client for the account described in the token
@@ -64,7 +66,6 @@ impl<T: StoreType, U: ApiClient, V: SamProtocolClient> Client<T, U, V> {
         protocol_config: impl ProtocolConfig<ProtocolClient = V>,
         api_client_config: impl ApiClientConfig<ApiClient = U>,
         username: &str,
-        _password: &str,
         device_name: &str,
     ) -> Result<Self, ClientError> {
         let mut csprng = OsRng;
