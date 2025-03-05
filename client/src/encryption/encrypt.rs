@@ -18,6 +18,21 @@ use crate::{
 
 use super::envelope::DecryptedEnvelope;
 
+/// Encrypt a message an put it into a [ClientEnvelope].
+///
+/// Anything that implements `Into<Vec<u8>>` can be encrypted. The message will be converted to
+/// bytes, padded and then encrypted.
+///
+/// # Arguments
+///
+/// * `message` - The message to be encrypted.
+/// * `recipient` - The [AccountId] of the contact that the message should be encrypted for.
+/// * `store` - The [Store] containing Signal Protocol related artefacts required for encryption.
+///
+/// # Returns
+///
+/// * `Ok(ClientEnvelope)` The encrypted message.
+/// * `Err(ClientError)` if encryption fails.
 pub async fn encrypt(
     message: impl Into<Vec<u8>>,
     recipient: AccountId,
@@ -57,6 +72,20 @@ pub async fn encrypt(
     Ok(ClientEnvelope::builder().messages(messages).build())
 }
 
+/// Decrypt a message an put it into a [ClientEnvelope].
+///
+/// Anything that implements `From<Vec<u8>>` can be decrypt. The message will be converted to
+/// bytes, decrypted and unpadded.
+///
+/// # Arguments
+///
+/// * `envelope` - The message to be decrypted.
+/// * `store` - The [Store] containing Signal Protocol related artefacts required for decryption.
+///
+/// # Returns
+///
+/// * `Ok(DecryptedEnvelope)` The an envelope type containing the decrypted message.
+/// * `Err(ClientError)` if decryption fails.
 pub async fn decrypt(
     envelope: ServerEnvelope,
     store: &mut Store<impl StoreType>,

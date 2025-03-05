@@ -16,5 +16,4 @@ pub enum ClientError {
     NoAccountId,
     NoPassword,
     NoUsername,
-    NoSession,
 }
