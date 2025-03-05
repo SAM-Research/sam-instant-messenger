@@ -237,4 +237,31 @@ impl ApiClient for HttpClient {
 
         Ok(())
     }
+
+    async fn get_user_account_id(
+        &self,
+        account_id: AccountId,
+        device_id: DeviceId,
+        password: &str,
+        username: &str,
+    ) -> Result<AccountId, ApiClientError> {
+        let url_str = format!("{}/api/v1/account/{}", self.base_url, username);
+        let url = Url::parse(&url_str).map_err(|_| ApiClientError::CouldNotParseUrl(url_str))?;
+
+        let request = self
+            .http_client
+            .request(Method::GET, url)
+            .basic_auth(format!("{}.{}", account_id, device_id), Some(password))
+            .build()
+            .map_err(|_| ApiClientError::CouldNotBuildRequest)?;
+
+        let response = self.make_request(request).await?;
+
+        let account_id = response
+            .json::<AccountId>()
+            .await
+            .map_err(|_| ApiClientError::CouldNotParseResponse)?;
+
+        Ok(account_id)
+    }
 }

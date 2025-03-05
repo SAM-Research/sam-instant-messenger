@@ -163,6 +163,14 @@ pub trait ApiClient {
         password: &str,
         removed_device: DeviceId,
     ) -> Result<(), ApiClientError>;
+
+    async fn get_user_account_id(
+        &self,
+        account_id: AccountId,
+        device_id: DeviceId,
+        password: &str,
+        username: &str,
+    ) -> Result<AccountId, ApiClientError>;
 }
 
 #[async_trait(?Send)]

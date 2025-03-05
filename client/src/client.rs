@@ -76,8 +76,18 @@ impl<T: StoreType, U: ApiClient, V: SamProtocolClient> Client<T, U, V> {
     }
 
     /// Get users account id from username
-    pub async fn get_user_account_id(&self, _username: &str) -> Result<AccountId, ClientError> {
-        todo!()
+    pub async fn get_user_account_id(&self, username: &str) -> Result<AccountId, ClientError> {
+        let account_id = self
+            ._api_client
+            .get_user_account_id(
+                self.account_id().await?,
+                self.store.account_store.get_device_id().await?,
+                self.store.account_store.get_password().await?.as_str(),
+                username,
+            )
+            .await?;
+
+        Ok(account_id)
     }
 
     /// Send any message to receipient
@@ -109,6 +119,7 @@ impl<T: StoreType, U: ApiClient, V: SamProtocolClient> Client<T, U, V> {
 
     /// Fetch key bundles for account_id
     pub async fn fetch_prekeys(
+        // Fetch fra api client og køre verification af prekey bundle
         &mut self,
         _account_id: AccountId,
         _devices: Vec<DeviceId>,

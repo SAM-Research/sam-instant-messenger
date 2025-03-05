@@ -1,12 +1,13 @@
+use crate::{storage::AccountStore, ClientError};
 use async_trait::async_trait;
 use sam_common::address::AccountId;
-
-use crate::{storage::AccountStore, ClientError};
+use sam_common::DeviceId;
 
 #[derive(Debug, Default)]
 pub struct InMemoryAccountStore {
     username: Option<String>,
     account_id: Option<AccountId>,
+    device_id: Option<DeviceId>,
     password: Option<String>,
 }
 
@@ -32,5 +33,14 @@ impl AccountStore for InMemoryAccountStore {
     }
     async fn get_username(&self) -> Result<String, ClientError> {
         Ok(self.username.clone().ok_or(ClientError::NoUsername)?)
+    }
+
+    async fn set_device_id(&mut self, device_id: DeviceId) -> Result<(), ClientError> {
+        self.device_id = Some(device_id);
+        Ok(())
+    }
+
+    async fn get_device_id(&self) -> Result<DeviceId, ClientError> {
+        Ok(self.device_id.ok_or(ClientError::NoDeviceId)?)
     }
 }

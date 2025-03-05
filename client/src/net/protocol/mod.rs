@@ -7,7 +7,7 @@ pub mod error;
 pub mod traits;
 mod websocket;
 
-struct WebSocketProtocolClientConfig {
+pub struct WebSocketProtocolClientConfig {
     url: String,
 }
 
