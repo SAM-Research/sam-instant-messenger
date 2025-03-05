@@ -213,9 +213,9 @@ mod test {
         string: String,
     }
 
-    impl Into<Vec<u8>> for MyStruct {
-        fn into(self) -> Vec<u8> {
-            self.string.into_bytes()
+    impl From<MyStruct> for Vec<u8> {
+        fn from(val: MyStruct) -> Self {
+            val.string.into_bytes()
         }
     }
 
