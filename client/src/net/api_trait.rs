@@ -164,3 +164,10 @@ pub trait ApiClient {
         removed_device: DeviceId,
     ) -> Result<(), ApiClientError>;
 }
+
+#[async_trait(?Send)]
+pub trait ApiClientConfig {
+    type ApiClient: ApiClient;
+
+    async fn create(self) -> Result<Self::ApiClient, ApiClientError>;
+}

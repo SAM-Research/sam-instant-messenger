@@ -1,11 +1,12 @@
+use derive_more::Error;
 use sam_common::sam_message::DeviceList;
 
-#[derive(Debug)]
+#[derive(Debug, Error)]
 pub enum ProtocolError {
     MalformedServerMessage,
     Disconnected,
-    ExtraDevices(Vec<DeviceList>),
-    MissingDevices(Vec<DeviceList>),
+    ExtraDevices(#[error(not(source))] Vec<DeviceList>),
+    MissingDevices(#[error(not(source))] Vec<DeviceList>),
 }
 
 impl std::fmt::Display for ProtocolError {
