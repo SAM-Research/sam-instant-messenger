@@ -7,8 +7,14 @@ pub mod error;
 pub mod traits;
 mod websocket;
 
-struct WebSocketProtocolClientConfig {
+pub struct WebSocketProtocolClientConfig {
     url: String,
+}
+
+impl WebSocketProtocolClientConfig {
+    pub fn new(url: String) -> Self {
+        Self { url }
+    }
 }
 
 #[async_trait::async_trait(?Send)]
