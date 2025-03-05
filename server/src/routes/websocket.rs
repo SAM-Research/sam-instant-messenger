@@ -116,8 +116,7 @@ mod test {
     #[tokio::test]
     async fn test_websocket_alice_send_to_bob() {
         let mut state = ServerState::in_memory_test();
-        let (_, alice_id, _alice_device) =
-            create_user(&mut state, "alice", "phone", "bob", OsRng).await;
+        let (_, alice_id, _) = create_user(&mut state, "alice", "phone", "bob", OsRng).await;
         let (_, bob_id, bob_device) =
             create_user(&mut state, "bob", "laptop", "cheeseburger", OsRng).await;
 
@@ -175,8 +174,7 @@ mod test {
     #[tokio::test]
     async fn test_websocket_alice_send_to_bob_offline() {
         let mut state = ServerState::in_memory_test();
-        let (_, alice_id, _alice_device) =
-            create_user(&mut state, "alice", "phone", "bob", OsRng).await;
+        let (_, alice_id, _) = create_user(&mut state, "alice", "phone", "bob", OsRng).await;
         let (_, bob_id, bob_device) =
             create_user(&mut state, "bob", "laptop", "cheeseburger", OsRng).await;
 
@@ -233,8 +231,7 @@ mod test {
     #[tokio::test]
     async fn alice_send_to_bob_missing_devices() {
         let mut state = ServerState::in_memory_test();
-        let (_, alice_id, _alice_device) =
-            create_user(&mut state, "alice", "phone", "bob", OsRng).await;
+        let (_, alice_id, _) = create_user(&mut state, "alice", "phone", "bob", OsRng).await;
         let (_, bob_id, bob_device) =
             create_user(&mut state, "bob", "laptop", "cheeseburger", OsRng).await;
 
@@ -327,8 +324,7 @@ mod test {
     #[tokio::test]
     async fn alice_send_to_bob_two_devices() {
         let mut state = ServerState::in_memory_test();
-        let (_, alice_id, _alice_device) =
-            create_user(&mut state, "alice", "phone", "bob", OsRng).await;
+        let (_, alice_id, _) = create_user(&mut state, "alice", "phone", "bob", OsRng).await;
         let (_, bob_id, bob_device) =
             create_user(&mut state, "bob", "laptop", "cheeseburger", OsRng).await;
 
@@ -440,8 +436,7 @@ mod test {
     #[tokio::test]
     async fn alice_send_to_bob_extra_device() {
         let mut state = ServerState::in_memory_test();
-        let (_, alice_id, _alice_device) =
-            create_user(&mut state, "alice", "phone", "bob", OsRng).await;
+        let (_, alice_id, _) = create_user(&mut state, "alice", "phone", "bob", OsRng).await;
         let (_, bob_id, bob_device) =
             create_user(&mut state, "bob", "laptop", "cheeseburger", OsRng).await;
 
@@ -536,8 +531,7 @@ mod test {
     #[tokio::test]
     async fn alice_send_to_bob_needs_sync() {
         let mut state = ServerState::in_memory_test();
-        let (_, alice_id, _alice_device) =
-            create_user(&mut state, "alice", "phone", "bob", OsRng).await;
+        let (_, alice_id, _) = create_user(&mut state, "alice", "phone", "bob", OsRng).await;
         let (_, bob_id, bob_device) =
             create_user(&mut state, "bob", "laptop", "cheeseburger", OsRng).await;
 
@@ -623,8 +617,7 @@ mod test {
     #[tokio::test]
     async fn alice_send_to_bob_does_not_need_sync() {
         let mut state = ServerState::in_memory_test();
-        let (_, alice_id, _alice_device) =
-            create_user(&mut state, "alice", "phone", "bob", OsRng).await;
+        let (_, alice_id, _) = create_user(&mut state, "alice", "phone", "bob", OsRng).await;
         let (_, bob_id, bob_device) =
             create_user(&mut state, "bob", "laptop", "cheeseburger", OsRng).await;
 
