@@ -1,7 +1,6 @@
-use base64::{prelude::BASE64_STANDARD, Engine as _};
 use bon::bon;
 use libsignal_protocol::IdentityKeyPair;
-use rand::{rngs::OsRng, Rng};
+use rand::rngs::OsRng;
 use sam_common::{
     address::RegistrationId,
     api::{
@@ -13,7 +12,7 @@ use sam_common::{
 use tokio::sync::broadcast::Receiver;
 
 use crate::{
-    encryption::envelope::DecryptedEnvelope,
+    encryption::{envelope::DecryptedEnvelope, password::generate_password},
     net::{
         api_trait::ApiClientConfig,
         protocol::traits::{ProtocolConfig, SamProtocolClient},
@@ -33,15 +32,6 @@ pub struct Client<T: StoreType, U: ApiClient, V: SamProtocolClient> {
     store: Store<T>,
     _api_client: U,
     _protocol_client: V,
-}
-
-const PASSWORD_LENGTH: usize = 16;
-
-fn generate_password<R: Rng>(rng: &mut R) -> String {
-    let mut password = [0u8; PASSWORD_LENGTH];
-    rng.fill(&mut password);
-    let password = BASE64_STANDARD.encode(password);
-    password[0..password.len() - 2].to_owned()
 }
 
 #[bon]
@@ -67,6 +57,8 @@ impl<T: StoreType, U: ApiClient, V: SamProtocolClient> Client<T, U, V> {
         api_client_config: impl ApiClientConfig<ApiClient = U>,
         username: &str,
         device_name: &str,
+        #[builder(default = 100)] upload_prekey_count: usize,
+        #[builder(default = 16)] password_length: usize,
     ) -> Result<Self, ClientError> {
         let mut csprng = OsRng;
         let registration_id = RegistrationId::generate(&mut csprng);
@@ -75,9 +67,12 @@ impl<T: StoreType, U: ApiClient, V: SamProtocolClient> Client<T, U, V> {
             .create_store(id_key_pair, registration_id)
             .await?;
 
-        let password = generate_password(&mut csprng);
+        let password = generate_password(password_length, &mut csprng);
         let key_bundle = RegistrationPreKeys {
-            pre_keys: Some(generate_ec_pre_keys(&mut store.pre_key_store, 100, &mut csprng).await?),
+            pre_keys: Some(
+                generate_ec_pre_keys(&mut store.pre_key_store, upload_prekey_count, &mut csprng)
+                    .await?,
+            ),
             signed_pre_key: store
                 .signed_pre_key_store
                 .generate_key(&mut csprng, id_key_pair.private_key())
@@ -87,7 +82,7 @@ impl<T: StoreType, U: ApiClient, V: SamProtocolClient> Client<T, U, V> {
                 generate_pq_pre_keys(
                     id_key_pair.private_key(),
                     &mut store.kyber_pre_key_store,
-                    100,
+                    upload_prekey_count,
                 )
                 .await?,
             ),

@@ -90,7 +90,7 @@ impl<T: KyberPreKeyStore + ProvidesKeyId<KyberPreKeyId>> KyberKeyGenerator for T
 
 pub async fn generate_ec_pre_keys<G: PreKeyGenerator, R: Rng + CryptoRng>(
     generator: &mut G,
-    amount: u32,
+    amount: usize,
     mut csprng: &mut R,
 ) -> Result<Vec<EcPreKey>, ClientError> {
     let mut keys = Vec::with_capacity(amount as usize);
@@ -103,7 +103,7 @@ pub async fn generate_ec_pre_keys<G: PreKeyGenerator, R: Rng + CryptoRng>(
 pub async fn generate_pq_pre_keys<G: KyberKeyGenerator>(
     signing_key: &PrivateKey,
     generator: &mut G,
-    amount: u32,
+    amount: usize,
 ) -> Result<Vec<PqPreKey>, ClientError> {
     let mut keys = Vec::with_capacity(amount as usize);
     for _ in 0..amount {
