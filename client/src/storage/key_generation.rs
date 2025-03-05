@@ -8,6 +8,7 @@ use libsignal_protocol::{
     PreKeyRecord, PreKeyStore, SignedPreKeyId, SignedPreKeyRecord, SignedPreKeyStore,
 };
 use rand::{CryptoRng, Rng};
+use sam_common::api::{EcPreKey, PqPreKey};
 
 #[async_trait(?Send)]
 pub trait PreKeyGenerator {
@@ -85,6 +86,30 @@ impl<T: KyberPreKeyStore + ProvidesKeyId<KyberPreKeyId>> KyberKeyGenerator for T
         self.save_kyber_pre_key(id, &record).await?;
         Ok(record)
     }
+}
+
+pub async fn generate_ec_pre_keys<G: PreKeyGenerator, R: Rng + CryptoRng>(
+    generator: &mut G,
+    amount: u32,
+    mut csprng: &mut R,
+) -> Result<Vec<EcPreKey>, ClientError> {
+    let mut keys = Vec::with_capacity(amount as usize);
+    for _ in 0..amount {
+        keys.push(generator.generate_key(&mut csprng).await?.into());
+    }
+    Ok(keys)
+}
+
+pub async fn generate_pq_pre_keys<G: KyberKeyGenerator>(
+    signing_key: &PrivateKey,
+    generator: &mut G,
+    amount: u32,
+) -> Result<Vec<PqPreKey>, ClientError> {
+    let mut keys = Vec::with_capacity(amount as usize);
+    for _ in 0..amount {
+        keys.push(generator.generate_key(signing_key).await?.into());
+    }
+    Ok(keys)
 }
 
 #[cfg(test)]
