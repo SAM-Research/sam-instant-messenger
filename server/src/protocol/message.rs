@@ -106,11 +106,25 @@ async fn handle_client_envelope<T: StateType>(
     let sender_dev = auth_user.device().id();
 
     let is_sync = dest_acc_ids.contains_key(&auth_user.account().id());
-    let needs_sync = !is_sync && state.devices.get_devices(sender_acc).await?.len() > 1;
+
+    let needs_sync = !is_sync
+        && !state
+            .devices
+            .get_devices(sender_acc)
+            .await?
+            .into_iter()
+            .filter(|id| *id != sender_dev)
+            .collect::<Vec<DeviceId>>()
+            .is_empty();
 
     let mut extra_devices: HashMap<AccountId, Vec<DeviceId>> = HashMap::new();
     for (recipient, devices) in dest_acc_ids {
-        let all_devices = state.devices.get_devices(recipient).await?;
+        let mut all_devices = state.devices.get_devices(recipient).await?;
+
+        if recipient == sender_acc {
+            all_devices.retain(|id| *id != sender_dev);
+        }
+
         let all_messages: HashMap<DeviceId, &SamMessage> = envelope
             .messages
             .iter()

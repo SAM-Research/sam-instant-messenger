@@ -623,7 +623,7 @@ mod test {
     #[tokio::test]
     async fn alice_send_to_bob_does_not_need_sync() {
         let mut state = ServerState::in_memory_test();
-        let (_, alice_id, alice_device) =
+        let (_, alice_id, _alice_device) =
             create_user(&mut state, "alice", "phone", "bob", OsRng).await;
         let (_, bob_id, bob_device) =
             create_user(&mut state, "bob", "laptop", "cheeseburger", OsRng).await;
@@ -659,7 +659,7 @@ mod test {
         let sync_message = SamMessage::builder()
             .r#type(SamMessageType::PlaintextContent.into())
             .destination_account_id(alice_id.into())
-            .destination_device_id(alice_device.into())
+            .destination_device_id(27)
             .content("hi bob<3".into())
             .build();
         let messages = vec![message, sync_message];
@@ -704,12 +704,8 @@ mod test {
         let server_msg =
             ServerMessage::decode(ws_msg.into_data()).expect("Server sends wellformed data");
 
-        assert!(server_msg.r#type() == MessageType::Status);
-        match server_msg.content.expect("Has content") {
-            Content::Message(_) => panic!("Server Sends Error"),
-            Content::Status(status) => {
-                assert!(status.code() == StatusCode::NeedsSync)
-            }
-        }
+        println!("MESSAGE: {:?}", server_msg);
+
+        assert_eq!(server_msg.r#type(), MessageType::Ack);
     }
 }
