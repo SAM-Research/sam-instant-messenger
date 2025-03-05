@@ -111,11 +111,11 @@ jobs:
 
   test:
     status:
-    project:
-      default:
-        target: 0%
-        threshold: 0%
-        informational: true
+      project:
+        default:
+          target: 0%
+          threshold: 0%
+          informational: true
     runs-on: ubuntu-latest
     steps:
       - name: Upgrade rust
