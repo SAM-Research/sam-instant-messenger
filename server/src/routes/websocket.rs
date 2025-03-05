@@ -5,9 +5,9 @@ use axum::{
     Router,
 };
 
+use crate::protocol::websocket::init_websocket;
 use crate::{
     auth::authenticated_user::AuthenticatedUser,
-    logic::websocket::init_websocket,
     managers::traits::message_manager::MessageManager,
     state::{state_type::StateType, ServerState},
     ServerError,
@@ -51,7 +51,7 @@ mod test {
         address::{AccountId, DeviceId, MessageId},
         sam_message::{
             server_message::Content, ClientEnvelope, ClientMessage, MessageType, SamMessage,
-            SamMessageType, ServerMessage,
+            SamMessageType, ServerMessage, StatusCode,
         },
     };
 
@@ -311,7 +311,7 @@ mod test {
             .expect("message should contain content");
 
         let missing_devices = match content {
-            Content::Error(error) => error
+            Content::Status(error) => error
                 .device_lists
                 .first()
                 .map(|list| list.device_ids.clone())
@@ -511,7 +511,7 @@ mod test {
             .expect("message should contain content");
 
         let missing_devices = match content {
-            Content::Error(error) => error
+            Content::Status(error) => error
                 .device_lists
                 .first()
                 .map(|list| list.device_ids.clone())
@@ -531,5 +531,92 @@ mod test {
             bob_received.is_ok_and(|op| op.is_some_and(|res| res.is_ok())),
             "Bob could not received"
         )
+    }
+
+    #[tokio::test]
+    async fn alice_send_to_bob_needs_sync() {
+        let mut state = ServerState::in_memory_test();
+        let (_, alice_id, _alice_device) =
+            create_user(&mut state, "alice", "phone", "bob", OsRng).await;
+        let (_, bob_id, bob_device) =
+            create_user(&mut state, "bob", "laptop", "cheeseburger", OsRng).await;
+
+        state
+            .devices
+            .add_device(
+                alice_id,
+                &Device::builder()
+                    .creation(0)
+                    .id(27.into())
+                    .registration_id(43284.into())
+                    .name("Device 27".to_string())
+                    .password(
+                        Password::generate("password".to_string())
+                            .expect("Password can be generated"),
+                    )
+                    .build(),
+            )
+            .await
+            .expect("can add extra device");
+
+        let address = "127.0.0.1:8006".to_string();
+        let (thread, axum, started) = start_websocket_server(state.clone(), address.clone());
+        started.await.expect("Server can start");
+
+        let message = SamMessage::builder()
+            .r#type(SamMessageType::PlaintextContent.into())
+            .destination_account_id(bob_id.into())
+            .destination_device_id(bob_device.into())
+            .content("hi bob<3".into())
+            .build();
+        let messages = vec![message];
+
+        let envelope = ClientEnvelope::builder().messages(messages).build();
+
+        let msg_id = MessageId::generate();
+        let msg = ClientMessage::builder()
+            .id(msg_id.into())
+            .message(envelope)
+            .r#type(MessageType::Message as i32)
+            .build();
+
+        let mut alice = connect_user(alice_id, 1.into(), "alice", "bob", &address).await;
+
+        let alice_send = tokio::time::timeout(
+            Duration::from_millis(300),
+            alice.send(tokio_tungstenite::tungstenite::Message::Binary(
+                msg.encode_to_vec().into(),
+            )),
+        );
+        let alice_sent = alice_send.await;
+
+        let alice_recv = tokio::time::timeout(Duration::from_millis(300), alice.next());
+        let alice_received = alice_recv.await;
+
+        axum.shutdown();
+        let _ = thread.await;
+        assert!(alice_sent.is_ok(), "Alice timed out");
+        assert!(alice_received.is_ok(), "Alice receive time out");
+        assert!(
+            alice_sent.is_ok_and(|res| res.is_ok()),
+            "Alice could not send"
+        );
+
+        let ws_msg = alice_received
+            .unwrap()
+            .expect("Alices connection is open")
+            .expect("Alice receives message");
+        assert!(ws_msg.is_binary());
+
+        let server_msg =
+            ServerMessage::decode(ws_msg.into_data()).expect("Server sends wellformed data");
+
+        assert!(server_msg.r#type() == MessageType::Status);
+        match server_msg.content.expect("Has content") {
+            Content::Message(_) => panic!("Server Sends Error"),
+            Content::Status(status) => {
+                assert!(status.code() == StatusCode::NeedsSync)
+            }
+        }
     }
 }

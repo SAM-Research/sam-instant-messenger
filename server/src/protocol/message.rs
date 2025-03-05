@@ -9,11 +9,9 @@ use crate::{
 use log::{error, warn};
 use sam_common::{
     address::MessageId,
-    sam_message::{ClientEnvelope, DeviceList, Error, ErrorCode, MessageType, SamMessage},
-};
-use sam_common::{
     address::{AccountId, DeviceId},
     sam_message::{server_message::Content, ClientMessage, ServerEnvelope, ServerMessage},
+    sam_message::{ClientEnvelope, DeviceList, MessageType, SamMessage, Status, StatusCode},
 };
 
 pub async fn handle_client_message<T: StateType>(
@@ -32,6 +30,7 @@ pub async fn handle_client_message<T: StateType>(
                 Ok(Some(
                     handle_client_envelope(
                         state,
+                        auth_user,
                         message_id,
                         envelope,
                         auth_user.account().id(),
@@ -71,7 +70,7 @@ pub async fn handle_client_message<T: StateType>(
                 }
             }
         }
-        MessageType::Error => {
+        MessageType::Status => {
             let account_id = auth_user.account().id();
             let device_id = auth_user.device().id();
             let pending_res = state
@@ -93,6 +92,7 @@ pub async fn handle_client_message<T: StateType>(
 
 async fn handle_client_envelope<T: StateType>(
     state: &mut ServerState<T>,
+    auth_user: &AuthenticatedUser,
     message_id: MessageId,
     envelope: ClientEnvelope,
     source_account_id: AccountId,
@@ -101,6 +101,15 @@ async fn handle_client_envelope<T: StateType>(
     let dest_acc_ids = envelope
         .recipients()
         .ok_or(ServerError::EnvelopeMalformed)?;
+
+    let is_sync = dest_acc_ids.contains_key(&auth_user.account().id());
+    let needs_sync = !is_sync
+        && state
+            .devices
+            .get_devices(auth_user.account().id())
+            .await?
+            .len()
+            > 1;
 
     let mut extra_devices: HashMap<AccountId, Vec<DeviceId>> = HashMap::new();
     for (recipient, devices) in dest_acc_ids {
@@ -120,9 +129,9 @@ async fn handle_client_envelope<T: StateType>(
 
         if !missing_devices.is_empty() {
             return Ok(ServerMessage::builder()
-                .r#type(MessageType::Error as i32)
-                .content(Content::Error(Error {
-                    code: ErrorCode::NotEncryptedForAllDevices.into(),
+                .r#type(MessageType::Status as i32)
+                .content(Content::Status(Status {
+                    code: StatusCode::NotEncryptedForAllDevices.into(),
                     device_lists: vec![DeviceList {
                         account_id: recipient.into(),
                         device_ids: missing_devices.into_iter().map(|id| id.into()).collect(),
@@ -159,9 +168,9 @@ async fn handle_client_envelope<T: StateType>(
     }
     if !extra_devices.iter().all(|(_, list)| list.is_empty()) {
         return Ok(ServerMessage::builder()
-            .r#type(MessageType::Error as i32)
-            .content(Content::Error(Error {
-                code: ErrorCode::EncryptedForExtraDevices.into(),
+            .r#type(MessageType::Status as i32)
+            .content(Content::Status(Status {
+                code: StatusCode::EncryptedForExtraDevices.into(),
                 device_lists: extra_devices
                     .into_iter()
                     .map(|(account_id, device_ids)| DeviceList {
@@ -170,6 +179,16 @@ async fn handle_client_envelope<T: StateType>(
                     })
                     .collect(),
             }))
+            .id(message_id.into())
+            .build());
+    }
+
+    if needs_sync {
+        return Ok(ServerMessage::builder()
+            .r#type(MessageType::Status as i32)
+            .content(Content::Status(
+                Status::builder().code(StatusCode::NeedsSync.into()).build(),
+            ))
             .id(message_id.into())
             .build());
     }
@@ -185,8 +204,7 @@ pub async fn handle_server_envelope<T: StateType>(
     auth_user: &AuthenticatedUser,
     envelope: ServerEnvelope,
 ) -> Result<Option<ServerMessage>, ServerError> {
-    let id =
-        MessageId::try_from(envelope.id.clone()).map_err(|_| ServerError::EnvelopeMalformed)?;
+    let id = MessageId::try_from(envelope.id.clone())?;
 
     state
         .messages

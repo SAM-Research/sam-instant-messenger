@@ -1,10 +1,11 @@
 use std::collections::HashMap;
 
+use bon::bon;
 use libsignal_protocol::CiphertextMessageType;
 
 use crate::{
     address::DeviceId,
-    sam_message::{ClientEnvelope, SamMessageType},
+    sam_message::{ClientEnvelope, DeviceList, SamMessageType, Status},
     AccountId,
 };
 
@@ -41,5 +42,13 @@ impl ClientEnvelope {
                 .push(msg.destination_device_id.into());
         }
         Some(devices)
+    }
+}
+
+#[bon]
+impl Status {
+    #[builder]
+    pub fn new(code: i32, #[builder(default)] device_lists: Vec<DeviceList>) -> Self {
+        Self { code, device_lists }
     }
 }

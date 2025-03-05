@@ -3,6 +3,7 @@ use std::{collections::HashMap, sync::Arc};
 
 use tokio::sync::Mutex;
 
+use crate::managers::error::AccountManagerError;
 use crate::{
     managers::{entities::account::Account, traits::account_manager::AccountManager},
     ServerError,
@@ -30,17 +31,18 @@ impl InMemoryAccountManager {
 #[async_trait::async_trait]
 impl AccountManager for InMemoryAccountManager {
     async fn get_account(&self, id: AccountId) -> Result<Account, ServerError> {
-        self.accounts
+        Ok(self
+            .accounts
             .lock()
             .await
             .get(&id)
-            .ok_or(ServerError::AccountNotExist)
             .cloned()
+            .ok_or(AccountManagerError::AccountDoesNotExist)?)
     }
 
     async fn add_account(&mut self, account: &Account) -> Result<(), ServerError> {
         if self.accounts.lock().await.contains_key(&account.id()) {
-            return Err(ServerError::AccountExists);
+            return Err(AccountManagerError::AccountAlreadyExists)?;
         }
         self.accounts
             .lock()
@@ -50,11 +52,12 @@ impl AccountManager for InMemoryAccountManager {
     }
 
     async fn remove_account(&mut self, account_id: AccountId) -> Result<(), ServerError> {
-        self.accounts
+        let _ = self
+            .accounts
             .lock()
             .await
             .remove(&account_id)
-            .ok_or(ServerError::AccountNotExist)
-            .map(|_| ())
+            .ok_or(AccountManagerError::AccountDoesNotExist)?;
+        Ok(())
     }
 }

@@ -32,7 +32,7 @@ message ServerEnvelope {
 enum MessageType {
   MESSAGE = 1;
   ACK = 2;
-  ERROR = 3;
+  STATUS = 3;
 }
 
 message DeviceList {
@@ -40,13 +40,15 @@ message DeviceList {
   repeated uint32 device_ids = 2;
 }
 
-enum ErrorCode {
-  NOT_ENCRYPTED_FOR_ALL_DEVICES = 1;
-  ENCRYPTED_FOR_EXTRA_DEVICES   = 2;
+
+enum StatusCode {
+  NEEDS_SYNC = 1;
+  NOT_ENCRYPTED_FOR_ALL_DEVICES=2;
+  ENCRYPTED_FOR_EXTRA_DEVICES=3;
 }
 
-message Error {
-  required ErrorCode code = 1;
+message Status {
+  required StatusCode code = 1;
   repeated DeviceList device_lists = 2;
 }
 
@@ -62,6 +64,6 @@ message ServerMessage {
 
   oneof content {
     ServerEnvelope message = 3;
-    Error error = 4;
+    Status status = 4;
   };
 }

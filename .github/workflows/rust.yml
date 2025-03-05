@@ -2,9 +2,9 @@ name: Rust
 
 on:
   push:
-    branches: [ "main" ]
+    branches: ["main"]
   pull_request:
-    branches: [ "main" ]
+    branches: ["main"]
 
 env:
   CARGO_TERM_COLOR: always
@@ -13,7 +13,6 @@ jobs:
   fmt:
     runs-on: ubuntu-latest
     steps:
-
       - name: Checkout code
         uses: actions/checkout@v4
 
@@ -109,7 +108,7 @@ jobs:
 
       - name: Run Clippy
         run: cargo clippy --all-targets --all-features -- -D warnings
-  
+
   test:
     runs-on: ubuntu-latest
     steps:
@@ -136,7 +135,7 @@ jobs:
           wget https://github.com/protocolbuffers/protobuf/releases/download/v21.3/protoc-21.3-linux-x86_64.zip
           unzip -o protoc-21.3-linux-x86_64.zip -d ~/.local
 
-      - name: Cache Cargo bin (for sqlx-cli)
+      - name: Cache Cargo bin (for sqlx)
         uses: actions/cache@v4
         with:
           path: ~/.cargo/bin/sqlx
@@ -158,5 +157,27 @@ jobs:
       - name: Setup sqlx
         run: cd client/database/ && sqlx db create -D sqlite://dev.db && sqlx migrate run -D sqlite://dev.db && cd ../..
 
-      - name: Run Test
-        run: cargo test --all
+      - name: Cache Cargo bin (for llvm-cov)
+        uses: actions/cache@v4
+        with:
+          path: ~/.cargo/bin/cargo-llvm-cov
+          key: cargo-llvm-cov-${{ runner.os }}-${{ hashFiles('**/Cargo.lock') }}
+          restore-keys: |
+            cargo-llvm-cov-${{ runner.os }}-
+
+      - name: Install cargo-llvm-cov if not cached
+        run: |
+          if ! command -v cargo-llvm-cov &> /dev/null; then
+            cargo install cargo-llvm-cov
+          else
+            echo "cargo-llvm-cov found in cache, skipping installation"
+          fi
+
+      - name: Test & Coverage
+        run: cargo llvm-cov --workspace --lcov --output-path lcov.info
+
+      - name: Upload coverage reports to Codecov
+        uses: codecov/codecov-action@v5
+        with:
+          token: ${{ secrets.CODECOV_TOKEN }}
+          slug: SAM-Research/sam-instant-messenger

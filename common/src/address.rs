@@ -6,10 +6,10 @@ use std::{
 
 use serde::{Deserialize, Serialize};
 
+use crate::error::LibError;
 use derive_more::{Display, From, Into};
 use rand::Rng;
 use uuid::Uuid;
-
 macro_rules! define_uuid_type {
     ($name:ident) => {
         #[derive(Debug, Clone, Copy, Hash, PartialEq, Eq, From, Into, Serialize, Deserialize)]
@@ -42,10 +42,10 @@ macro_rules! define_uuid_type {
         }
 
         impl TryFrom<Vec<u8>> for $name {
-            type Error = <[u8; 16] as TryFrom<Vec<u8>>>::Error;
+            type Error = LibError;
 
             fn try_from(value: Vec<u8>) -> Result<Self, Self::Error> {
-                let bytes = value.try_into()?;
+                let bytes = value.try_into().map_err(|_| Self::Error::ConversionError)?;
                 Ok(Self::parse_from_bytes(bytes))
             }
         }

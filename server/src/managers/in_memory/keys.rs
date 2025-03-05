@@ -3,6 +3,7 @@ use std::{
     sync::Arc,
 };
 
+use crate::managers::error::KeyManagerError;
 use crate::{
     auth::keys::verify_key,
     managers::traits::key_manager::{
@@ -92,7 +93,8 @@ impl PreKeyManager for InMemoryKeyManager {
             .await
             .get_mut(&dkey)
             .map(|keys| keys.push(key))
-            .ok_or(ServerError::AccountNotExist)
+            .ok_or(KeyManagerError::AccountDoesNotExist)?;
+        Ok(())
     }
 
     async fn remove_pre_key(
@@ -135,7 +137,7 @@ impl SignedPreKeyManager for InMemoryKeyManager {
             .await
             .get(&key)
             .cloned()
-            .ok_or(ServerError::AccountNotExist)
+            .ok_or(ServerError::from(KeyManagerError::AccountDoesNotExist))
     }
 
     async fn set_signed_pre_key(
@@ -160,7 +162,12 @@ impl SignedPreKeyManager for InMemoryKeyManager {
     ) -> Result<(), ServerError> {
         let key = DeviceAddress::new(account_id, device_id);
 
-        self.signed_pre_keys.lock().await.remove(&key);
+        let _ = self
+            .signed_pre_keys
+            .lock()
+            .await
+            .remove(&key)
+            .ok_or(KeyManagerError::AccountDoesNotExist)?;
         Ok(())
     }
 }
@@ -218,7 +225,8 @@ impl PqPreKeyManager for InMemoryKeyManager {
             .await
             .get_mut(&dkey)
             .map(|keys| keys.push(key))
-            .ok_or(ServerError::AccountNotExist)
+            .ok_or(KeyManagerError::AccountDoesNotExist)?;
+        Ok(())
     }
 
     async fn remove_pq_pre_key(
@@ -239,7 +247,7 @@ impl PqPreKeyManager for InMemoryKeyManager {
                     .map(|index| (keys, index))
                     .map(|(keys, index)| keys.remove(index))
             })
-            .ok_or(ServerError::KeyNotExist)?;
+            .ok_or(KeyManagerError::KeyDoesNotExist)?;
         {
             let mut pq_pre_keys = self.pq_pre_keys.lock().await;
             if let Some(keys) = pq_pre_keys.get(&dkey) {
@@ -261,12 +269,13 @@ impl LastResortKeyManager for InMemoryKeyManager {
     ) -> Result<PqPreKey, ServerError> {
         let key = DeviceAddress::new(account_id, device_id);
 
-        self.last_resort_keys
+        Ok(self
+            .last_resort_keys
             .lock()
             .await
             .get(&key)
             .cloned()
-            .ok_or(ServerError::KeyNotExist)
+            .ok_or(KeyManagerError::KeyDoesNotExist)?)
     }
     async fn set_last_resort_key(
         &mut self,
@@ -289,11 +298,12 @@ impl LastResortKeyManager for InMemoryKeyManager {
     ) -> Result<(), ServerError> {
         let key = DeviceAddress::new(account_id, device_id);
 
-        self.last_resort_keys
+        let _ = self
+            .last_resort_keys
             .lock()
             .await
             .remove(&key)
-            .ok_or(ServerError::KeyNotExist)
-            .map(|_| ())
+            .ok_or(KeyManagerError::KeyDoesNotExist)?;
+        Ok(())
     }
 }
