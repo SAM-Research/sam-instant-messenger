@@ -1,4 +1,7 @@
-use super::{api_trait::ApiClient, ApiClientError};
+use super::{
+    api_trait::{ApiClient, ApiClientConfig},
+    ApiClientError,
+};
 use async_trait::async_trait;
 use reqwest::{Client as ReqwestClient, Method, Request, Response, Url};
 use sam_common::{
@@ -8,6 +11,23 @@ use sam_common::{
     },
     AccountId, DeviceId,
 };
+
+#[derive(Debug)]
+pub struct HttpClientConfig {
+    base_url: String,
+}
+
+#[async_trait(?Send)]
+impl ApiClientConfig for HttpClientConfig {
+    type ApiClient = HttpClient;
+
+    async fn create(self) -> Result<Self::ApiClient, ApiClientError> {
+        Ok(Self::ApiClient {
+            http_client: ReqwestClient::new(),
+            base_url: self.base_url,
+        })
+    }
+}
 
 #[derive(Debug)]
 pub struct HttpClient {
