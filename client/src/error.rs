@@ -3,6 +3,8 @@ use libsignal_core::curve::CurveError;
 use libsignal_protocol::SignalProtocolError;
 use sam_common::LibError;
 
+use crate::net::{protocol::error::ProtocolError, ApiClientError};
+
 #[derive(Debug, Display, Error, From)]
 pub enum ClientError {
     #[display("Failed to parse an invalid ServiceId: {_0}")]
@@ -13,6 +15,8 @@ pub enum ClientError {
     Database(#[error(not(source))] String),
     Lib(LibError),
     Curve(CurveError),
+    Api(ApiClientError),
+    Protocol(ProtocolError),
     NoAccountId,
     NoPassword,
     NoUsername,
