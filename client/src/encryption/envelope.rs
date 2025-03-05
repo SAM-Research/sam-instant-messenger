@@ -12,11 +12,11 @@ impl DecryptedEnvelope {
     pub fn content_bytes(&self) -> &Vec<u8> {
         &self.content
     }
-    pub fn content<T>(&self) -> Result<T, <T as TryFrom<&Vec<u8>>>::Error>
+    pub fn content<T>(&self) -> Result<T, <T as TryFrom<Vec<u8>>>::Error>
     where
-        T: for<'a> TryFrom<&'a Vec<u8>>,
+        T: TryFrom<Vec<u8>>,
     {
-        T::try_from(self.content_bytes())
+        T::try_from(self.content_bytes().clone())
     }
 
     pub fn source_account_id(&self) -> AccountId {
