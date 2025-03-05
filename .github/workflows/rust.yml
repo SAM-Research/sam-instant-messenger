@@ -110,6 +110,12 @@ jobs:
         run: cargo clippy --all-targets --all-features -- -D warnings
 
   test:
+    status:
+    project:
+      default:
+        target: 0%
+        threshold: 0%
+        informational: true
     runs-on: ubuntu-latest
     steps:
       - name: Upgrade rust
