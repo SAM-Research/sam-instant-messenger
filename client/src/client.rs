@@ -108,7 +108,7 @@ impl<T: StoreType, U: ApiClient, V: SamProtocolClient> Client<T, U, V> {
             .register_account(username, &password, registration_request)
             .await?;
 
-        let account_id = response.account_id.into();
+        let account_id = response.account_id;
 
         let protocol_client = protocol_config.create().await?;
 
@@ -116,12 +116,9 @@ impl<T: StoreType, U: ApiClient, V: SamProtocolClient> Client<T, U, V> {
             .account_store
             .set_username(username.to_owned())
             .await?;
-        store
-            .account_store
-            .set_username(username.to_owned())
-            .await?;
+
         store.account_store.set_account_id(account_id).await?;
-        //store.account_store.set_device_id(1.into()).await?;
+        store.account_store.set_device_id(1.into()).await?;
         store.account_store.set_password(password).await?;
 
         Ok(Client {
