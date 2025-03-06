@@ -11,6 +11,12 @@ pub struct WebSocketProtocolClientConfig {
     url: String,
 }
 
+impl WebSocketProtocolClientConfig {
+    pub fn new(url: String) -> Self {
+        Self { url }
+    }
+}
+
 #[async_trait::async_trait(?Send)]
 impl ProtocolConfig for WebSocketProtocolClientConfig {
     type ProtocolClient = ProtocolClient;
