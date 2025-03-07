@@ -6,5 +6,5 @@ use crate::{encryption::envelope::DecryptedEnvelope, ClientError};
 #[async_trait(?Send)]
 pub trait MessageStore {
     async fn store_message(&mut self, envelope: DecryptedEnvelope) -> Result<(), ClientError>;
-    async fn subscribe(&self) -> Receiver<DecryptedEnvelope>;
+    fn subscribe(&self) -> Receiver<DecryptedEnvelope>;
 }

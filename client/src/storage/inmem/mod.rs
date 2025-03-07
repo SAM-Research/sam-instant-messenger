@@ -1,6 +1,9 @@
 use crate::ClientError;
 
-use super::{Store, StoreConfig, StoreType};
+use super::{
+    sqlite::{connect_to_in_memory, message::SqliteMessageStore},
+    Store, StoreConfig, StoreType,
+};
 use account::InMemoryAccountStore;
 use async_trait::async_trait;
 use contact::InMemoryContactStore;
@@ -36,6 +39,7 @@ impl StoreType for InMemoryStoreType {
     type SessionStore = InMemSessionStore;
 
     type SenderKeyStore = InMemSenderKeyStore;
+    type MessageStore = SqliteMessageStore;
 }
 
 pub type InMemoryStore = Store<InMemoryStoreType>;
@@ -60,6 +64,7 @@ impl StoreConfig for InMemoryStoreConfig {
             .session_store(InMemSessionStore::default())
             .account_store(InMemoryAccountStore::default())
             .contact_store(InMemoryContactStore::default())
+            .message_store(SqliteMessageStore::new(connect_to_in_memory().await, 10))
             .build())
     }
 
