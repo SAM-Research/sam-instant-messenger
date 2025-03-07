@@ -145,7 +145,7 @@ impl<T: StoreType, U: ApiClient, V: SamProtocolClient> Client<T, U, V> {
         self.store.account_store.get_account_id().await
     }
 
-    pub async fn device_id(&self) -> Result<DeviceId, ClientError> {
+    async fn device_id(&self) -> Result<DeviceId, ClientError> {
         self.store.account_store.get_device_id().await
     }
 
