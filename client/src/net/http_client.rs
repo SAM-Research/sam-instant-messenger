@@ -17,6 +17,12 @@ pub struct HttpClientConfig {
     base_url: String,
 }
 
+impl HttpClientConfig {
+    pub fn new(base_url: String) -> Self {
+        Self { base_url }
+    }
+}
+
 #[async_trait(?Send)]
 impl ApiClientConfig for HttpClientConfig {
     type ApiClient = HttpClient;
@@ -93,7 +99,7 @@ impl ApiClient for HttpClient {
     }
 
     async fn delete_account(
-        self,
+        &self,
         account_id: AccountId,
         device_id: DeviceId,
         password: &str,

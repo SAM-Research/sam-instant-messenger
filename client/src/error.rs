@@ -21,4 +21,5 @@ pub enum ClientError {
     NoPassword,
     NoUsername,
     SendError,
+    NoDeviceId,
 }

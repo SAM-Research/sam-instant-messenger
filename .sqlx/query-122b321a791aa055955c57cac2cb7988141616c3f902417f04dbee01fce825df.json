@@ -1,0 +1,12 @@
+{
+  "db_name": "SQLite",
+  "query": "\n            DELETE FROM AccountId;\n            INSERT INTO AccountId\n            VALUES (?)\n            ",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Right": 1
+    },
+    "nullable": []
+  },
+  "hash": "122b321a791aa055955c57cac2cb7988141616c3f902417f04dbee01fce825df"
+}
