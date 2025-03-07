@@ -1,10 +1,10 @@
 {
   "db_name": "SQLite",
-  "query": "\n            SELECT * FROM Aci;\n            ",
+  "query": "\n            SELECT * FROM AccountId;\n            ",
   "describe": {
     "columns": [
       {
-        "name": "aci",
+        "name": "account_id",
         "ordinal": 0,
         "type_info": "Text"
       }
@@ -16,5 +16,5 @@
       false
     ]
   },
-  "hash": "488cf5bb6fe44340d9499f91c019d8fba39849407497abf93579957cb47eeeb0"
+  "hash": "da20cdbc77d68610bf3e0756922950419a0c294830827e279d644267f6dd6f93"
 }

@@ -1,7 +1,7 @@
+use crate::ClientError;
 use async_trait::async_trait;
 use sam_common::address::AccountId;
-
-use crate::ClientError;
+use sam_common::DeviceId;
 
 #[async_trait(?Send)]
 pub trait AccountStore {
@@ -11,4 +11,6 @@ pub trait AccountStore {
     async fn get_password(&self) -> Result<String, ClientError>;
     async fn set_username(&mut self, username: String) -> Result<(), ClientError>;
     async fn get_username(&self) -> Result<String, ClientError>;
+    async fn set_device_id(&mut self, device_id: DeviceId) -> Result<(), ClientError>;
+    async fn get_device_id(&self) -> Result<DeviceId, ClientError>;
 }
