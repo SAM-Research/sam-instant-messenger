@@ -93,7 +93,7 @@ pub async fn generate_ec_pre_keys<G: PreKeyGenerator, R: Rng + CryptoRng>(
     amount: usize,
     mut csprng: &mut R,
 ) -> Result<Vec<EcPreKey>, ClientError> {
-    let mut keys = Vec::with_capacity(amount as usize);
+    let mut keys = Vec::with_capacity(amount);
     for _ in 0..amount {
         keys.push(generator.generate_key(&mut csprng).await?.into());
     }
@@ -105,7 +105,7 @@ pub async fn generate_pq_pre_keys<G: KyberKeyGenerator>(
     generator: &mut G,
     amount: usize,
 ) -> Result<Vec<PqPreKey>, ClientError> {
-    let mut keys = Vec::with_capacity(amount as usize);
+    let mut keys = Vec::with_capacity(amount);
     for _ in 0..amount {
         keys.push(generator.generate_key(signing_key).await?.into());
     }

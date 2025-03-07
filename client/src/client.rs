@@ -108,7 +108,7 @@ impl<T: StoreType, U: ApiClient, V: SamProtocolClient> Client<T, U, V> {
             .register_account(username, &password, registration_request)
             .await?;
 
-        let account_id = response.account_id.into();
+        let account_id = response.account_id;
 
         let protocol_client = protocol_config.create().await?;
 
