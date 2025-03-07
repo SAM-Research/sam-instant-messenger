@@ -12,7 +12,7 @@ use sam_common::{
 use tokio::sync::broadcast::Receiver;
 
 use crate::{
-    encryption::{envelope::DecryptedEnvelope, password::generate_password},
+    encryption::{encrypt::encrypt, envelope::DecryptedEnvelope, password::generate_password},
     net::{
         api_trait::ApiClientConfig,
         protocol::traits::{ProtocolConfig, SamProtocolClient},
@@ -23,6 +23,7 @@ use crate::{
             generate_ec_pre_keys, generate_pq_pre_keys, KyberKeyGenerator as _,
             SignedPreKeyGenerator as _,
         },
+        traits::message::MessageStore,
         AccountStore, Store, StoreConfig, StoreType,
     },
     ClientError,
@@ -31,7 +32,18 @@ use crate::{
 pub struct Client<T: StoreType, U: ApiClient, V: SamProtocolClient> {
     store: Store<T>,
     api_client: U,
-    _protocol_client: V,
+    protocol_client: V,
+}
+
+impl<T: StoreType, U: ApiClient, V: SamProtocolClient> Client<T, U, V> {
+    async fn ensure_socket_connection(&mut self) -> Result<(), ClientError> {
+        if self.protocol_client.is_connected().await {
+            return Ok(());
+        }
+
+        let receiver = self.protocol_client.connect().await?;
+        todo!()
+    }
 }
 
 #[bon]
@@ -120,11 +132,13 @@ impl<T: StoreType, U: ApiClient, V: SamProtocolClient> Client<T, U, V> {
         store.account_store.set_device_id(1.into()).await?;
         store.account_store.set_password(password).await?;
 
-        Ok(Client {
+        let mut client = Self {
             store,
-            _protocol_client: protocol_client,
+            protocol_client,
             api_client,
-        })
+        };
+        client.ensure_socket_connection().await?;
+        Ok(client)
     }
 
     /// Instantiate a client from a valid store
@@ -134,11 +148,13 @@ impl<T: StoreType, U: ApiClient, V: SamProtocolClient> Client<T, U, V> {
         protocol_config: impl ProtocolConfig<ProtocolClient = V>,
         api_client_config: impl ApiClientConfig<ApiClient = U>,
     ) -> Result<Self, ClientError> {
-        Ok(Self {
+        let mut client = Self {
             store,
-            _protocol_client: protocol_config.create().await?,
+            protocol_client: protocol_config.create().await?,
             api_client: api_client_config.create().await?,
-        })
+        };
+        client.ensure_socket_connection().await?;
+        Ok(client)
     }
 
     pub async fn account_id(&self) -> Result<AccountId, ClientError> {
@@ -189,19 +205,23 @@ impl<T: StoreType, U: ApiClient, V: SamProtocolClient> Client<T, U, V> {
         todo!()
     }
 
-    /// Send any message to receipient
+    /// Send any message to recipient
     /// Should also send to users other devices
     pub async fn send_message(
         &mut self,
-        _receipient: AccountId,
-        _msg: impl Into<Vec<u8>>,
+        recipient: AccountId,
+        msg: impl Into<Vec<u8>>,
     ) -> Result<bool, ClientError> {
-        todo!()
+        let envelope = encrypt(msg, recipient, &mut self.store).await?;
+        self.protocol_client
+            .send_message(envelope)
+            .await
+            .map_err(ClientError::from)
     }
 
     /// Returns a broadcast receiver for incoming messages that have been decrypted
-    pub async fn subscribe(&mut self) -> Result<Receiver<DecryptedEnvelope>, ClientError> {
-        todo!()
+    pub async fn subscribe(&mut self) -> Receiver<DecryptedEnvelope> {
+        self.store.message_store.subscribe()
     }
 
     /// publish ec, pq, last resort or last resort of amount
