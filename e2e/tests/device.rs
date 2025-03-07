@@ -12,6 +12,10 @@ use crate::utils::server::TestServer;
 
 mod utils;
 
+/*
+   PORTS USED: 9387-9389
+*/
+
 fn link_device_request(
     token: LinkDeviceToken,
     reg_id: RegistrationId,

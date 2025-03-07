@@ -6,11 +6,15 @@ use sam_client::Client;
 
 mod utils;
 
+/*
+   Ports used: 9383
+*/
+
 #[tokio::test]
 pub async fn alice_can_find_bobs_account_id() {
     let _ = env_logger::try_init();
-    let address = "http://127.0.0.1:9384".to_owned();
-    let mut server = TestServer::start("127.0.0.1:9384").await;
+    let address = "http://127.0.0.1:9383".to_owned();
+    let mut server = TestServer::start("127.0.0.1:9383").await;
 
     server
         .started_rx()

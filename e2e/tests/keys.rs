@@ -7,6 +7,10 @@ mod utils;
 
 use crate::utils::server::TestServer;
 
+/*
+   PORTS USED: 9384-9386
+*/
+
 #[tokio::test]
 pub async fn alice_can_upload_keys() {
     let _ = env_logger::try_init();
@@ -42,8 +46,8 @@ pub async fn alice_can_upload_keys() {
 #[tokio::test]
 pub async fn bob_can_fetch_alices_keys() {
     let _ = env_logger::try_init();
-    let address = "http://127.0.0.1:9384".to_owned();
-    let mut server = TestServer::start("127.0.0.1:9384").await;
+    let address = "http://127.0.0.1:9385".to_owned();
+    let mut server = TestServer::start("127.0.0.1:9385").await;
 
     server
         .started_rx()
@@ -89,8 +93,8 @@ pub async fn bob_can_fetch_alices_keys() {
 #[tokio::test]
 pub async fn bob_can_fetch_alices_keys_for_specific_devices() {
     let _ = env_logger::try_init();
-    let address = "http://127.0.0.1:9384".to_owned();
-    let mut server = TestServer::start("127.0.0.1:9384").await;
+    let address = "http://127.0.0.1:9386".to_owned();
+    let mut server = TestServer::start("127.0.0.1:9386").await;
 
     server
         .started_rx()
