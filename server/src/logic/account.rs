@@ -94,7 +94,7 @@ pub async fn create_account<T: StateType>(
     })
 }
 
-pub async fn get_users_account_id<T: StateType>(
+pub async fn get_account_id_by_username<T: StateType>(
     state: &mut ServerState<T>,
     username: String,
 ) -> Result<AccountId, ServerError> {

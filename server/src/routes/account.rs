@@ -12,7 +12,7 @@ use axum_extra::{
 use sam_common::api::account::{RegistrationRequest, RegistrationResponse};
 use sam_common::AccountId;
 
-use crate::logic::account::get_users_account_id;
+use crate::logic::account::get_account_id_by_username;
 use crate::routes::error::RouterError;
 use crate::{
     auth::authenticated_user::AuthenticatedUser,
@@ -53,7 +53,9 @@ async fn get_account_id<T: StateType>(
     State(mut state): State<ServerState<T>>,
     _auth_user: AuthenticatedUser,
 ) -> Result<Json<AccountId>, ServerError> {
-    get_users_account_id(&mut state, username).await.map(Json)
+    get_account_id_by_username(&mut state, username)
+        .await
+        .map(Json)
 }
 
 pub fn account_routes<T: StateType>(router: Router<ServerState<T>>) -> Router<ServerState<T>> {

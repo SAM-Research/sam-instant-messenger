@@ -185,13 +185,13 @@ impl<T: StoreType, U: ApiClient, V: SamProtocolClient> Client<T, U, V> {
         todo!()
     }
 
-    /// Get users account id from username
-    pub async fn get_user_account_id(&self, username: &str) -> Result<AccountId, ClientError> {
+    /// Get the [AccountId] of a user by username.
+    pub async fn get_account_id_for(&self, username: &str) -> Result<AccountId, ClientError> {
         let account_id = self
             .api_client
             .get_user_account_id(
                 self.account_id().await?,
-                self.store.account_store.get_device_id().await?,
+                self.device_id().await?,
                 self.store.account_store.get_password().await?.as_str(),
                 username,
             )
@@ -271,7 +271,7 @@ impl<T: StoreType, U: ApiClient, V: SamProtocolClient> Client<T, U, V> {
         self.api_client
             .publish_pre_keys(
                 self.account_id().await?,
-                self.store.account_store.get_device_id().await?,
+                self.device_id().await?,
                 self.store.account_store.get_password().await?.as_str(),
                 pre_key_bundle,
             )
@@ -290,7 +290,7 @@ impl<T: StoreType, U: ApiClient, V: SamProtocolClient> Client<T, U, V> {
             .api_client
             .get_pre_keys_for_specific_devices(
                 self.account_id().await?,
-                self.store.account_store.get_device_id().await?,
+                self.device_id().await?,
                 self.store.account_store.get_password().await?.as_str(),
                 account_id,
                 devices,
@@ -308,7 +308,7 @@ impl<T: StoreType, U: ApiClient, V: SamProtocolClient> Client<T, U, V> {
             .api_client
             .get_pre_keys_for_all_devices(
                 self.account_id().await?,
-                self.store.account_store.get_device_id().await?,
+                self.device_id().await?,
                 self.store.account_store.get_password().await?.as_str(),
                 account_id,
             )
