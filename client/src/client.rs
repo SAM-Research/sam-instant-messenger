@@ -1,6 +1,6 @@
 use bon::bon;
 use sam_common::{api::LinkDeviceToken, AccountId, DeviceId};
-use tokio::sync::broadcast::Receiver;
+use tokio::sync::mpsc::Receiver;
 
 use crate::{
     encryption::envelope::DecryptedEnvelope,

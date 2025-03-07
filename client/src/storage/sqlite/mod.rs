@@ -24,6 +24,7 @@ pub mod account;
 pub mod contact;
 pub mod identity;
 pub mod kyber;
+pub mod message;
 pub mod pre_key;
 pub mod sender_key;
 pub mod session;
