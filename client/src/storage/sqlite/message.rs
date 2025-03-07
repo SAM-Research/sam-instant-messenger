@@ -56,7 +56,6 @@ impl MessageStore for SqliteMessageStore {
 
 #[cfg(test)]
 mod test {
-    use core::time;
     use std::time::Duration;
 
     use libsignal_protocol::IdentityKeyPair;

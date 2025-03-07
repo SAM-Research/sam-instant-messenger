@@ -13,13 +13,7 @@ use sqlx::{sqlite::SqlitePoolOptions, Pool, Sqlite};
 
 use crate::ClientError;
 
-use super::{
-    store_builder::{
-        SetAccountStore, SetContactStore, SetKyberPreKeyStore, SetPreKeyStore, SetSenderKeyStore,
-        SetSessionStore, SetSignedPreKeyStore,
-    },
-    Store, StoreBuilder, StoreConfig, StoreType,
-};
+use super::{Store, StoreConfig, StoreType};
 
 pub mod account;
 pub mod contact;
