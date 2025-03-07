@@ -1,0 +1,12 @@
+{
+  "db_name": "SQLite",
+  "query": "\n            DELETE FROM DeviceId;\n            INSERT INTO DeviceId\n            VALUES (?)\n            ",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Right": 1
+    },
+    "nullable": []
+  },
+  "hash": "d0bdc32ab76a00cf8769ba54f1f48d42eed0f240964b0f05384f539c48a9a2dc"
+}
