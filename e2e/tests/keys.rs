@@ -5,7 +5,7 @@ use sam_client::net::{ApiClient, HttpClient};
 mod utils;
 
 use crate::utils::client::{publish_keys, registration_request};
-use crate::utils::server::TestServer;
+use sam_e2e_tests::TestServer;
 
 #[tokio::test]
 pub async fn bob_can_fetch_alices_keys() {

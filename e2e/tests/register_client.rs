@@ -1,5 +1,4 @@
 use crate::utils::client::{publish_keys, registration_request};
-use crate::utils::server::TestServer;
 use libsignal_protocol::IdentityKeyPair;
 use rand::rngs::OsRng;
 use sam_client::net::http_client::HttpClientConfig;
@@ -7,6 +6,7 @@ use sam_client::net::protocol::WebSocketProtocolClientConfig;
 use sam_client::net::{ApiClient, HttpClient};
 use sam_client::storage::sqlite::SqliteStoreConfig;
 use sam_client::Client;
+use sam_e2e_tests::TestServer;
 mod utils;
 
 #[tokio::test]

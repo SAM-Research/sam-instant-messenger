@@ -8,7 +8,7 @@ use sam_common::api::keys::RegistrationPreKeys;
 use sam_common::api::{LinkDeviceRequest, LinkDeviceToken};
 
 use crate::utils::client::{publish_keys, registration_request};
-use crate::utils::server::TestServer;
+use sam_e2e_tests::TestServer;
 
 mod utils;
 
