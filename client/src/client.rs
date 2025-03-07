@@ -30,7 +30,7 @@ use crate::{
 
 pub struct Client<T: StoreType, U: ApiClient, V: SamProtocolClient> {
     store: Store<T>,
-    _api_client: U,
+    api_client: U,
     _protocol_client: V,
 }
 
@@ -116,18 +116,14 @@ impl<T: StoreType, U: ApiClient, V: SamProtocolClient> Client<T, U, V> {
             .account_store
             .set_username(username.to_owned())
             .await?;
-        store
-            .account_store
-            .set_username(username.to_owned())
-            .await?;
         store.account_store.set_account_id(account_id).await?;
-        //store.account_store.set_device_id(1.into()).await?;
+        store.account_store.set_device_id(1.into()).await?;
         store.account_store.set_password(password).await?;
 
         Ok(Client {
             store,
             _protocol_client: protocol_client,
-            _api_client: api_client,
+            api_client,
         })
     }
 
@@ -141,7 +137,7 @@ impl<T: StoreType, U: ApiClient, V: SamProtocolClient> Client<T, U, V> {
         Ok(Self {
             store,
             _protocol_client: protocol_config.create().await?,
-            _api_client: api_client_config.create().await?,
+            api_client: api_client_config.create().await?,
         })
     }
 
@@ -149,13 +145,42 @@ impl<T: StoreType, U: ApiClient, V: SamProtocolClient> Client<T, U, V> {
         self.store.account_store.get_account_id().await
     }
 
+    async fn device_id(&self) -> Result<DeviceId, ClientError> {
+        self.store.account_store.get_device_id().await
+    }
+
     /// Delete Account and consume client
-    pub async fn delete_account(self) {
-        todo!()
+    pub async fn delete_account(self) -> Result<(), (Self, ClientError)> {
+        let account_id = self.account_id().await;
+        let device_id = self.device_id().await;
+        let password = self.store.account_store.get_password().await;
+
+        let Ok(account_id) = account_id else {
+            return Err((self, account_id.unwrap_err()));
+        };
+
+        let Ok(device_id) = device_id else {
+            return Err((self, device_id.unwrap_err()));
+        };
+
+        let Ok(password) = password else {
+            return Err((self, password.unwrap_err()));
+        };
+
+        let delete_result = self
+            .api_client
+            .delete_account(account_id, device_id, &password)
+            .await;
+
+        let Ok(()) = delete_result else {
+            return Err((self, ClientError::Api(delete_result.unwrap_err())));
+        };
+
+        Ok(())
     }
 
     /// Delete device and consume client
-    pub async fn delete_device(self) {
+    pub async fn delete_device(self) -> Result<(), (Self, ClientError)> {
         todo!()
     }
 
