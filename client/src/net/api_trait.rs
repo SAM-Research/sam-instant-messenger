@@ -44,7 +44,7 @@ pub trait ApiClient {
     /// * `Err(ApiClientError)` if the deletion fails.
     // TODO: What if deletion fails?
     async fn delete_account(
-        self,
+        &self,
         account_id: AccountId,
         device_id: DeviceId,
         password: &str,
