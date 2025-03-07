@@ -99,7 +99,7 @@ impl ApiClient for HttpClient {
     }
 
     async fn delete_account(
-        self,
+        &self,
         account_id: AccountId,
         device_id: DeviceId,
         password: &str,
