@@ -1,6 +1,4 @@
 use crate::utils::server::TestServer;
-
-
 use libsignal_protocol::IdentityKeyPair;
 use rand::rngs::OsRng;
 use sam_client::{
@@ -108,7 +106,6 @@ pub async fn cannot_delete_a_client_that_does_not_exist() {
     let result = client.delete_account().await;
     assert!(result.is_err_and(|(_, err)| matches!(err, ClientError::Api(_))))
 }
-
 
 #[tokio::test]
 pub async fn alice_can_find_bobs_account_id() {
