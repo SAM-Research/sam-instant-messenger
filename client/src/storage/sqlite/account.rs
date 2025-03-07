@@ -3,6 +3,7 @@ use std::str::FromStr as _;
 use crate::{storage::AccountStore, ClientError};
 use async_trait::async_trait;
 use sam_common::address::AccountId;
+use sam_common::DeviceId;
 use sqlx::{Error as SqlxError, Pool, Sqlite};
 
 #[derive(Debug)]
@@ -22,8 +23,8 @@ impl AccountStore for SqliteAccountStore {
         let aci = id.to_string();
         sqlx::query!(
             r#"
-            DELETE FROM Aci;
-            INSERT INTO Aci
+            DELETE FROM AccountId;
+            INSERT INTO AccountId
             VALUES (?)
             "#,
             aci
@@ -37,16 +38,15 @@ impl AccountStore for SqliteAccountStore {
     async fn get_account_id(&self) -> Result<AccountId, ClientError> {
         match sqlx::query!(
             r#"
-            SELECT * FROM Aci;
+            SELECT * FROM AccountId;
             "#,
         )
         .fetch_one(&self.database)
         .await
         {
             Err(SqlxError::RowNotFound) => Err(ClientError::NoAccountId),
-            Ok(rec) => {
-                AccountId::from_str(&rec.aci).map_err(|_| ClientError::InvalidAccountId(rec.aci))
-            }
+            Ok(rec) => AccountId::from_str(&rec.account_id)
+                .map_err(|_| ClientError::InvalidAccountId(rec.account_id)),
             Err(err) => Err(ClientError::Database(format!("{err}"))),
         }
     }
@@ -107,6 +107,37 @@ impl AccountStore for SqliteAccountStore {
         {
             Err(SqlxError::RowNotFound) => Err(ClientError::NoUsername),
             Ok(rec) => Ok(rec.username),
+            Err(err) => Err(ClientError::Database(format!("{err}"))),
+        }
+    }
+
+    async fn set_device_id(&mut self, device_id: DeviceId) -> Result<(), ClientError> {
+        let dev_id = Into::<u32>::into(device_id);
+        sqlx::query!(
+            r#"
+            DELETE FROM DeviceId;
+            INSERT INTO DeviceId
+            VALUES (?)
+            "#,
+            dev_id
+        )
+        .execute(&self.database)
+        .await
+        .map(|_| ())
+        .map_err(|err| ClientError::Database(format!("{err}")))
+    }
+
+    async fn get_device_id(&self) -> Result<DeviceId, ClientError> {
+        match sqlx::query!(
+            r#"
+            SELECT * FROM DeviceId;
+            "#,
+        )
+        .fetch_one(&self.database)
+        .await
+        {
+            Err(SqlxError::RowNotFound) => Err(ClientError::NoDeviceId),
+            Ok(rec) => Ok((rec.device_id as u32).into()),
             Err(err) => Err(ClientError::Database(format!("{err}"))),
         }
     }

@@ -1,13 +1,17 @@
-CREATE TABLE Aci (
-  aci   TEXT NOT NULL
+CREATE TABLE AccountId (
+  account_id TEXT NOT NULL
+);
+
+CREATE TABLE DeviceId (
+  device_id INTEGER NOT NULL
 );
 
 CREATE TABLE Username (
-  username  TEXT NOT NULL
+  username TEXT NOT NULL
 );
 
 CREATE TABLE Password (
-  password  TEXT NOT NULL
+  password TEXT NOT NULL
 );
 
 CREATE TABLE IdentityKeys (
