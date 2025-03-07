@@ -65,7 +65,16 @@ pub trait ApiClient {
     ///
     /// * `Ok(PreKeyBundles)` containing the retrieved pre-key bundles.
     /// * `Err(ApiClientError)` if fetching pre-key bundles fails.
-    async fn get_pre_keys(
+    async fn get_pre_keys_for_specific_devices(
+        &self,
+        account_id: AccountId,
+        device_id: DeviceId,
+        password: &str,
+        receiver_account_id: AccountId,
+        specific_devices: Vec<DeviceId>,
+    ) -> Result<PreKeyBundles, ApiClientError>;
+
+    async fn get_pre_keys_for_all_devices(
         &self,
         account_id: AccountId,
         device_id: DeviceId,

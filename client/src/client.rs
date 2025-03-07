@@ -1,16 +1,3 @@
-use bon::bon;
-use libsignal_protocol::IdentityKeyPair;
-use rand::rngs::OsRng;
-use sam_common::{
-    address::RegistrationId,
-    api::{
-        device::DeviceActivationInfo, keys::RegistrationPreKeys, LinkDeviceToken,
-        RegistrationRequest,
-    },
-    AccountId, DeviceId,
-};
-use tokio::sync::broadcast::Receiver;
-
 use crate::{
     encryption::{envelope::DecryptedEnvelope, password::generate_password},
     net::{
@@ -27,10 +14,24 @@ use crate::{
     },
     ClientError,
 };
+use bon::bon;
+use libsignal_protocol::{IdentityKeyPair, IdentityKeyStore};
+use rand::rngs::OsRng;
+use sam_common::api::keys::PreKeyBundles;
+use sam_common::api::{PqPreKey, PublishPreKeys, SignedEcPreKey};
+use sam_common::{
+    address::RegistrationId,
+    api::{
+        device::DeviceActivationInfo, keys::RegistrationPreKeys, LinkDeviceToken,
+        RegistrationRequest,
+    },
+    AccountId, DeviceId,
+};
+use tokio::sync::broadcast::Receiver;
 
 pub struct Client<T: StoreType, U: ApiClient, V: SamProtocolClient> {
     store: Store<T>,
-    _api_client: U,
+    api_client: U,
     _protocol_client: V,
 }
 
@@ -124,7 +125,7 @@ impl<T: StoreType, U: ApiClient, V: SamProtocolClient> Client<T, U, V> {
         Ok(Client {
             store,
             _protocol_client: protocol_client,
-            _api_client: api_client,
+            api_client,
         })
     }
 
@@ -138,7 +139,7 @@ impl<T: StoreType, U: ApiClient, V: SamProtocolClient> Client<T, U, V> {
         Ok(Self {
             store,
             _protocol_client: protocol_config.create().await?,
-            _api_client: api_client_config.create().await?,
+            api_client: api_client_config.create().await?,
         })
     }
 
@@ -159,7 +160,7 @@ impl<T: StoreType, U: ApiClient, V: SamProtocolClient> Client<T, U, V> {
     /// Get users account id from username
     pub async fn get_user_account_id(&self, username: &str) -> Result<AccountId, ClientError> {
         let account_id = self
-            ._api_client
+            .api_client
             .get_user_account_id(
                 self.account_id().await?,
                 self.store.account_store.get_device_id().await?,
@@ -190,22 +191,102 @@ impl<T: StoreType, U: ApiClient, V: SamProtocolClient> Client<T, U, V> {
     #[builder]
     pub async fn publish_prekeys(
         &mut self,
-        #[builder(default)] _onetime_ec_keys: u32,
-        #[builder(default)] _onetime_pq_prekeys: u32,
-        #[builder(default = false)] _new_signed_prekey: bool,
-        #[builder(default = false)] _new_last_resort: bool,
+        #[builder(default)] onetime_prekeys: usize,
+        #[builder(default = false)] new_signed_prekey: bool,
+        #[builder(default = false)] new_last_resort: bool,
     ) -> Result<(), ClientError> {
-        todo!()
+        let mut csprng = OsRng;
+        let id_key_pair = self
+            .store
+            .identity_key_store
+            .get_identity_key_pair()
+            .await?;
+        let onetime_ec_prekeys =
+            generate_ec_pre_keys(&mut self.store.pre_key_store, onetime_prekeys, &mut csprng)
+                .await?;
+        let onetime_pq_prekeys = generate_pq_pre_keys(
+            id_key_pair.private_key(),
+            &mut self.store.kyber_pre_key_store,
+            onetime_prekeys,
+        )
+        .await?;
+
+        let signed_pre_key: Option<SignedEcPreKey> = match new_signed_prekey {
+            true => Some(
+                self.store
+                    .signed_pre_key_store
+                    .generate_key(&mut csprng, id_key_pair.private_key())
+                    .await?
+                    .into(),
+            ),
+            false => None,
+        };
+
+        let last_resort_key: Option<PqPreKey> = match new_last_resort {
+            true => Some(
+                self.store
+                    .kyber_pre_key_store
+                    .generate_key(id_key_pair.private_key())
+                    .await?
+                    .into(),
+            ),
+            false => None,
+        };
+
+        let pre_key_bundle = PublishPreKeys {
+            pre_keys: Some(onetime_ec_prekeys),
+            signed_pre_key,
+            pq_pre_keys: Some(onetime_pq_prekeys),
+            pq_last_resort_pre_key: last_resort_key,
+        };
+
+        self.api_client
+            .publish_pre_keys(
+                self.account_id().await?,
+                self.store.account_store.get_device_id().await?,
+                self.store.account_store.get_password().await?.as_str(),
+                pre_key_bundle,
+            )
+            .await?;
+
+        Ok(())
     }
 
     /// Fetch key bundles for account_id
-    pub async fn fetch_prekeys(
-        // Fetch fra api client og køre verification af prekey bundle
+    pub async fn fetch_prekeys_for_specific_devices(
         &mut self,
-        _account_id: AccountId,
-        _devices: Vec<DeviceId>,
-    ) -> Result<(), ClientError> {
-        todo!()
+        account_id: AccountId,
+        devices: Vec<DeviceId>,
+    ) -> Result<PreKeyBundles, ClientError> {
+        let prekey_bundles = self
+            .api_client
+            .get_pre_keys_for_specific_devices(
+                self.account_id().await?,
+                self.store.account_store.get_device_id().await?,
+                self.store.account_store.get_password().await?.as_str(),
+                account_id,
+                devices,
+            )
+            .await?;
+
+        Ok(prekey_bundles)
+    }
+
+    pub async fn fetch_prekeys_for_all_devices(
+        &mut self,
+        account_id: AccountId,
+    ) -> Result<PreKeyBundles, ClientError> {
+        let prekey_bundles = self
+            .api_client
+            .get_pre_keys_for_all_devices(
+                self.account_id().await?,
+                self.store.account_store.get_device_id().await?,
+                self.store.account_store.get_password().await?.as_str(),
+                account_id,
+            )
+            .await?;
+
+        Ok(prekey_bundles)
     }
 
     /// Create a provision token to be used on another client to activate
