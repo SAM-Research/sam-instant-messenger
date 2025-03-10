@@ -21,4 +21,6 @@ pub enum ClientError {
     NoPassword,
     NoUsername,
     NoDeviceId,
+    FailedToConvertPreKeyBundle,
+    FailedToProcessPrekeyBundle,
 }

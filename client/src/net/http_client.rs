@@ -118,20 +118,30 @@ impl ApiClient for HttpClient {
         Ok(())
     }
 
-    async fn get_pre_keys(
+    async fn get_pre_key_bundles(
         &self,
         account_id: AccountId,
         device_id: DeviceId,
         password: &str,
         receiver_account_id: AccountId,
+        devices: Option<Vec<DeviceId>>,
     ) -> Result<PreKeyBundles, ApiClientError> {
         let url_str = format!("{}/api/v1/keys/{}", self.base_url, receiver_account_id);
         let url = Url::parse(&url_str).map_err(|_| ApiClientError::CouldNotParseUrl(url_str))?;
 
-        let request = self
-            .http_client
-            .request(Method::GET, url)
-            .basic_auth(format!("{}.{}", account_id, device_id), Some(password))
+        let request_builder = match devices {
+            None => self
+                .http_client
+                .request(Method::GET, url)
+                .basic_auth(format!("{}.{}", account_id, device_id), Some(password)),
+            Some(devices) => self
+                .http_client
+                .request(Method::GET, url)
+                .json(&devices)
+                .basic_auth(format!("{}.{}", account_id, device_id), Some(password)),
+        };
+
+        let request = request_builder
             .build()
             .map_err(|_| ApiClientError::CouldNotBuildRequest)?;
 
@@ -242,5 +252,32 @@ impl ApiClient for HttpClient {
         let _ = self.make_request(request).await?;
 
         Ok(())
+    }
+
+    async fn get_user_account_id(
+        &self,
+        account_id: AccountId,
+        device_id: DeviceId,
+        password: &str,
+        username: &str,
+    ) -> Result<AccountId, ApiClientError> {
+        let url_str = format!("{}/api/v1/account/{}", self.base_url, username);
+        let url = Url::parse(&url_str).map_err(|_| ApiClientError::CouldNotParseUrl(url_str))?;
+
+        let request = self
+            .http_client
+            .request(Method::GET, url)
+            .basic_auth(format!("{}.{}", account_id, device_id), Some(password))
+            .build()
+            .map_err(|_| ApiClientError::CouldNotBuildRequest)?;
+
+        let response = self.make_request(request).await?;
+
+        let account_id = response
+            .json::<AccountId>()
+            .await
+            .map_err(|_| ApiClientError::CouldNotParseResponse)?;
+
+        Ok(account_id)
     }
 }

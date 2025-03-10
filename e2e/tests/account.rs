@@ -16,6 +16,9 @@ use sam_client::{
 use sam_common::{address::RegistrationId, AccountId};
 mod utils;
 
+/*
+   Ports used: 9383
+*/
 pub async fn register_alice(
     address: String,
 ) -> Client<SqliteStoreType, HttpClient, ProtocolClient> {
@@ -102,4 +105,41 @@ pub async fn cannot_delete_a_client_that_does_not_exist() {
 
     let result = client.delete_account().await;
     assert!(result.is_err_and(|(_, err)| matches!(err, ClientError::Api(_))))
+}
+
+#[tokio::test]
+pub async fn alice_can_find_bobs_account_id() {
+    let _ = env_logger::try_init();
+    let address = "http://127.0.0.1:9383".to_owned();
+    let mut server = TestServer::start("127.0.0.1:9383").await;
+
+    server
+        .started_rx()
+        .await
+        .expect("Should be able to start server");
+
+    let alice = Client::from_registration()
+        .username("Alice")
+        .device_name("Alice's Device")
+        .store_config(SqliteStoreConfig::in_memory().await)
+        .api_client_config(HttpClientConfig::new(address.clone()))
+        .protocol_config(WebSocketProtocolClientConfig::new(address.clone()))
+        .call()
+        .await
+        .unwrap();
+
+    let bob = Client::from_registration()
+        .username("Bob")
+        .device_name("Bob's Device")
+        .store_config(SqliteStoreConfig::in_memory().await)
+        .api_client_config(HttpClientConfig::new(address.clone()))
+        .protocol_config(WebSocketProtocolClientConfig::new(address))
+        .call()
+        .await
+        .unwrap();
+
+    let result = alice.get_account_id_for("Bob").await;
+
+    assert!(result.is_ok());
+    assert_eq!(bob.account_id().await.unwrap(), result.unwrap())
 }

@@ -1,3 +1,14 @@
+use crate::logic::keys::{get_keybundles, get_keybundles_for_all_devices};
+use crate::routes::error::RouterError;
+use crate::{
+    auth::authenticated_user::AuthenticatedUser,
+    logic::keys::publish_keybundle,
+    state::{state_type::StateType, ServerState},
+    ServerError,
+};
+use axum::body::Body;
+use axum::extract::FromRequest;
+use axum::http::Request;
 use axum::{
     extract::{Path, State},
     routing::{get, put},
@@ -5,36 +16,44 @@ use axum::{
 };
 use sam_common::{
     address::AccountId,
-    api::{
-        keys::{PreKeyBundles, PublishPreKeys},
-        PreKeyBundle,
-    },
+    api::keys::{PreKeyBundles, PublishPreKeys},
     DeviceId,
 };
 
-use crate::{
-    auth::authenticated_user::AuthenticatedUser,
-    logic::keys::{get_keybundle, get_keybundles, publish_keybundle},
-    state::{state_type::StateType, ServerState},
-    ServerError,
-};
+impl<T: StateType> FromRequest<ServerState<T>> for Option<Json<Vec<DeviceId>>> {
+    type Rejection = ServerError;
+
+    async fn from_request(
+        parts: Request<Body>,
+        state: &ServerState<T>,
+    ) -> Result<Self, Self::Rejection> {
+        match Json::<Vec<DeviceId>>::from_request(parts, state).await {
+            Ok(json) => Ok(Some(json)),
+            Err(_) => Ok(None),
+        }
+    }
+}
 
 /// Returns key bundles for users devices
-async fn key_bundles_endpoint<T: StateType>(
+async fn key_bundles_for_some_devices_endpoint<T: StateType>(
     Path(account_id): Path<AccountId>,
     _auth_user: AuthenticatedUser,
     State(mut state): State<ServerState<T>>,
+    json: Option<Json<Vec<DeviceId>>>,
 ) -> Result<Json<PreKeyBundles>, ServerError> {
-    get_keybundles(&mut state, account_id).await.map(Json)
-}
-
-async fn key_bundle_endpoint<T: StateType>(
-    Path((account_id, device_id)): Path<(AccountId, DeviceId)>,
-    State(mut state): State<ServerState<T>>,
-) -> Result<Json<PreKeyBundle>, ServerError> {
-    get_keybundle(&mut state, account_id, device_id)
-        .await
-        .map(Json)
+    match json {
+        None => get_keybundles_for_all_devices(&mut state, account_id)
+            .await
+            .map(Json),
+        Some(Json(device_ids)) => {
+            if device_ids.is_empty() {
+                return Err(RouterError::NoDeviceIdsInRequest)?;
+            };
+            get_keybundles(&mut state, account_id, device_ids)
+                .await
+                .map(Json)
+        }
+    }
 }
 
 /// Handle publish of new key bundles
@@ -54,10 +73,9 @@ async fn publish_keys_endpoint<T: StateType>(
 
 pub fn key_routes<T: StateType>(router: Router<ServerState<T>>) -> Router<ServerState<T>> {
     router
-        .route("/api/v1/keys/{account_id}", get(key_bundles_endpoint))
         .route(
-            "/api/v1/keys/{account_id}/{device_id}",
-            get(key_bundle_endpoint),
+            "/api/v1/keys/{account_id}",
+            get(key_bundles_for_some_devices_endpoint),
         )
         .route("/api/v1/keys", put(publish_keys_endpoint))
 }
@@ -77,6 +95,7 @@ mod test {
     use base64::{prelude::BASE64_STANDARD, Engine};
     use rand::rngs::OsRng;
     use sam_common::api::{keys::PreKeyBundles, PreKeyBundle};
+    use sam_common::DeviceId;
 
     #[tokio::test]
     async fn test_post_api_v1_keys() {
@@ -184,17 +203,23 @@ mod test {
             BASE64_STANDARD.encode(format!("{}.1:{}", account_id, "bob"))
         );
 
+        let device_ids: Vec<DeviceId> = vec![1.into()];
+
         let res = server
-            .get(&format!("/api/v1/keys/{account_id}/{device_id}"))
+            .get(&format!("/api/v1/keys/{account_id}"))
             .add_header(http::header::AUTHORIZATION, basic)
+            .json(&device_ids)
             .await;
 
-        let expected = PreKeyBundle {
-            device_id: 1,
-            registration_id: 1,
-            pre_key: keys.pre_keys.unwrap().first().cloned(),
-            pq_pre_key: keys.pq_pre_keys.unwrap().first().cloned().unwrap(),
-            signed_pre_key: keys.signed_pre_key.unwrap(),
+        let expected = PreKeyBundles {
+            bundles: vec![PreKeyBundle {
+                device_id: 1,
+                registration_id: 1,
+                pre_key: keys.pre_keys.unwrap().first().cloned(),
+                pq_pre_key: keys.pq_pre_keys.unwrap().first().cloned().unwrap(),
+                signed_pre_key: keys.signed_pre_key.unwrap(),
+            }],
+            identity_key: *pair.identity_key(),
         };
 
         res.assert_status_ok();
