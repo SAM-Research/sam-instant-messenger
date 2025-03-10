@@ -108,10 +108,31 @@ pub async fn cannot_delete_a_client_that_does_not_exist() {
 }
 
 #[tokio::test]
-pub async fn alice_can_find_bobs_account_id() {
+pub async fn can_delete_a_device() {
     let _ = env_logger::try_init();
     let address = "http://127.0.0.1:9383".to_owned();
     let mut server = TestServer::start("127.0.0.1:9383").await;
+
+    server
+        .started_rx()
+        .await
+        .expect("Should be able to start server");
+
+    let client = register_alice(address).await;
+
+    let result = client.delete_account().await;
+    assert!(
+        result.is_ok(),
+        "Error deleting account: {:?}",
+        result.unwrap_err().1
+    )
+}
+
+#[tokio::test]
+pub async fn alice_can_find_bobs_account_id() {
+    let _ = env_logger::try_init();
+    let address = "http://127.0.0.1:9482".to_owned();
+    let mut server = TestServer::start("127.0.0.1:9482").await;
 
     server
         .started_rx()

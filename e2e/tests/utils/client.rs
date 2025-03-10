@@ -9,6 +9,7 @@ use sam_common::api::device::DeviceActivationInfo;
 use sam_common::api::keys::RegistrationPreKeys;
 use sam_common::api::{PublishPreKeys, RegistrationRequest};
 
+#[allow(unused)]
 pub fn registration_prekeys(id_key_pair: IdentityKeyPair) -> RegistrationPreKeys {
     let mut csprng = OsRng;
     let last_resort_pq = KyberPreKeyRecord::generate(
@@ -37,6 +38,7 @@ pub fn registration_prekeys(id_key_pair: IdentityKeyPair) -> RegistrationPreKeys
     }
 }
 
+#[allow(unused)]
 pub fn registration_request(id_key_pair: IdentityKeyPair) -> RegistrationRequest {
     let mut csprng = OsRng;
 
@@ -51,6 +53,7 @@ pub fn registration_request(id_key_pair: IdentityKeyPair) -> RegistrationRequest
     }
 }
 
+#[allow(unused)]
 pub fn publish_keys(id_key_pair: IdentityKeyPair) -> PublishPreKeys {
     let keys = registration_prekeys(id_key_pair);
     PublishPreKeys {
