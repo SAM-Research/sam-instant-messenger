@@ -8,7 +8,7 @@ use crate::utils::server::TestServer;
 mod utils;
 
 /*
-   PORTS USED: 9387-9390
+   PORTS USED: 9388-9390
 */
 
 #[tokio::test]

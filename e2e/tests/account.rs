@@ -17,7 +17,7 @@ use sam_common::{address::RegistrationId, AccountId};
 mod utils;
 
 /*
-   Ports used: 9381 - 9390
+   Ports used: 9380 - 9383
 */
 pub async fn register_alice(
     address: String,
