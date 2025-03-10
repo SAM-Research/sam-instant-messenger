@@ -260,7 +260,7 @@ impl ApiClient for HttpClient {
         password: &str,
         username: &str,
     ) -> Result<AccountId, ApiClientError> {
-        let url_str = format!("{}/api/v1/account/by-username/{}", self.base_url, username);
+        let url_str = format!("{}/api/v1/account/account-id/{}", self.base_url, username);
         let url = Url::parse(&url_str).map_err(|_| ApiClientError::CouldNotParseUrl(url_str))?;
 
         let request = self
@@ -280,14 +280,14 @@ impl ApiClient for HttpClient {
         Ok(account_id)
     }
 
-    async fn get_username_of_other(
+    async fn get_username(
         &self,
         account_id: AccountId,
         device_id: DeviceId,
         password: &str,
         other_id: AccountId,
-    ) -> Result<AccountId, ApiClientError> {
-        let url_str = format!("{}/api/v1/account/by_id/{}", self.base_url, other_id);
+    ) -> Result<String, ApiClientError> {
+        let url_str = format!("{}/api/v1/account/username/{}", self.base_url, other_id);
         let url = Url::parse(&url_str).map_err(|_| ApiClientError::CouldNotParseUrl(url_str))?;
 
         let request = self
@@ -299,11 +299,11 @@ impl ApiClient for HttpClient {
 
         let response = self.make_request(request).await?;
 
-        let account_id = response
-            .json::<AccountId>()
+        let username = response
+            .json::<String>()
             .await
             .map_err(|_| ApiClientError::CouldNotParseResponse)?;
 
-        Ok(account_id)
+        Ok(username)
     }
 }

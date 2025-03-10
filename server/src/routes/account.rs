@@ -72,12 +72,9 @@ pub fn account_routes<T: StateType>(router: Router<ServerState<T>>) -> Router<Se
     router
         .route("/api/v1/account", post(account_register_endpoint))
         .route("/api/v1/account", delete(delete_account_endpoint))
+        .route("/api/v1/account/account-id/{username}", get(get_account_id))
         .route(
-            "/api/v1/account/by-username/{username}",
-            get(get_account_id),
-        )
-        .route(
-            "/api/v1/account/by-id/{account_id}",
+            "/api/v1/account/username/{account_id}",
             get(get_account_username),
         )
 }

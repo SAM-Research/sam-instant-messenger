@@ -101,9 +101,18 @@ impl<T: StoreType, U: ApiClient, V: SamProtocolClient> Client<T, U, V> {
 
         let protocol_client = protocol_config.create().await?;
 
+        let username = api_client
+            .get_username(
+                response.account_id,
+                response.device_id,
+                &password,
+                response.account_id,
+            )
+            .await?;
+
         store
             .account_store
-            .set_username(device_name.to_owned())
+            .set_username(username.to_owned())
             .await?;
         store
             .account_store
