@@ -6,6 +6,7 @@ use derive_more::{Display, Error, From};
 pub enum RouterError {
     DeviceProvisionUnAuth,
     DeviceUnAuth,
+    NoDeviceIdsInRequest,
 }
 
 impl IntoResponse for RouterError {
@@ -18,6 +19,10 @@ impl IntoResponse for RouterError {
             RouterError::DeviceUnAuth => (
                 StatusCode::FORBIDDEN,
                 "The main device cannot be unlinked.".to_string(),
+            ),
+            RouterError::NoDeviceIdsInRequest => (
+                StatusCode::BAD_REQUEST,
+                "No device ids were supplied in the request".to_string(),
             ),
         }
         .into_response()

@@ -107,12 +107,13 @@ pub async fn add_keybundle<T: StateType>(
 pub async fn get_keybundles<T: StateType>(
     state: &mut ServerState<T>,
     account_id: AccountId,
+    device_ids: Vec<DeviceId>,
 ) -> Result<PreKeyBundles, ServerError> {
     let identity_key = { *state.accounts.get_account(account_id).await?.identity() };
 
     let devices = {
         let mut device_vec = vec![];
-        for id in state.devices.get_devices(account_id).await? {
+        for id in device_ids {
             let device = state.devices.get_device(account_id, id).await?;
             device_vec.push(device);
         }
@@ -133,6 +134,19 @@ pub async fn get_keybundles<T: StateType>(
     })
 }
 
+pub async fn get_keybundles_for_all_devices<T: StateType>(
+    state: &mut ServerState<T>,
+    account_id: AccountId,
+) -> Result<PreKeyBundles, ServerError> {
+    let key_bundles = get_keybundles(
+        state,
+        account_id,
+        state.devices.get_devices(account_id).await?,
+    )
+    .await?;
+    Ok(key_bundles)
+}
+
 pub async fn publish_keybundle<T: StateType>(
     state: &mut ServerState<T>,
     account_id: AccountId,
@@ -150,9 +164,10 @@ mod test {
     use rand::rngs::OsRng;
     use sam_common::{address::AccountId, api::Key};
 
+    use crate::logic::keys::get_keybundles_for_all_devices;
     use crate::{
         auth::password::Password,
-        logic::keys::{add_keybundle, get_keybundle, get_keybundles, publish_keybundle},
+        logic::keys::{add_keybundle, get_keybundle, publish_keybundle},
         managers::{
             entities::{account::Account, device::Device},
             traits::{
@@ -384,7 +399,7 @@ mod test {
             .await
             .expect("Alice can publish bundle");
 
-        let bundles = get_keybundles(&mut state, account_id)
+        let bundles = get_keybundles_for_all_devices(&mut state, account_id)
             .await
             .expect("User can get alices bundles");
 

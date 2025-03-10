@@ -1,15 +1,18 @@
+use axum::extract::Path;
+use axum::routing::get;
 use axum::{
     extract::State,
     routing::{delete, post},
     Json, Router,
 };
-
 use axum_extra::{
     headers::{authorization::Basic, Authorization},
     TypedHeader,
 };
 use sam_common::api::account::{RegistrationRequest, RegistrationResponse};
+use sam_common::AccountId;
 
+use crate::logic::account::get_account_id_by_username;
 use crate::routes::error::RouterError;
 use crate::{
     auth::authenticated_user::AuthenticatedUser,
@@ -45,10 +48,21 @@ async fn delete_account_endpoint<T: StateType>(
     delete_account(&mut state, auth_user.account().id()).await
 }
 
+async fn get_account_id<T: StateType>(
+    Path(username): Path<String>,
+    State(mut state): State<ServerState<T>>,
+    _auth_user: AuthenticatedUser,
+) -> Result<Json<AccountId>, ServerError> {
+    get_account_id_by_username(&mut state, username)
+        .await
+        .map(Json)
+}
+
 pub fn account_routes<T: StateType>(router: Router<ServerState<T>>) -> Router<ServerState<T>> {
     router
         .route("/api/v1/account", post(account_register_endpoint))
         .route("/api/v1/account", delete(delete_account_endpoint))
+        .route("/api/v1/account/{username}", get(get_account_id))
 }
 
 #[cfg(test)]
