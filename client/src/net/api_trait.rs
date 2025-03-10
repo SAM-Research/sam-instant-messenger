@@ -172,6 +172,14 @@ pub trait ApiClient {
         password: &str,
         username: &str,
     ) -> Result<AccountId, ApiClientError>;
+
+    async fn get_username_of_other(
+        &self,
+        account_id: AccountId,
+        device_id: DeviceId,
+        password: &str,
+        other_id: AccountId,
+    ) -> Result<AccountId, ApiClientError>;
 }
 
 #[async_trait(?Send)]

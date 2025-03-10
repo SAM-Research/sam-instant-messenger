@@ -12,7 +12,7 @@ use axum_extra::{
 use sam_common::api::account::{RegistrationRequest, RegistrationResponse};
 use sam_common::AccountId;
 
-use crate::logic::account::get_account_id_by_username;
+use crate::logic::account::{get_account_id_by_username, get_username_by_account_id};
 use crate::routes::error::RouterError;
 use crate::{
     auth::authenticated_user::AuthenticatedUser,
@@ -58,11 +58,28 @@ async fn get_account_id<T: StateType>(
         .map(Json)
 }
 
+async fn get_account_username<T: StateType>(
+    Path(username): Path<AccountId>,
+    State(mut state): State<ServerState<T>>,
+    _auth_user: AuthenticatedUser,
+) -> Result<Json<String>, ServerError> {
+    get_username_by_account_id(&mut state, username)
+        .await
+        .map(Json)
+}
+
 pub fn account_routes<T: StateType>(router: Router<ServerState<T>>) -> Router<ServerState<T>> {
     router
         .route("/api/v1/account", post(account_register_endpoint))
         .route("/api/v1/account", delete(delete_account_endpoint))
-        .route("/api/v1/account/{username}", get(get_account_id))
+        .route(
+            "/api/v1/account/by-username/{username}",
+            get(get_account_id),
+        )
+        .route(
+            "/api/v1/account/by-id/{account_id}",
+            get(get_account_username),
+        )
 }
 
 #[cfg(test)]
