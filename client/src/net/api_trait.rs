@@ -72,7 +72,7 @@ pub trait ApiClient {
         device_id: DeviceId,
         password: &str,
         receiver_account_id: AccountId,
-        specific_devices: Option<Vec<DeviceId>>,
+        devices: Option<Vec<DeviceId>>,
     ) -> Result<PreKeyBundles, ApiClientError>;
 
     /// Publishes pre-keys for a device.

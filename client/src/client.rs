@@ -328,7 +328,7 @@ impl<T: StoreType, U: ApiClient, V: SamProtocolClient> Client<T, U, V> {
     }
 }
 
-pub fn into_libsignal_bundle(
+fn into_libsignal_bundle(
     bundle: sam_common::api::PreKeyBundle,
     identity_key_pair: IdentityKey,
 ) -> Result<PreKeyBundle, ClientError> {
