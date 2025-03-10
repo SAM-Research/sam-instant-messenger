@@ -15,9 +15,12 @@ use crate::{
     ClientError,
 };
 use bon::bon;
-use libsignal_protocol::{IdentityKeyPair, IdentityKeyStore};
+use libsignal_core::curve::PublicKey;
+use libsignal_core::ProtocolAddress;
+use libsignal_protocol::{
+    kem, process_prekey_bundle, IdentityKey, IdentityKeyPair, IdentityKeyStore, PreKeyBundle,
+};
 use rand::rngs::OsRng;
-use sam_common::api::keys::PreKeyBundles;
 use sam_common::api::{PqPreKey, PublishPreKeys, SignedEcPreKey};
 use sam_common::{
     address::RegistrationId,
@@ -27,6 +30,7 @@ use sam_common::{
     },
     AccountId, DeviceId,
 };
+use std::time::SystemTime;
 use tokio::sync::broadcast::Receiver;
 
 pub struct Client<T: StoreType, U: ApiClient, V: SamProtocolClient> {
@@ -281,14 +285,14 @@ impl<T: StoreType, U: ApiClient, V: SamProtocolClient> Client<T, U, V> {
     }
 
     /// Fetch key bundles for account_id
-    pub async fn fetch_prekeys_for_specific_devices(
+    pub async fn fetch_prekeys(
         &mut self,
         account_id: AccountId,
-        devices: Vec<DeviceId>,
-    ) -> Result<PreKeyBundles, ClientError> {
+        devices: Option<Vec<DeviceId>>,
+    ) -> Result<(), ClientError> {
         let prekey_bundles = self
             .api_client
-            .get_pre_keys_for_specific_devices(
+            .get_pre_key_bundles(
                 self.account_id().await?,
                 self.device_id().await?,
                 self.store.account_store.get_password().await?.as_str(),
@@ -297,28 +301,53 @@ impl<T: StoreType, U: ApiClient, V: SamProtocolClient> Client<T, U, V> {
             )
             .await?;
 
-        Ok(prekey_bundles)
-    }
+        let time = SystemTime::now();
 
-    pub async fn fetch_prekeys_for_all_devices(
-        &mut self,
-        account_id: AccountId,
-    ) -> Result<PreKeyBundles, ClientError> {
-        let prekey_bundles = self
-            .api_client
-            .get_pre_keys_for_all_devices(
-                self.account_id().await?,
-                self.device_id().await?,
-                self.store.account_store.get_password().await?.as_str(),
-                account_id,
+        for bundle in prekey_bundles.bundles {
+            let device_id = bundle.device_id;
+            let libsignal_bundle = into_libsignal_bundle(bundle, prekey_bundles.identity_key)
+                .map_err(|_| ClientError::FailedToConvertPreKeyBundle)?;
+            process_prekey_bundle(
+                &ProtocolAddress::new(account_id.to_string(), device_id.into()),
+                &mut self.store.session_store,
+                &mut self.store.identity_key_store,
+                &libsignal_bundle,
+                time,
+                &mut OsRng,
             )
-            .await?;
+            .await
+            .map_err(|_| ClientError::FailedToProcessPrekeyBundle)?;
+        }
 
-        Ok(prekey_bundles)
+        Ok(())
     }
 
     /// Create a provision token to be used on another client to activate
     pub async fn create_provision(&mut self) -> Result<LinkDeviceToken, ClientError> {
         todo!()
     }
+}
+
+pub fn into_libsignal_bundle(
+    bundle: sam_common::api::PreKeyBundle,
+    identity_key_pair: IdentityKey,
+) -> Result<PreKeyBundle, ClientError> {
+    let libsignal_bundle = PreKeyBundle::with_kyber_pre_key(
+        PreKeyBundle::new(
+            bundle.registration_id,
+            bundle.device_id.into(),
+            match bundle.pre_key {
+                None => None,
+                Some(key) => Some((key.key_id.into(), PublicKey::deserialize(&key.public_key)?)),
+            },
+            bundle.signed_pre_key.key_id.into(),
+            PublicKey::deserialize(&bundle.signed_pre_key.public_key)?,
+            Vec::from(bundle.signed_pre_key.signature),
+            identity_key_pair,
+        )?,
+        bundle.pq_pre_key.key_id.into(),
+        kem::PublicKey::try_from(&*bundle.pq_pre_key.public_key)?,
+        Vec::from(bundle.pq_pre_key.signature),
+    );
+    Ok(libsignal_bundle)
 }

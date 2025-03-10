@@ -60,26 +60,19 @@ pub trait ApiClient {
     /// * `device_id` - A [`DeviceId`] containing the id for the device on that account.
     /// * `password` - The password of the account.
     /// * `receiver_account_id` - The [`AccountId`] for which pre-keys should be fetched.
+    /// * `specific_devices` - A [`Option<Vec<DeviceId>>`] if client only wants to fetch for some devices.
     ///
     /// # Returns
     ///
     /// * `Ok(PreKeyBundles)` containing the retrieved pre-key bundles.
     /// * `Err(ApiClientError)` if fetching pre-key bundles fails.
-    async fn get_pre_keys_for_specific_devices(
+    async fn get_pre_key_bundles(
         &self,
         account_id: AccountId,
         device_id: DeviceId,
         password: &str,
         receiver_account_id: AccountId,
-        specific_devices: Vec<DeviceId>,
-    ) -> Result<PreKeyBundles, ApiClientError>;
-
-    async fn get_pre_keys_for_all_devices(
-        &self,
-        account_id: AccountId,
-        device_id: DeviceId,
-        password: &str,
-        receiver_account_id: AccountId,
+        specific_devices: Option<Vec<DeviceId>>,
     ) -> Result<PreKeyBundles, ApiClientError>;
 
     /// Publishes pre-keys for a device.

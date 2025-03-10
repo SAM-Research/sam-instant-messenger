@@ -84,7 +84,7 @@ pub async fn bob_can_fetch_alices_keys() {
         .unwrap();
 
     let pre_key = bob
-        .fetch_prekeys_for_all_devices(alice.account_id().await.unwrap())
+        .fetch_prekeys(alice.account_id().await.unwrap(), None)
         .await;
 
     assert!(pre_key.is_ok())
@@ -131,7 +131,7 @@ pub async fn bob_can_fetch_alices_keys_for_specific_devices() {
         .unwrap();
 
     let pre_key = bob
-        .fetch_prekeys_for_specific_devices(alice.account_id().await.unwrap(), vec![1.into()])
+        .fetch_prekeys(alice.account_id().await.unwrap(), Some(vec![1.into()]))
         .await;
 
     assert!(pre_key.is_ok())

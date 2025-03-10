@@ -1,10 +1,14 @@
 use crate::logic::keys::{get_keybundles, get_keybundles_for_all_devices};
+use crate::routes::error::RouterError;
 use crate::{
     auth::authenticated_user::AuthenticatedUser,
     logic::keys::publish_keybundle,
     state::{state_type::StateType, ServerState},
     ServerError,
 };
+use axum::body::Body;
+use axum::extract::FromRequest;
+use axum::http::Request;
 use axum::{
     extract::{Path, State},
     routing::{get, put},
@@ -16,26 +20,40 @@ use sam_common::{
     DeviceId,
 };
 
-/// Returns key bundles for users devices
-async fn key_bundles_for_all_devices_endpoint<T: StateType>(
-    Path(account_id): Path<AccountId>,
-    _auth_user: AuthenticatedUser,
-    State(mut state): State<ServerState<T>>,
-) -> Result<Json<PreKeyBundles>, ServerError> {
-    get_keybundles_for_all_devices(&mut state, account_id)
-        .await
-        .map(Json)
+impl<T: StateType> FromRequest<ServerState<T>> for Option<Json<Vec<DeviceId>>> {
+    type Rejection = ServerError;
+
+    async fn from_request(
+        parts: Request<Body>,
+        state: &ServerState<T>,
+    ) -> Result<Self, Self::Rejection> {
+        match Json::<Vec<DeviceId>>::from_request(parts, state).await {
+            Ok(json) => Ok(Some(json)),
+            Err(_) => Ok(None),
+        }
+    }
 }
 
+/// Returns key bundles for users devices
 async fn key_bundles_for_some_devices_endpoint<T: StateType>(
     Path(account_id): Path<AccountId>,
     _auth_user: AuthenticatedUser,
     State(mut state): State<ServerState<T>>,
-    Json(device_id): Json<Vec<DeviceId>>,
+    json: Option<Json<Vec<DeviceId>>>,
 ) -> Result<Json<PreKeyBundles>, ServerError> {
-    get_keybundles(&mut state, account_id, device_id)
-        .await
-        .map(Json)
+    match json {
+        None => get_keybundles_for_all_devices(&mut state, account_id)
+            .await
+            .map(Json),
+        Some(Json(device_ids)) => {
+            if device_ids.is_empty() {
+                return Err(RouterError::NoDeviceIdsInRequest)?;
+            };
+            get_keybundles(&mut state, account_id, device_ids)
+                .await
+                .map(Json)
+        }
+    }
 }
 
 /// Handle publish of new key bundles
@@ -57,10 +75,6 @@ pub fn key_routes<T: StateType>(router: Router<ServerState<T>>) -> Router<Server
     router
         .route(
             "/api/v1/keys/{account_id}",
-            get(key_bundles_for_all_devices_endpoint),
-        )
-        .route(
-            "/api/v1/keys/{account_id}/some",
             get(key_bundles_for_some_devices_endpoint),
         )
         .route("/api/v1/keys", put(publish_keys_endpoint))
@@ -192,7 +206,7 @@ mod test {
         let device_ids: Vec<DeviceId> = vec![1.into()];
 
         let res = server
-            .get(&format!("/api/v1/keys/{account_id}/some"))
+            .get(&format!("/api/v1/keys/{account_id}"))
             .add_header(http::header::AUTHORIZATION, basic)
             .json(&device_ids)
             .await;
