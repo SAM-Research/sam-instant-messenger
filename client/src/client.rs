@@ -1,5 +1,6 @@
 use bon::bon;
 use libsignal_protocol::IdentityKeyPair;
+use log::error;
 use rand::rngs::OsRng;
 use sam_common::{
     address::RegistrationId,
@@ -7,12 +8,18 @@ use sam_common::{
         device::DeviceActivationInfo, keys::RegistrationPreKeys, LinkDeviceToken,
         RegistrationRequest,
     },
+    sam_message::ServerEnvelope,
     AccountId, DeviceId,
 };
 use tokio::sync::broadcast::Receiver;
+use tokio::sync::mpsc::Receiver as MpscReceiver;
 
 use crate::{
-    encryption::{encrypt::encrypt, envelope::DecryptedEnvelope, password::generate_password},
+    encryption::{
+        encrypt::{decrypt, encrypt},
+        envelope::DecryptedEnvelope,
+        password::generate_password,
+    },
     net::{
         api_trait::ApiClientConfig,
         protocol::traits::{ProtocolConfig, SamProtocolClient},
@@ -33,17 +40,7 @@ pub struct Client<T: StoreType, U: ApiClient, V: SamProtocolClient> {
     store: Store<T>,
     api_client: U,
     protocol_client: V,
-}
-
-impl<T: StoreType, U: ApiClient, V: SamProtocolClient> Client<T, U, V> {
-    async fn ensure_socket_connection(&mut self) -> Result<(), ClientError> {
-        if self.protocol_client.is_connected().await {
-            return Ok(());
-        }
-
-        let receiver = self.protocol_client.connect().await?;
-        todo!()
-    }
+    envelope_queue: MpscReceiver<ServerEnvelope>,
 }
 
 #[bon]
@@ -122,7 +119,9 @@ impl<T: StoreType, U: ApiClient, V: SamProtocolClient> Client<T, U, V> {
 
         let account_id = response.account_id;
 
-        let protocol_client = protocol_config.create().await?;
+        let mut protocol_client = protocol_config
+            .create(account_id, 1.into(), password.clone())
+            .await?;
 
         store
             .account_store
@@ -132,13 +131,14 @@ impl<T: StoreType, U: ApiClient, V: SamProtocolClient> Client<T, U, V> {
         store.account_store.set_device_id(1.into()).await?;
         store.account_store.set_password(password).await?;
 
-        let mut client = Self {
+        let queue = protocol_client.connect().await?;
+
+        Ok(Self {
             store,
             protocol_client,
             api_client,
-        };
-        client.ensure_socket_connection().await?;
-        Ok(client)
+            envelope_queue: queue,
+        })
     }
 
     /// Instantiate a client from a valid store
@@ -148,13 +148,19 @@ impl<T: StoreType, U: ApiClient, V: SamProtocolClient> Client<T, U, V> {
         protocol_config: impl ProtocolConfig<ProtocolClient = V>,
         api_client_config: impl ApiClientConfig<ApiClient = U>,
     ) -> Result<Self, ClientError> {
-        let mut client = Self {
+        let account_id = store.account_store.get_account_id().await?;
+        let device_id = store.account_store.get_device_id().await?;
+        let password = store.account_store.get_password().await?;
+        let mut protocol_client = protocol_config
+            .create(account_id, device_id, password)
+            .await?;
+        let queue = protocol_client.connect().await?;
+        Ok(Self {
             store,
-            protocol_client: protocol_config.create().await?,
+            protocol_client,
             api_client: api_client_config.create().await?,
-        };
-        client.ensure_socket_connection().await?;
-        Ok(client)
+            envelope_queue: queue,
+        })
     }
 
     pub async fn account_id(&self) -> Result<AccountId, ClientError> {
@@ -222,6 +228,27 @@ impl<T: StoreType, U: ApiClient, V: SamProtocolClient> Client<T, U, V> {
     /// Returns a broadcast receiver for incoming messages that have been decrypted
     pub async fn subscribe(&mut self) -> Receiver<DecryptedEnvelope> {
         self.store.message_store.subscribe()
+    }
+
+    pub async fn process_messages(&mut self) -> Result<(), ClientError> {
+        while let Some(envelope) = self.envelope_queue.recv().await {
+            // TODO: How should we handle failure to decrypt and/or store message?
+            let envelope = match decrypt(envelope, &mut self.store).await {
+                Ok(denvelope) => denvelope,
+                Err(e) => {
+                    error!("Failed to decrypt message {e}");
+                    continue;
+                }
+            };
+
+            let _ = self
+                .store
+                .message_store
+                .store_message(envelope)
+                .await
+                .inspect_err(|e| error!("Failed to store message {e}"));
+        }
+        Ok(())
     }
 
     /// publish ec, pq, last resort or last resort of amount

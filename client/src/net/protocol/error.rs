@@ -1,10 +1,13 @@
 use derive_more::Error;
 use sam_common::sam_message::DeviceList;
 
+use super::websocket::WebSocketError;
+
 #[derive(Debug, Error)]
 pub enum ProtocolError {
     MalformedServerMessage,
-    Disconnected,
+    InvalidCredentials,
+    WebSocketError(WebSocketError),
     ExtraDevices(#[error(not(source))] Vec<DeviceList>),
     MissingDevices(#[error(not(source))] Vec<DeviceList>),
 }
@@ -15,12 +18,17 @@ impl std::fmt::Display for ProtocolError {
             ProtocolError::MalformedServerMessage => {
                 write!(f, "ProtocolError::MalformedServerMessage")
             }
-            ProtocolError::Disconnected => write!(f, "ProtocolError::Disconnected"),
+            ProtocolError::InvalidCredentials => {
+                write!(f, "ProtocolError::InvalidCredentials")
+            }
             ProtocolError::ExtraDevices(devices) => {
                 write!(f, "ProtocolError::ExtraDevices({:?})", devices)
             }
             ProtocolError::MissingDevices(devices) => {
                 write!(f, "ProtocolError::MissingDevices({:?})", devices)
+            }
+            ProtocolError::WebSocketError(err) => {
+                write!(f, "ProtocolError::WebSocket({:?})", err)
             }
         }
     }

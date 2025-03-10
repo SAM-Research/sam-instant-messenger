@@ -19,7 +19,9 @@ pub struct HttpClientConfig {
 
 impl HttpClientConfig {
     pub fn new(base_url: String) -> Self {
-        Self { base_url }
+        Self {
+            base_url: format!("http://{}", base_url),
+        }
     }
 }
 

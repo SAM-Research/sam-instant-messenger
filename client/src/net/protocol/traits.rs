@@ -1,6 +1,9 @@
 use super::error::ProtocolError;
 use async_trait::async_trait;
-use sam_common::sam_message::{ClientEnvelope, ServerEnvelope};
+use sam_common::{
+    sam_message::{ClientEnvelope, ServerEnvelope},
+    AccountId, DeviceId,
+};
 use tokio::sync::mpsc::Receiver;
 
 #[async_trait::async_trait]
@@ -15,5 +18,10 @@ pub trait SamProtocolClient {
 pub trait ProtocolConfig {
     type ProtocolClient: SamProtocolClient;
 
-    async fn create(self) -> Result<Self::ProtocolClient, ProtocolError>;
+    async fn create(
+        self,
+        account_id: AccountId,
+        device_id: DeviceId,
+        password: String,
+    ) -> Result<Self::ProtocolClient, ProtocolError>;
 }
