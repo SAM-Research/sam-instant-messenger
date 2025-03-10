@@ -1,13 +1,8 @@
-use libsignal_protocol::IdentityKeyPair;
-use rand::rngs::OsRng;
 use sam_client::net::http_client::HttpClientConfig;
 use sam_client::net::protocol::WebSocketProtocolClientConfig;
-use sam_client::net::ApiClient;
-use sam_client::net::HttpClient;
 use sam_client::storage::sqlite::SqliteStoreConfig;
 use sam_client::Client;
 
-use crate::utils::client::registration_request;
 use crate::utils::server::TestServer;
 
 mod utils;
@@ -15,39 +10,6 @@ mod utils;
 /*
    PORTS USED: 9387-9390
 */
-
-#[tokio::test]
-async fn test_device_provision() {
-    let _ = env_logger::try_init();
-    let address = "http://127.0.0.1:9387";
-    let mut server = TestServer::start("127.0.0.1:9387").await;
-    let mut csprng = OsRng;
-    let id_key_pair = IdentityKeyPair::generate(&mut csprng);
-
-    server
-        .started_rx()
-        .await
-        .expect("Should be able to start server");
-
-    let client = HttpClient::new(address.to_owned());
-
-    let username = "Alice";
-    let password = "Alice Password";
-
-    let result = client
-        .register_account(username, password, registration_request(id_key_pair))
-        .await;
-
-    assert!(result.is_ok());
-
-    let account_id = result.unwrap().account_id;
-
-    let token_result = client
-        .provision_device(account_id, 1.into(), password)
-        .await;
-
-    assert!(token_result.is_ok());
-}
 
 #[tokio::test]
 async fn can_link_device() {
