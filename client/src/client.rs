@@ -247,6 +247,9 @@ impl<T: StoreType, U: ApiClient, V: SamProtocolClient> Client<T, U, V> {
                 .store_message(envelope)
                 .await
                 .inspect_err(|e| error!("Failed to store message {e}"));
+            if self.envelope_queue.len() == 0 {
+                break;
+            }
         }
         Ok(())
     }

@@ -1,19 +1,15 @@
 use crate::utils::server::TestServer;
-use libsignal_protocol::IdentityKeyPair;
-use rand::rngs::OsRng;
+
 use sam_client::{
     net::{
         http_client::HttpClientConfig,
         protocol::{client::ProtocolClient, WebSocketProtocolClientConfig},
         HttpClient,
     },
-    storage::{
-        sqlite::{SqliteStoreConfig, SqliteStoreType},
-        AccountStore, StoreConfig,
-    },
-    Client, ClientError,
+    storage::sqlite::{SqliteStoreConfig, SqliteStoreType},
+    Client,
 };
-use sam_common::{address::RegistrationId, AccountId};
+
 mod utils;
 
 pub async fn register_alice(

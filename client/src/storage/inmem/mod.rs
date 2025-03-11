@@ -1,9 +1,6 @@
 use crate::ClientError;
 
-use super::{
-    sqlite::{connect_to_in_memory, message::SqliteMessageStore},
-    Store, StoreConfig, StoreType,
-};
+use super::{Store, StoreConfig, StoreType};
 use account::InMemoryAccountStore;
 use async_trait::async_trait;
 use contact::InMemoryContactStore;
@@ -11,12 +8,14 @@ use libsignal_protocol::{
     IdentityKeyPair, InMemIdentityKeyStore, InMemKyberPreKeyStore, InMemPreKeyStore,
     InMemSenderKeyStore, InMemSessionStore, InMemSignedPreKeyStore,
 };
+use message::InMemoryMessageStore;
 use rand::rngs::OsRng;
 use sam_common::address::RegistrationId;
 
 pub mod account;
 pub mod contact;
 pub mod kyber;
+pub mod message;
 pub mod pre_key;
 pub mod signed_pre_key;
 
@@ -39,7 +38,7 @@ impl StoreType for InMemoryStoreType {
     type SessionStore = InMemSessionStore;
 
     type SenderKeyStore = InMemSenderKeyStore;
-    type MessageStore = SqliteMessageStore;
+    type MessageStore = InMemoryMessageStore;
 }
 
 pub type InMemoryStore = Store<InMemoryStoreType>;
@@ -64,7 +63,7 @@ impl StoreConfig for InMemoryStoreConfig {
             .session_store(InMemSessionStore::default())
             .account_store(InMemoryAccountStore::default())
             .contact_store(InMemoryContactStore::default())
-            .message_store(SqliteMessageStore::new(connect_to_in_memory().await, 10))
+            .message_store(InMemoryMessageStore::new(10))
             .build())
     }
 
