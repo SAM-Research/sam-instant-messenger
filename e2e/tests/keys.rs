@@ -20,6 +20,7 @@ pub async fn alice_can_upload_keys() {
         key: "./cert/server.key".to_string(),
         cert: "./cert/server.crt".to_string(),
     };
+    let root_ca = Some("./cert/rootCA.crt".to_string());
     let mut server = TestServer::start("127.0.0.1:9384", Some(paths)).await;
 
     server
@@ -31,11 +32,8 @@ pub async fn alice_can_upload_keys() {
         .username("Alice")
         .device_name("Alice's Device")
         .store_config(SqliteStoreConfig::in_memory().await)
-        .api_client_config(HttpClientConfig::new(
-            address.clone(),
-            Some("./cert/rootCA.crt".to_string()),
-        ))
-        .protocol_config(WebSocketProtocolClientConfig::new(address.clone()))
+        .api_client_config(HttpClientConfig::new(address.clone(), root_ca.clone()))
+        .protocol_config(WebSocketProtocolClientConfig::new(address.clone(), root_ca))
         .call()
         .await
         .unwrap();
@@ -60,6 +58,7 @@ pub async fn bob_can_fetch_alices_keys() {
         key: "./cert/server.key".to_string(),
         cert: "./cert/server.crt".to_string(),
     };
+    let root_ca = Some("./cert/rootCA.crt".to_string());
     let mut server = TestServer::start("127.0.0.1:9385", Some(paths)).await;
 
     server
@@ -71,11 +70,11 @@ pub async fn bob_can_fetch_alices_keys() {
         .username("Alice")
         .device_name("Alice's Device")
         .store_config(SqliteStoreConfig::in_memory().await)
-        .api_client_config(HttpClientConfig::new(
+        .api_client_config(HttpClientConfig::new(address.clone(), root_ca.clone()))
+        .protocol_config(WebSocketProtocolClientConfig::new(
             address.clone(),
-            Some("./cert/rootCA.crt".to_string()),
+            root_ca.clone(),
         ))
-        .protocol_config(WebSocketProtocolClientConfig::new(address.clone()))
         .call()
         .await
         .unwrap();
@@ -84,11 +83,8 @@ pub async fn bob_can_fetch_alices_keys() {
         .username("Bob")
         .device_name("Bob's Device")
         .store_config(SqliteStoreConfig::in_memory().await)
-        .api_client_config(HttpClientConfig::new(
-            address.clone(),
-            Some("./cert/rootCA.crt".to_string()),
-        ))
-        .protocol_config(WebSocketProtocolClientConfig::new(address))
+        .api_client_config(HttpClientConfig::new(address.clone(), root_ca.clone()))
+        .protocol_config(WebSocketProtocolClientConfig::new(address, root_ca.clone()))
         .call()
         .await
         .unwrap();
@@ -117,6 +113,7 @@ pub async fn bob_can_fetch_alices_keys_for_specific_devices() {
         key: "./cert/server.key".to_string(),
         cert: "./cert/server.crt".to_string(),
     };
+    let root_ca = Some("./cert/rootCA.crt".to_string());
     let mut server = TestServer::start("127.0.0.1:9386", Some(paths)).await;
 
     server
@@ -128,11 +125,11 @@ pub async fn bob_can_fetch_alices_keys_for_specific_devices() {
         .username("Alice")
         .device_name("Alice's Device")
         .store_config(SqliteStoreConfig::in_memory().await)
-        .api_client_config(HttpClientConfig::new(
+        .api_client_config(HttpClientConfig::new(address.clone(), root_ca.clone()))
+        .protocol_config(WebSocketProtocolClientConfig::new(
             address.clone(),
-            Some("./cert/rootCA.crt".to_string()),
+            root_ca.clone(),
         ))
-        .protocol_config(WebSocketProtocolClientConfig::new(address.clone()))
         .call()
         .await
         .unwrap();
@@ -141,11 +138,8 @@ pub async fn bob_can_fetch_alices_keys_for_specific_devices() {
         .username("Bob")
         .device_name("Bob's Device")
         .store_config(SqliteStoreConfig::in_memory().await)
-        .api_client_config(HttpClientConfig::new(
-            address.clone(),
-            Some("./cert/rootCA.crt".to_string()),
-        ))
-        .protocol_config(WebSocketProtocolClientConfig::new(address))
+        .api_client_config(HttpClientConfig::new(address.clone(), root_ca.clone()))
+        .protocol_config(WebSocketProtocolClientConfig::new(address, root_ca))
         .call()
         .await
         .unwrap();

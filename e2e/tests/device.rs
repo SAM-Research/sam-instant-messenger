@@ -19,6 +19,7 @@ async fn can_link_device() {
         key: "./cert/server.key".to_string(),
         cert: "./cert/server.crt".to_string(),
     };
+    let root_ca = Some("./cert/rootCA.crt".to_string());
     let mut server = TestServer::start("127.0.0.1:9388", Some(paths)).await;
 
     server
@@ -30,9 +31,8 @@ async fn can_link_device() {
     let device_name = "Alice's Device";
 
     let store_config = SqliteStoreConfig::in_memory().await;
-    let protocol_config = WebSocketProtocolClientConfig::new(address.to_owned());
-    let api_client_config =
-        HttpClientConfig::new(address.to_owned(), Some("./cert/rootCA.crt".to_string()));
+    let protocol_config = WebSocketProtocolClientConfig::new(address.to_owned(), root_ca.clone());
+    let api_client_config = HttpClientConfig::new(address.to_owned(), root_ca.clone());
 
     let mut alice = Client::from_registration()
         .store_config(store_config)
@@ -50,9 +50,8 @@ async fn can_link_device() {
         .expect("Can create a link token");
 
     let store_config = SqliteStoreConfig::in_memory().await;
-    let protocol_config = WebSocketProtocolClientConfig::new(address.to_owned());
-    let api_client_config =
-        HttpClientConfig::new(address.to_owned(), Some("./cert/rootCA.crt".to_string()));
+    let protocol_config = WebSocketProtocolClientConfig::new(address.to_owned(), root_ca.clone());
+    let api_client_config = HttpClientConfig::new(address.to_owned(), root_ca);
     let id_key_pair = alice
         .identity_key_pair()
         .await
@@ -78,6 +77,7 @@ async fn can_delete_device() {
         key: "./cert/server.key".to_string(),
         cert: "./cert/server.crt".to_string(),
     };
+    let root_ca = Some("./cert/rootCA.crt".to_string());
     let mut server = TestServer::start("127.0.0.1:9389", Some(paths)).await;
 
     server
@@ -89,9 +89,8 @@ async fn can_delete_device() {
     let device_name = "Alice's Device";
 
     let store_config = SqliteStoreConfig::in_memory().await;
-    let protocol_config = WebSocketProtocolClientConfig::new(address.to_owned());
-    let api_client_config =
-        HttpClientConfig::new(address.to_owned(), Some("./cert/rootCA.crt".to_string()));
+    let protocol_config = WebSocketProtocolClientConfig::new(address.to_owned(), root_ca.clone());
+    let api_client_config = HttpClientConfig::new(address.to_owned(), root_ca.clone());
 
     let mut alice = Client::from_registration()
         .store_config(store_config)
@@ -109,9 +108,8 @@ async fn can_delete_device() {
         .expect("Can create a link token");
 
     let store_config = SqliteStoreConfig::in_memory().await;
-    let protocol_config = WebSocketProtocolClientConfig::new(address.to_owned());
-    let api_client_config =
-        HttpClientConfig::new(address.to_owned(), Some("./cert/rootCA.crt".to_string()));
+    let protocol_config = WebSocketProtocolClientConfig::new(address.to_owned(), root_ca.clone());
+    let api_client_config = HttpClientConfig::new(address.to_owned(), root_ca.clone());
     let id_key_pair = alice
         .identity_key_pair()
         .await
@@ -142,6 +140,7 @@ async fn can_delete_account() {
         key: "./cert/server.key".to_string(),
         cert: "./cert/server.crt".to_string(),
     };
+    let root_ca = Some("./cert/rootCA.crt".to_string());
     let mut server = TestServer::start("127.0.0.1:9390", Some(paths)).await;
 
     server
@@ -153,9 +152,8 @@ async fn can_delete_account() {
     let device_name = "Alice's Device";
 
     let store_config = SqliteStoreConfig::in_memory().await;
-    let protocol_config = WebSocketProtocolClientConfig::new(address.to_owned());
-    let api_client_config =
-        HttpClientConfig::new(address.to_owned(), Some("./cert/rootCA.crt".to_string()));
+    let protocol_config = WebSocketProtocolClientConfig::new(address.to_owned(), root_ca.clone());
+    let api_client_config = HttpClientConfig::new(address.to_owned(), root_ca);
 
     let alice = Client::from_registration()
         .store_config(store_config)

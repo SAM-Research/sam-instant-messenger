@@ -1,12 +1,11 @@
-use std::sync::{
-    atomic::{AtomicBool, Ordering},
-    Arc,
-};
-
 use derive_more::Display;
 use futures_util::{
     stream::{SplitSink, SplitStream},
     SinkExt, StreamExt,
+};
+use std::sync::{
+    atomic::{AtomicBool, Ordering},
+    Arc,
 };
 use tokio::{
     net::TcpStream,

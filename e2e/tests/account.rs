@@ -32,7 +32,10 @@ pub async fn register_alice(
             address.clone(),
             Some("./cert/rootCA.crt".to_string()),
         ))
-        .protocol_config(WebSocketProtocolClientConfig::new(address))
+        .protocol_config(WebSocketProtocolClientConfig::new(
+            address,
+            Some("./cert/rootCA.crt".to_string()),
+        ))
         .call()
         .await
 }
@@ -85,6 +88,7 @@ pub async fn cannot_delete_a_client_that_does_not_exist() {
         key: "./cert/server.key".to_string(),
         cert: "./cert/server.crt".to_string(),
     };
+    let root_ca = Some("./cert/rootCA.crt".to_string());
     let mut server = TestServer::start("127.0.0.1:9382", Some(paths)).await;
 
     server
@@ -119,8 +123,8 @@ pub async fn cannot_delete_a_client_that_does_not_exist() {
         .await
         .expect("Can set password");
 
-    let api_client = HttpClientConfig::new(address.clone(), Some("./cert/rootCA.crt".to_string()));
-    let protocol_client = WebSocketProtocolClientConfig::new(address);
+    let api_client = HttpClientConfig::new(address.clone(), root_ca.clone());
+    let protocol_client = WebSocketProtocolClientConfig::new(address, root_ca);
 
     let client = Client::from_store()
         .store(store)
@@ -167,6 +171,7 @@ pub async fn alice_can_find_bobs_account_id() {
         key: "./cert/server.key".to_string(),
         cert: "./cert/server.crt".to_string(),
     };
+    let root_ca = Some("./cert/rootCA.crt".to_string());
     let mut server = TestServer::start("127.0.0.1:9384", Some(paths)).await;
 
     server
@@ -182,11 +187,8 @@ pub async fn alice_can_find_bobs_account_id() {
         .username("Bob")
         .device_name("Bob's Device")
         .store_config(SqliteStoreConfig::in_memory().await)
-        .api_client_config(HttpClientConfig::new(
-            address.clone(),
-            Some("./cert/rootCA.crt".to_string()),
-        ))
-        .protocol_config(WebSocketProtocolClientConfig::new(address))
+        .api_client_config(HttpClientConfig::new(address.clone(), root_ca.clone()))
+        .protocol_config(WebSocketProtocolClientConfig::new(address, root_ca))
         .call()
         .await
         .unwrap();
