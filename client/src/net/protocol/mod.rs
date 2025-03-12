@@ -34,7 +34,7 @@ impl ProtocolConfig for WebSocketProtocolClientConfig {
         let basic = format!("{account_id}.{device_id}:{password}");
         let basic = format!("Basic {}", BASE64_STANDARD.encode(basic));
         let ws_client = WebSocketClientConfig::builder()
-            .url(format!("ws://{}", self.url))
+            .url(format!("ws://{}/api/v1/websocket", self.url))
             .headers(vec![(
                 http::header::AUTHORIZATION,
                 http::HeaderValue::from_str(&basic)

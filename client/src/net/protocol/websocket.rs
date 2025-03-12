@@ -8,6 +8,7 @@ use futures_util::{
     stream::{SplitSink, SplitStream},
     SinkExt, StreamExt,
 };
+use log::error;
 use tokio::{
     net::TcpStream,
     sync::mpsc::{self, Receiver, Sender},
@@ -86,6 +87,7 @@ impl WebSocketClient {
             self.config.tls.clone(),
         )
         .await
+        .inspect_err(|e| error!("{}", e))
         .map_err(|_| WebSocketError::ConnectionFailed)?;
         Ok(ws)
     }

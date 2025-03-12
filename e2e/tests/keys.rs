@@ -1,66 +1,138 @@
-use libsignal_protocol::IdentityKeyPair;
-use rand::rngs::OsRng;
-use sam_client::net::{ApiClient, HttpClient};
+use sam_client::net::http_client::HttpClientConfig;
+use sam_client::net::protocol::WebSocketProtocolClientConfig;
+use sam_client::storage::sqlite::SqliteStoreConfig;
+use sam_client::Client;
 
 mod utils;
 
-use crate::utils::client::{publish_keys, registration_request};
 use crate::utils::server::TestServer;
 
+/*
+   PORTS USED: 9384-9386
+*/
+
 #[tokio::test]
-pub async fn bob_can_fetch_alices_keys() {
+pub async fn alice_can_upload_keys() {
     let _ = env_logger::try_init();
-    let address = "http://127.0.0.1:9385";
-    let mut server = TestServer::start("127.0.0.1:9385").await;
-    let alice_password = "Alice Password";
-    let mut csprng = OsRng;
-    let alice_id_key_pair = IdentityKeyPair::generate(&mut csprng);
+    let address = "127.0.0.1:9384".to_owned();
+    let mut server = TestServer::start("127.0.0.1:9384").await;
 
     server
         .started_rx()
         .await
         .expect("Should be able to start server");
 
-    let alice_client = HttpClient::new(address.to_owned());
-
-    let alice_account_creation_result = alice_client
-        .register_account(
-            "Alice",
-            alice_password,
-            registration_request(alice_id_key_pair),
-        )
-        .await;
-
-    assert!(alice_account_creation_result.is_ok());
-
-    let alice_account_id = alice_account_creation_result.unwrap().account_id;
-
-    assert!(alice_client
-        .publish_pre_keys(
-            alice_account_id,
-            1.into(),
-            alice_password,
-            publish_keys(alice_id_key_pair)
-        )
+    let mut alice = Client::from_registration()
+        .username("Alice")
+        .device_name("Alice's Device")
+        .store_config(SqliteStoreConfig::in_memory().await)
+        .api_client_config(HttpClientConfig::new(address.clone()))
+        .protocol_config(WebSocketProtocolClientConfig::new(address.clone()))
+        .call()
         .await
-        .inspect_err(|err| println!("{err}"))
-        .is_ok());
+        .unwrap();
 
-    // now we create Bob
-
-    let bob_client = HttpClient::new(address.to_owned());
-    let bob_id_key_pair = IdentityKeyPair::generate(&mut csprng);
-    let bob_password = "Bob password";
-
-    let bob_account_creation_result = bob_client
-        .register_account("Bob", bob_password, registration_request(bob_id_key_pair))
+    let publish_keys = alice
+        .publish_prekeys()
+        .onetime_prekeys(10)
+        .new_signed_prekey(true)
+        .new_last_resort(true)
+        .call()
         .await;
 
-    let bob_account_id = bob_account_creation_result.unwrap().account_id;
+    assert!(publish_keys.is_ok())
+}
 
-    let get_prekeys_result = bob_client
-        .get_pre_keys(bob_account_id, 1.into(), bob_password, alice_account_id)
+#[tokio::test]
+pub async fn bob_can_fetch_alices_keys() {
+    let _ = env_logger::try_init();
+    let address = "127.0.0.1:9385".to_owned();
+    let mut server = TestServer::start("127.0.0.1:9385").await;
+
+    server
+        .started_rx()
+        .await
+        .expect("Should be able to start server");
+
+    let mut alice = Client::from_registration()
+        .username("Alice")
+        .device_name("Alice's Device")
+        .store_config(SqliteStoreConfig::in_memory().await)
+        .api_client_config(HttpClientConfig::new(address.clone()))
+        .protocol_config(WebSocketProtocolClientConfig::new(address.clone()))
+        .call()
+        .await
+        .unwrap();
+
+    let mut bob = Client::from_registration()
+        .username("Bob")
+        .device_name("Bob's Device")
+        .store_config(SqliteStoreConfig::in_memory().await)
+        .api_client_config(HttpClientConfig::new(address.clone()))
+        .protocol_config(WebSocketProtocolClientConfig::new(address))
+        .call()
+        .await
+        .unwrap();
+
+    alice
+        .publish_prekeys()
+        .onetime_prekeys(10)
+        .new_signed_prekey(true)
+        .new_last_resort(true)
+        .call()
+        .await
+        .unwrap();
+
+    let pre_key = bob
+        .fetch_prekeys(alice.account_id().await.unwrap(), None)
         .await;
 
-    assert!(get_prekeys_result.is_ok())
+    assert!(pre_key.is_ok())
+}
+
+#[tokio::test]
+pub async fn bob_can_fetch_alices_keys_for_specific_devices() {
+    let _ = env_logger::try_init();
+    let address = "127.0.0.1:9386".to_owned();
+    let mut server = TestServer::start("127.0.0.1:9386").await;
+
+    server
+        .started_rx()
+        .await
+        .expect("Should be able to start server");
+
+    let mut alice = Client::from_registration()
+        .username("Alice")
+        .device_name("Alice's Device")
+        .store_config(SqliteStoreConfig::in_memory().await)
+        .api_client_config(HttpClientConfig::new(address.clone()))
+        .protocol_config(WebSocketProtocolClientConfig::new(address.clone()))
+        .call()
+        .await
+        .unwrap();
+
+    let mut bob = Client::from_registration()
+        .username("Bob")
+        .device_name("Bob's Device")
+        .store_config(SqliteStoreConfig::in_memory().await)
+        .api_client_config(HttpClientConfig::new(address.clone()))
+        .protocol_config(WebSocketProtocolClientConfig::new(address))
+        .call()
+        .await
+        .unwrap();
+
+    alice
+        .publish_prekeys()
+        .onetime_prekeys(10)
+        .new_signed_prekey(true)
+        .new_last_resort(true)
+        .call()
+        .await
+        .unwrap();
+
+    let pre_key = bob
+        .fetch_prekeys(alice.account_id().await.unwrap(), Some(vec![1.into()]))
+        .await;
+
+    assert!(pre_key.is_ok())
 }

@@ -23,4 +23,6 @@ pub enum ClientError {
     SendError,
     NoDeviceId,
     NoContact,
+    FailedToConvertPreKeyBundle,
+    FailedToProcessPrekeyBundle,
 }

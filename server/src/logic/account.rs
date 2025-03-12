@@ -94,6 +94,13 @@ pub async fn create_account<T: StateType>(
     })
 }
 
+pub async fn get_account_id_by_username<T: StateType>(
+    state: &mut ServerState<T>,
+    username: String,
+) -> Result<AccountId, ServerError> {
+    state.accounts.get_account_from_username(username).await
+}
+
 #[cfg(test)]
 mod test {
     use libsignal_protocol::IdentityKeyPair;

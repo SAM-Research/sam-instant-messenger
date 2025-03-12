@@ -25,9 +25,7 @@ async fn client(
         .device_name(device_name)
         .store_config(SqliteStoreConfig::in_memory().await)
         .api_client_config(HttpClientConfig::new(address.to_string()))
-        .protocol_config(WebSocketProtocolClientConfig::new(
-            address.to_string() + "/api/v1/websocket",
-        ))
+        .protocol_config(WebSocketProtocolClientConfig::new(address.to_string()))
         .call()
         .await
         .expect("Can register Client")

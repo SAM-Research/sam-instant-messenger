@@ -1,6 +1,5 @@
 use sam_common::address::AccountId;
 use std::{collections::HashMap, sync::Arc};
-
 use tokio::sync::Mutex;
 
 use crate::managers::error::AccountManagerError;
@@ -38,6 +37,19 @@ impl AccountManager for InMemoryAccountManager {
             .get(&id)
             .cloned()
             .ok_or(AccountManagerError::AccountDoesNotExist)?)
+    }
+
+    async fn get_account_from_username(&self, username: String) -> Result<AccountId, ServerError> {
+        let account = self
+            .accounts
+            .lock()
+            .await
+            .values()
+            .find(|acc| acc.username() == username)
+            .cloned()
+            .ok_or(AccountManagerError::AccountDoesNotExist)?;
+
+        Ok(account.id())
     }
 
     async fn add_account(&mut self, account: &Account) -> Result<(), ServerError> {

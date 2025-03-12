@@ -60,17 +60,19 @@ pub trait ApiClient {
     /// * `device_id` - A [`DeviceId`] containing the id for the device on that account.
     /// * `password` - The password of the account.
     /// * `receiver_account_id` - The [`AccountId`] for which pre-keys should be fetched.
+    /// * `specific_devices` - A [`Option<Vec<DeviceId>>`] if client only wants to fetch for some devices.
     ///
     /// # Returns
     ///
     /// * `Ok(PreKeyBundles)` containing the retrieved pre-key bundles.
     /// * `Err(ApiClientError)` if fetching pre-key bundles fails.
-    async fn get_pre_keys(
+    async fn get_pre_key_bundles(
         &self,
         account_id: AccountId,
         device_id: DeviceId,
         password: &str,
         receiver_account_id: AccountId,
+        devices: Option<Vec<DeviceId>>,
     ) -> Result<PreKeyBundles, ApiClientError>;
 
     /// Publishes pre-keys for a device.
@@ -134,8 +136,7 @@ pub trait ApiClient {
     /// * `Err(ApiClientError)` if the operation fails.
     async fn link_device(
         &self,
-        account_id: AccountId,
-        device_id: DeviceId,
+        username: &str,
         password: &str,
         request: LinkDeviceRequest,
     ) -> Result<LinkDeviceResponse, ApiClientError>;
@@ -163,6 +164,14 @@ pub trait ApiClient {
         password: &str,
         removed_device: DeviceId,
     ) -> Result<(), ApiClientError>;
+
+    async fn get_user_account_id(
+        &self,
+        account_id: AccountId,
+        device_id: DeviceId,
+        password: &str,
+        username: &str,
+    ) -> Result<AccountId, ApiClientError>;
 }
 
 #[async_trait(?Send)]
