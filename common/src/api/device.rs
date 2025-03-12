@@ -29,6 +29,7 @@ impl LinkDeviceToken {
 pub struct LinkDeviceResponse {
     pub account_id: AccountId,
     pub device_id: DeviceId,
+    pub username: String,
 }
 
 #[derive(Debug, Serialize, Deserialize)]
