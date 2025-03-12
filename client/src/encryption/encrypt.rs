@@ -133,8 +133,7 @@ mod test {
 
     use libsignal_core::ProtocolAddress;
     use libsignal_protocol::{
-        process_prekey_bundle, IdentityKeyPair, IdentityKeyStore,
-        PreKeyBundle as SignalPreKeyBundle, SignalProtocolError,
+        process_prekey_bundle, IdentityKeyPair, IdentityKeyStore, SignalProtocolError,
     };
     use rand::{rngs::OsRng, CryptoRng, Rng};
     use sam_common::{

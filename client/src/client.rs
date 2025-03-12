@@ -353,6 +353,22 @@ impl<T: StoreType, U: ApiClient, V: SamProtocolClient> Client<T, U, V> {
             .await
     }
 
+    pub async fn disconnect(&mut self) -> Result<(), ClientError> {
+        self.protocol_client
+            .disconnect()
+            .await
+            .map_err(ClientError::from)
+    }
+
+    pub async fn connect(&mut self) -> Result<(), ClientError> {
+        self.envelope_queue = self.protocol_client.connect().await?;
+        Ok(())
+    }
+
+    pub async fn is_connected(&self) -> bool {
+        self.protocol_client.is_connected().await
+    }
+
     /// Send any message to recipient
     /// Should also send to users other devices
     pub async fn send_message(
@@ -371,7 +387,7 @@ impl<T: StoreType, U: ApiClient, V: SamProtocolClient> Client<T, U, V> {
     }
 
     /// Returns a broadcast receiver for incoming messages that have been decrypted
-    pub async fn subscribe(&self) -> Receiver<DecryptedEnvelope> {
+    pub fn subscribe(&self) -> Receiver<DecryptedEnvelope> {
         self.store.message_store.subscribe()
     }
 

@@ -140,7 +140,7 @@ impl MessageManager for InMemoryMessageManager {
     async fn unsubscribe(&mut self, account_id: AccountId, device_id: DeviceId) {
         let key = DeviceAddress::new(account_id, device_id);
 
-        if self.subscribers.lock().await.contains_key(&key) {
+        if !self.subscribers.lock().await.contains_key(&key) {
             return;
         }
 
