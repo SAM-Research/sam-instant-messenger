@@ -55,7 +55,7 @@ impl SamProtocolReceiver {
                     .into(),
             ))
             .await
-            .map_err(|e| ProtocolError::WebSocketError(e))
+            .map_err(ProtocolError::WebSocketError)
     }
 
     async fn handle_server_message(
@@ -138,7 +138,7 @@ impl ProtocolClient {
             .await
             .send(Message::Binary(message.encode_to_vec().into()))
             .await
-            .map_err(|e| ProtocolError::WebSocketError(e))
+            .map_err(ProtocolError::WebSocketError)
     }
 
     async fn handle_server_status(
@@ -171,7 +171,7 @@ impl ProtocolClient {
                     reason: "Request and Response Id did not match".into(),
                 })))
                 .await
-                .map_err(|e| ProtocolError::WebSocketError(e))
+                .map_err(ProtocolError::WebSocketError)
         } else {
             Ok(())
         }
@@ -254,7 +254,7 @@ impl SamProtocolClient for ProtocolClient {
             .connect(handler)
             .await
             .inspect_err(|e| error!("ProtocolClient Error: {e}"))
-            .map_err(|e| ProtocolError::WebSocketError(e))
+            .map_err(ProtocolError::WebSocketError)
     }
     async fn disconnect(&mut self) -> Result<(), ProtocolError> {
         self.status_messages = None;
@@ -266,7 +266,7 @@ impl SamProtocolClient for ProtocolClient {
                 reason: "bye!".into(),
             })))
             .await
-            .map_err(|e| ProtocolError::WebSocketError(e))
+            .map_err(ProtocolError::WebSocketError)
     }
 
     async fn is_connected(&self) -> bool {

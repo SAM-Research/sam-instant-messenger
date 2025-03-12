@@ -125,7 +125,7 @@ impl<T: StoreType, U: ApiClient, V: SamProtocolClient> Client<T, U, V> {
         Ok(Self {
             store,
             api_client,
-            protocol_client: protocol_client,
+            protocol_client,
             envelope_queue: queue,
         })
     }

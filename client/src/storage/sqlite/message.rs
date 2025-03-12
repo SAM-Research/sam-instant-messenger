@@ -95,8 +95,8 @@ mod test {
             .store_message(
                 DecryptedEnvelope::builder()
                     .content(vec![55, 66, 77])
-                    .source_account_id(account_id.clone())
-                    .source_device_id(device_id.clone())
+                    .source_account_id(account_id)
+                    .source_device_id(device_id)
                     .build(),
             )
             .await
