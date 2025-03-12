@@ -1,17 +1,27 @@
 use super::error::ProtocolError;
 use async_trait::async_trait;
 use sam_common::{
-    sam_message::{ClientEnvelope, ServerEnvelope},
+    sam_message::{ClientEnvelope, DeviceList, ServerEnvelope},
     AccountId, DeviceId,
 };
 use tokio::sync::mpsc::Receiver;
+
+pub enum MessageStatus {
+    ExtraDevices(Vec<DeviceList>),
+    MissingDevices(Vec<DeviceList>),
+    Ok,
+    NeedsSync,
+}
 
 #[async_trait::async_trait]
 pub trait SamProtocolClient {
     async fn connect(&mut self) -> Result<Receiver<ServerEnvelope>, ProtocolError>;
     async fn disconnect(&mut self) -> Result<(), ProtocolError>;
     async fn is_connected(&self) -> bool;
-    async fn send_message(&mut self, message: ClientEnvelope) -> Result<bool, ProtocolError>;
+    async fn send_message(
+        &mut self,
+        message: ClientEnvelope,
+    ) -> Result<MessageStatus, ProtocolError>;
 }
 
 #[async_trait(?Send)]

@@ -94,7 +94,7 @@ async fn handle_client_envelope<T: StateType>(
 
     let sender_acc_id = auth_user.account().id();
     let sender_dev_id = auth_user.device().id();
-    error!("{:?}", envelope.messages);
+
     let is_sync = dest_acc_ids.contains_key(&auth_user.account().id());
 
     let needs_sync = !is_sync

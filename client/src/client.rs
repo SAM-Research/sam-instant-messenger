@@ -1,9 +1,6 @@
 use bon::bon;
 use libsignal_core::ProtocolAddress;
-use libsignal_protocol::{
-    kem, process_prekey_bundle, IdentityKey, IdentityKeyPair, IdentityKeyStore, PreKeyBundle,
-    PublicKey,
-};
+use libsignal_protocol::{process_prekey_bundle, IdentityKeyPair, IdentityKeyStore};
 use log::error;
 use rand::rngs::OsRng;
 use sam_common::{
@@ -27,13 +24,13 @@ use crate::{
     },
     net::{
         api_trait::ApiClientConfig,
-        protocol::traits::{ProtocolConfig, SamProtocolClient},
+        protocol::traits::{MessageStatus, ProtocolConfig, SamProtocolClient},
         ApiClient,
     },
     storage::{
         key_generation::{
-            generate_ec_pre_keys, generate_pq_pre_keys, KyberKeyGenerator as _,
-            SignedPreKeyGenerator as _,
+            generate_ec_pre_keys, generate_pq_pre_keys, into_libsignal_bundle,
+            KyberKeyGenerator as _, SignedPreKeyGenerator as _,
         },
         traits::message::MessageStore,
         AccountStore, ContactStore, Store, StoreConfig, StoreType,
@@ -345,13 +342,24 @@ impl<T: StoreType, U: ApiClient, V: SamProtocolClient> Client<T, U, V> {
         Ok(account_id)
     }
 
+    pub async fn remove_device_for(
+        &mut self,
+        account_id: AccountId,
+        device_id: DeviceId,
+    ) -> Result<(), ClientError> {
+        self.store
+            .contact_store
+            .remove_device(account_id, device_id)
+            .await
+    }
+
     /// Send any message to recipient
     /// Should also send to users other devices
     pub async fn send_message(
         &mut self,
         recipient: AccountId,
         msg: impl Into<Vec<u8>>,
-    ) -> Result<bool, ClientError> {
+    ) -> Result<MessageStatus, ClientError> {
         if !self.store.contact_store.contains_contact(recipient).await? {
             return Err(ClientError::NoContact);
         }
@@ -376,8 +384,8 @@ impl<T: StoreType, U: ApiClient, V: SamProtocolClient> Client<T, U, V> {
             let envelope = match decrypt(envelope, &mut self.store).await {
                 Ok(denvelope) => denvelope,
                 Err(e) => {
-                    error!("Failed to decrypt message {e}");
-                    continue;
+                    error!("Failed to decrypt message: {e}");
+                    break;
                 }
             };
 
@@ -480,6 +488,10 @@ impl<T: StoreType, U: ApiClient, V: SamProtocolClient> Client<T, U, V> {
 
         for bundle in prekey_bundles.bundles {
             let device_id = bundle.device_id;
+            self.store
+                .contact_store
+                .add_device(account_id, device_id.into())
+                .await?;
             let libsignal_bundle = into_libsignal_bundle(bundle, prekey_bundles.identity_key)
                 .map_err(|_| ClientError::FailedToConvertPreKeyBundle)?;
             process_prekey_bundle(
@@ -508,28 +520,4 @@ impl<T: StoreType, U: ApiClient, V: SamProtocolClient> Client<T, U, V> {
             )
             .await?)
     }
-}
-
-fn into_libsignal_bundle(
-    bundle: sam_common::api::PreKeyBundle,
-    identity_key_pair: IdentityKey,
-) -> Result<PreKeyBundle, ClientError> {
-    let libsignal_bundle = PreKeyBundle::with_kyber_pre_key(
-        PreKeyBundle::new(
-            bundle.registration_id,
-            bundle.device_id.into(),
-            match bundle.pre_key {
-                None => None,
-                Some(key) => Some((key.key_id.into(), PublicKey::deserialize(&key.public_key)?)),
-            },
-            bundle.signed_pre_key.key_id.into(),
-            PublicKey::deserialize(&bundle.signed_pre_key.public_key)?,
-            Vec::from(bundle.signed_pre_key.signature),
-            identity_key_pair,
-        )?,
-        bundle.pq_pre_key.key_id.into(),
-        kem::PublicKey::try_from(&*bundle.pq_pre_key.public_key)?,
-        Vec::from(bundle.pq_pre_key.signature),
-    );
-    Ok(libsignal_bundle)
 }

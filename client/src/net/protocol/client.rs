@@ -1,6 +1,5 @@
 use std::sync::Arc;
 
-use derive_more::Display;
 use futures_util::{lock::Mutex, stream::SplitStream, StreamExt};
 use log::error;
 use prost::Message as PMessage;
@@ -19,16 +18,15 @@ use tokio_tungstenite::tungstenite::{
 
 use super::{
     error::ProtocolError,
-    traits::SamProtocolClient,
+    traits::{MessageStatus, SamProtocolClient},
     websocket::{WebSocket, WebSocketClient, WebSocketError, WebSocketReceiver},
 };
 
-#[derive(Display)]
 enum ServerStatus {
     Ack(MessageId),
-    #[display("Status({}, {})", "_0", "_1")]
     Status(MessageId, Status),
 }
+
 struct SamProtocolReceiver {
     client: Arc<Mutex<WebSocketClient>>,
     enqueue_status: Sender<ServerStatus>,
@@ -147,10 +145,12 @@ impl ProtocolClient {
         &mut self,
         req_id: MessageId,
         status: ServerStatus,
-    ) -> Result<bool, ProtocolError> {
-        error!("{}", status);
+    ) -> Result<MessageStatus, ProtocolError> {
         match status {
-            ServerStatus::Ack(message_id) => self.check_id(req_id, message_id).await.map(|_| false),
+            ServerStatus::Ack(message_id) => self
+                .check_id(req_id, message_id)
+                .await
+                .map(|_| MessageStatus::Ok),
             ServerStatus::Status(message_id, status) => {
                 self.handle_status(req_id, message_id, status).await
             }
@@ -182,20 +182,20 @@ impl ProtocolClient {
         req_id: MessageId,
         res_id: MessageId,
         status: Status,
-    ) -> Result<bool, ProtocolError> {
+    ) -> Result<MessageStatus, ProtocolError> {
         self.check_id(req_id, res_id).await?;
 
         match status.code() {
             sam_message::StatusCode::EmptyMessage => Err(ProtocolError::EmptyMessage),
             sam_message::StatusCode::NotEncryptedForAllDevices => {
-                Err(ProtocolError::MissingDevices(status.device_lists))
+                Ok(MessageStatus::MissingDevices(status.device_lists))
             }
 
             sam_message::StatusCode::EncryptedForExtraDevices => {
-                Err(ProtocolError::ExtraDevices(status.device_lists))
+                Ok(MessageStatus::ExtraDevices(status.device_lists))
             }
 
-            sam_message::StatusCode::NeedsSync => Ok(true),
+            sam_message::StatusCode::NeedsSync => Ok(MessageStatus::NeedsSync),
         }
     }
 }
@@ -273,7 +273,10 @@ impl SamProtocolClient for ProtocolClient {
         self.client.lock().await.is_connected()
     }
 
-    async fn send_message(&mut self, message: ClientEnvelope) -> Result<bool, ProtocolError> {
+    async fn send_message(
+        &mut self,
+        message: ClientEnvelope,
+    ) -> Result<MessageStatus, ProtocolError> {
         let id = MessageId::generate();
 
         self.send_client_message(id, message).await?;

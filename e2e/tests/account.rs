@@ -15,7 +15,6 @@ use sam_client::{
     Client, ClientError,
 };
 use sam_common::{address::RegistrationId, AccountId};
-use sam_server::protocol::error::WebSocketError;
 
 mod utils;
 
