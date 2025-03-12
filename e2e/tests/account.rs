@@ -14,6 +14,8 @@ use sam_client::{
     Client, ClientError,
 };
 use sam_common::{address::RegistrationId, AccountId};
+use sam_server::server::CertificatePaths;
+
 mod utils;
 
 /*
@@ -26,7 +28,7 @@ pub async fn register_alice(
         .username("Alice")
         .device_name("Alice's Device")
         .store_config(SqliteStoreConfig::in_memory().await)
-        .api_client_config(HttpClientConfig::new(address.clone()))
+        .api_client_config(HttpClientConfig::new(address.clone(), None))
         .protocol_config(WebSocketProtocolClientConfig::new(address))
         .call()
         .await
@@ -36,8 +38,8 @@ pub async fn register_alice(
 #[tokio::test]
 pub async fn can_delete_a_client() {
     let _ = env_logger::try_init();
-    let address = "http://127.0.0.1:9480".to_owned();
-    let mut server = TestServer::start("127.0.0.1:9480").await;
+    let address = "127.0.0.1:9480".to_owned();
+    let mut server = TestServer::start("127.0.0.1:9480", None).await;
 
     server
         .started_rx()
@@ -57,8 +59,12 @@ pub async fn can_delete_a_client() {
 #[tokio::test]
 pub async fn cannot_delete_a_client_that_does_not_exist() {
     let _ = env_logger::try_init();
-    let address = "http://127.0.0.1:9481".to_owned();
-    let mut server = TestServer::start("127.0.0.1:9481").await;
+    let address = "127.0.0.1:9481".to_owned();
+    let paths = CertificatePaths {
+        key: "./cert/server.key".to_string(),
+        cert: "./cert/server.crt".to_string(),
+    };
+    let mut server = TestServer::start("127.0.0.1:9481", Some(paths)).await;
 
     server
         .started_rx()
@@ -92,7 +98,7 @@ pub async fn cannot_delete_a_client_that_does_not_exist() {
         .await
         .expect("Can set password");
 
-    let api_client = HttpClientConfig::new(address.clone());
+    let api_client = HttpClientConfig::new(address.clone(), Some("./cert/rootCA.crt".to_string()));
     let protocol_client = WebSocketProtocolClientConfig::new(address);
 
     let client = Client::from_store()
@@ -110,8 +116,12 @@ pub async fn cannot_delete_a_client_that_does_not_exist() {
 #[tokio::test]
 pub async fn alice_can_find_bobs_account_id() {
     let _ = env_logger::try_init();
-    let address = "http://127.0.0.1:9383".to_owned();
-    let mut server = TestServer::start("127.0.0.1:9383").await;
+    let address = "127.0.0.1:9383".to_owned();
+    let paths = CertificatePaths {
+        key: "./cert/server.key".to_string(),
+        cert: "./cert/server.crt".to_string(),
+    };
+    let mut server = TestServer::start("127.0.0.1:9383", Some(paths)).await;
 
     server
         .started_rx()
@@ -122,7 +132,10 @@ pub async fn alice_can_find_bobs_account_id() {
         .username("Alice")
         .device_name("Alice's Device")
         .store_config(SqliteStoreConfig::in_memory().await)
-        .api_client_config(HttpClientConfig::new(address.clone()))
+        .api_client_config(HttpClientConfig::new(
+            address.clone(),
+            Some("./cert/rootCA.crt".to_string()),
+        ))
         .protocol_config(WebSocketProtocolClientConfig::new(address.clone()))
         .call()
         .await
@@ -132,7 +145,10 @@ pub async fn alice_can_find_bobs_account_id() {
         .username("Bob")
         .device_name("Bob's Device")
         .store_config(SqliteStoreConfig::in_memory().await)
-        .api_client_config(HttpClientConfig::new(address.clone()))
+        .api_client_config(HttpClientConfig::new(
+            address.clone(),
+            Some("./cert/rootCA.crt".to_string()),
+        ))
         .protocol_config(WebSocketProtocolClientConfig::new(address))
         .call()
         .await

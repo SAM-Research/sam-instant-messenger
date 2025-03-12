@@ -8,4 +8,5 @@ pub enum ApiClientError {
     #[display("Got bad response from server: {_0} - {_1}")]
     ErrorResponse(u16, String),
     CouldNotParseResponse,
+    FailedToBuildApiClient,
 }

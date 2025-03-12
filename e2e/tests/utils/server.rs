@@ -6,6 +6,7 @@ use sam_server::{
     start_server, ServerConfig, ServerState,
 };
 
+use sam_server::server::CertificatePaths;
 use tokio::{
     sync::oneshot::{self, Receiver},
     task::JoinHandle,
@@ -23,11 +24,11 @@ impl Drop for TestServer {
 }
 
 impl TestServer {
-    pub async fn start(address: &str) -> Self {
+    pub async fn start(address: &str, certificate_urls: Option<CertificatePaths>) -> Self {
         let config = ServerConfig {
             state: in_memory_server_state(),
             addr: address.parse().expect("Unable to parse socket address"),
-            tls: None,
+            tls: certificate_urls,
         };
         let (tx, started_rx) = oneshot::channel::<()>();
         let thread = tokio::spawn(async move {

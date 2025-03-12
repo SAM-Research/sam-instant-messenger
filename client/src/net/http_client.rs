@@ -3,7 +3,9 @@ use super::{
     ApiClientError,
 };
 use async_trait::async_trait;
-use reqwest::{Client as ReqwestClient, Method, Request, Response, Url};
+use reqwest::{
+    Certificate, Client as ReqwestClient, ClientBuilder, Method, Request, Response, Url,
+};
 use sam_common::{
     api::{
         keys::PreKeyBundles, LinkDeviceRequest, LinkDeviceResponse, LinkDeviceToken,
@@ -11,15 +13,31 @@ use sam_common::{
     },
     AccountId, DeviceId,
 };
+use std::fs;
 
 #[derive(Debug)]
 pub struct HttpClientConfig {
     base_url: String,
+    client_builder: ClientBuilder,
 }
 
 impl HttpClientConfig {
-    pub fn new(base_url: String) -> Self {
-        Self { base_url }
+    pub fn new(base_url: String, cert_path: Option<String>) -> Self {
+        match cert_path {
+            None => Self {
+                base_url: format!("http://{}", base_url),
+                client_builder: ReqwestClient::builder(),
+            },
+            Some(path) => {
+                let cert_bytes = fs::read(path).expect("Could not read certificate.");
+                let cert =
+                    Certificate::from_pem(&cert_bytes).expect("Could not parse certificate.");
+                Self {
+                    base_url: format!("https://{}", base_url),
+                    client_builder: ReqwestClient::builder().add_root_certificate(cert),
+                }
+            }
+        }
     }
 }
 
@@ -29,7 +47,10 @@ impl ApiClientConfig for HttpClientConfig {
 
     async fn create(self) -> Result<Self::ApiClient, ApiClientError> {
         Ok(Self::ApiClient {
-            http_client: ReqwestClient::new(),
+            http_client: self
+                .client_builder
+                .build()
+                .map_err(|_| ApiClientError::FailedToBuildApiClient)?,
             base_url: self.base_url,
         })
     }

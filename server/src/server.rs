@@ -8,10 +8,15 @@ use axum_server::tls_rustls::RustlsConfig;
 use log::info;
 use std::net::SocketAddr;
 
+pub struct CertificatePaths {
+    pub key: String,
+    pub cert: String,
+}
+
 pub struct ServerConfig<T: StateType> {
     pub state: ServerState<T>,
     pub addr: SocketAddr,
-    pub tls: Option<RustlsConfig>,
+    pub tls: Option<CertificatePaths>,
 }
 
 async fn log_request(req: Request, next: Next) -> impl IntoResponse {
@@ -35,12 +40,13 @@ pub async fn start_server<T: StateType>(config: ServerConfig<T>) -> Result<(), s
         config.addr
     );
     if let Some(tls_config) = config.tls {
-        rustls::crypto::ring::default_provider()
-            .install_default()
-            .expect("Failed to install rustls crypto provider");
-        axum_server::bind_rustls(config.addr, tls_config)
-            .serve(app.into_make_service_with_connect_info::<SocketAddr>())
-            .await?;
+        let _ = rustls::crypto::ring::default_provider().install_default();
+        axum_server::bind_rustls(
+            config.addr,
+            RustlsConfig::from_pem_file(tls_config.cert, tls_config.key).await?,
+        )
+        .serve(app.into_make_service_with_connect_info::<SocketAddr>())
+        .await?;
     } else {
         axum_server::bind(config.addr)
             .serve(app.into_make_service_with_connect_info::<SocketAddr>())
