@@ -206,8 +206,7 @@ impl ApiClient for HttpClient {
 
     async fn link_device(
         &self,
-        account_id: AccountId,
-        device_id: DeviceId,
+        username: &str,
         password: &str,
         request: LinkDeviceRequest,
     ) -> Result<LinkDeviceResponse, ApiClientError> {
@@ -218,7 +217,7 @@ impl ApiClient for HttpClient {
             .http_client
             .request(Method::POST, url)
             .json(&request)
-            .basic_auth(format!("{}.{}", account_id, device_id), Some(password))
+            .basic_auth(username.to_owned(), Some(password))
             .build()
             .map_err(|_| ApiClientError::CouldNotBuildRequest)?;
 
