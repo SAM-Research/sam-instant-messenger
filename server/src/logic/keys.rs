@@ -386,16 +386,10 @@ mod test {
             .await
             .expect("Alice can add device");
 
-        let key_bundle = create_publish_pre_keys(
-            Some(vec![1, 2]),
-            Some(22),
-            Some(vec![1, 2]),
-            Some(33),
-            &pair,
-            rng,
-        );
+        let key_bundle =
+            create_publish_pre_keys(Some(vec![1]), Some(22), Some(vec![1]), Some(33), &pair, rng);
 
-        publish_keybundle(&mut state, account_id, 1.into(), key_bundle)
+        publish_keybundle(&mut state, account_id, 1.into(), key_bundle.clone())
             .await
             .expect("Alice can publish bundle");
 
@@ -407,10 +401,25 @@ mod test {
         assert!(bundles.bundles.len() == 1);
 
         let bundle = bundles.bundles.first().unwrap();
+        let expected_pre_key_public = key_bundle
+            .pre_keys
+            .unwrap()
+            .first()
+            .unwrap()
+            .public_key
+            .clone();
+
+        assert!(bundles.identity_key == *pair.identity_key());
         assert!(bundle.device_id == 1);
         assert!(bundle.registration_id == 1);
-        assert!(bundle.pre_key.clone().is_some_and(|k| k.id() == 1));
-        assert!(bundle.signed_pre_key.id() == 22);
-        assert!(bundle.pq_pre_key.id() == 1);
+        assert!(bundle
+            .pre_key
+            .clone()
+            .is_some_and(|k| k.public_key == expected_pre_key_public));
+        assert!(bundle.signed_pre_key.public_key == key_bundle.signed_pre_key.unwrap().public_key);
+        assert!(
+            bundle.pq_pre_key.public_key
+                == key_bundle.pq_pre_keys.unwrap().first().unwrap().public_key
+        );
     }
 }
