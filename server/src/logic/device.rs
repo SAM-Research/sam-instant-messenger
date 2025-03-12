@@ -61,6 +61,7 @@ pub async fn link_device<T: StateType>(
     Ok(LinkDeviceResponse {
         account_id,
         device_id: next_id,
+        username: account.username().to_owned(),
     })
 }
 

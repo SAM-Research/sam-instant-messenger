@@ -19,27 +19,33 @@ use sam_server::server::CertificatePaths;
 mod utils;
 
 /*
-   Ports used: 9383
+   Ports used: 9380 - 9384
 */
 pub async fn register_alice(
     address: String,
-) -> Client<SqliteStoreType, HttpClient, ProtocolClient> {
+) -> Result<Client<SqliteStoreType, HttpClient, ProtocolClient>, ClientError> {
     Client::from_registration()
         .username("Alice")
         .device_name("Alice's Device")
         .store_config(SqliteStoreConfig::in_memory().await)
-        .api_client_config(HttpClientConfig::new(address.clone(), None))
+        .api_client_config(HttpClientConfig::new(
+            address.clone(),
+            Some("./cert/rootCA.crt".to_string()),
+        ))
         .protocol_config(WebSocketProtocolClientConfig::new(address))
         .call()
         .await
-        .expect("Can register Alice")
 }
 
 #[tokio::test]
-pub async fn can_delete_a_client() {
+pub async fn one_client_can_register() {
     let _ = env_logger::try_init();
-    let address = "127.0.0.1:9480".to_owned();
-    let mut server = TestServer::start("127.0.0.1:9480", None).await;
+    let address = "127.0.0.1:9380".to_owned();
+    let paths = CertificatePaths {
+        key: "./cert/server.key".to_string(),
+        cert: "./cert/server.crt".to_string(),
+    };
+    let mut server = TestServer::start("127.0.0.1:9380", Some(paths)).await;
 
     server
         .started_rx()
@@ -48,23 +54,38 @@ pub async fn can_delete_a_client() {
 
     let client = register_alice(address).await;
 
-    let result = client.delete_account().await;
-    assert!(
-        result.is_ok(),
-        "Error deleting account: {:?}",
-        result.unwrap_err().1
-    )
+    assert!(client.is_ok());
+}
+
+#[tokio::test]
+pub async fn can_delete_account() {
+    let _ = env_logger::try_init();
+    let address = "127.0.0.1:9381".to_owned();
+    let paths = CertificatePaths {
+        key: "./cert/server.key".to_string(),
+        cert: "./cert/server.crt".to_string(),
+    };
+    let mut server = TestServer::start("127.0.0.1:9381", Some(paths)).await;
+
+    server
+        .started_rx()
+        .await
+        .expect("Should be able to start server");
+
+    let client = register_alice(address).await.expect("Can register account");
+
+    assert!(client.delete_account().await.is_ok());
 }
 
 #[tokio::test]
 pub async fn cannot_delete_a_client_that_does_not_exist() {
     let _ = env_logger::try_init();
-    let address = "127.0.0.1:9481".to_owned();
+    let address = "127.0.0.1:9382".to_owned();
     let paths = CertificatePaths {
         key: "./cert/server.key".to_string(),
         cert: "./cert/server.crt".to_string(),
     };
-    let mut server = TestServer::start("127.0.0.1:9481", Some(paths)).await;
+    let mut server = TestServer::start("127.0.0.1:9382", Some(paths)).await;
 
     server
         .started_rx()
@@ -114,7 +135,7 @@ pub async fn cannot_delete_a_client_that_does_not_exist() {
 }
 
 #[tokio::test]
-pub async fn alice_can_find_bobs_account_id() {
+pub async fn can_delete_a_device() {
     let _ = env_logger::try_init();
     let address = "127.0.0.1:9383".to_owned();
     let paths = CertificatePaths {
@@ -128,18 +149,34 @@ pub async fn alice_can_find_bobs_account_id() {
         .await
         .expect("Should be able to start server");
 
-    let alice = Client::from_registration()
-        .username("Alice")
-        .device_name("Alice's Device")
-        .store_config(SqliteStoreConfig::in_memory().await)
-        .api_client_config(HttpClientConfig::new(
-            address.clone(),
-            Some("./cert/rootCA.crt".to_string()),
-        ))
-        .protocol_config(WebSocketProtocolClientConfig::new(address.clone()))
-        .call()
+    let client = register_alice(address).await.expect("Can register account");
+
+    let result = client.delete_account().await;
+    assert!(
+        result.is_ok(),
+        "Error deleting account: {:?}",
+        result.unwrap_err().1
+    )
+}
+
+#[tokio::test]
+pub async fn alice_can_find_bobs_account_id() {
+    let _ = env_logger::try_init();
+    let address = "127.0.0.1:9384".to_owned();
+    let paths = CertificatePaths {
+        key: "./cert/server.key".to_string(),
+        cert: "./cert/server.crt".to_string(),
+    };
+    let mut server = TestServer::start("127.0.0.1:9384", Some(paths)).await;
+
+    server
+        .started_rx()
         .await
-        .unwrap();
+        .expect("Should be able to start server");
+
+    let alice = register_alice(address.clone())
+        .await
+        .expect("Can create account");
 
     let bob = Client::from_registration()
         .username("Bob")
