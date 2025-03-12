@@ -1,5 +1,6 @@
 use std::sync::Arc;
 
+use derive_more::Display;
 use futures_util::{lock::Mutex, stream::SplitStream, StreamExt};
 use log::error;
 use prost::Message as PMessage;
@@ -22,8 +23,10 @@ use super::{
     websocket::{WebSocket, WebSocketClient, WebSocketError, WebSocketReceiver},
 };
 
+#[derive(Display)]
 enum ServerStatus {
     Ack(MessageId),
+    #[display("Status({}, {})", "_0", "_1")]
     Status(MessageId, Status),
 }
 struct SamProtocolReceiver {
@@ -145,6 +148,7 @@ impl ProtocolClient {
         req_id: MessageId,
         status: ServerStatus,
     ) -> Result<bool, ProtocolError> {
+        error!("{}", status);
         match status {
             ServerStatus::Ack(message_id) => self.check_id(req_id, message_id).await.map(|_| false),
             ServerStatus::Status(message_id, status) => {
@@ -182,6 +186,7 @@ impl ProtocolClient {
         self.check_id(req_id, res_id).await?;
 
         match status.code() {
+            sam_message::StatusCode::EmptyMessage => Err(ProtocolError::EmptyMessage),
             sam_message::StatusCode::NotEncryptedForAllDevices => {
                 Err(ProtocolError::MissingDevices(status.device_lists))
             }

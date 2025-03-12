@@ -31,7 +31,7 @@ use crate::{
             SignedPreKeyGenerator as _,
         },
         traits::message::MessageStore,
-        AccountStore, Store, StoreConfig, StoreType,
+        AccountStore, ContactStore, Store, StoreConfig, StoreType,
     },
     ClientError,
 };
@@ -218,6 +218,9 @@ impl<T: StoreType, U: ApiClient, V: SamProtocolClient> Client<T, U, V> {
         recipient: AccountId,
         msg: impl Into<Vec<u8>>,
     ) -> Result<bool, ClientError> {
+        if !self.store.contact_store.contains_contact(recipient).await? {
+            return Err(ClientError::NoContact);
+        }
         let envelope = encrypt(msg, recipient, &mut self.store).await?;
         self.protocol_client
             .send_message(envelope)
@@ -226,11 +229,14 @@ impl<T: StoreType, U: ApiClient, V: SamProtocolClient> Client<T, U, V> {
     }
 
     /// Returns a broadcast receiver for incoming messages that have been decrypted
-    pub async fn subscribe(&mut self) -> Receiver<DecryptedEnvelope> {
+    pub async fn subscribe(&self) -> Receiver<DecryptedEnvelope> {
         self.store.message_store.subscribe()
     }
 
     pub async fn process_messages(&mut self) -> Result<(), ClientError> {
+        if self.envelope_queue.is_empty() {
+            return Ok(());
+        }
         while let Some(envelope) = self.envelope_queue.recv().await {
             // TODO: How should we handle failure to decrypt and/or store message?
             let envelope = match decrypt(envelope, &mut self.store).await {
@@ -247,7 +253,7 @@ impl<T: StoreType, U: ApiClient, V: SamProtocolClient> Client<T, U, V> {
                 .store_message(envelope)
                 .await
                 .inspect_err(|e| error!("Failed to store message {e}"));
-            if self.envelope_queue.len() == 0 {
+            if self.envelope_queue.is_empty() {
                 break;
             }
         }

@@ -21,4 +21,6 @@ pub trait ContactStore {
         account_id: AccountId,
         device_id: DeviceId,
     ) -> Result<(), ClientError>;
+
+    async fn contains_contact(&self, account_id: AccountId) -> Result<bool, ClientError>;
 }
