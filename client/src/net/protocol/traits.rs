@@ -9,8 +9,8 @@ use tokio::sync::mpsc::Receiver;
 pub enum MessageStatus {
     ExtraDevices(Vec<DeviceList>),
     MissingDevices(Vec<DeviceList>),
-    Ok,
     NeedsSync,
+    Ok,
 }
 
 #[async_trait::async_trait]

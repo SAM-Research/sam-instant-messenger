@@ -6,8 +6,8 @@ use prost::Message as PMessage;
 use sam_common::{
     address::MessageId,
     sam_message::{
-        self, server_message::Content, ClientEnvelope, ClientMessage, MessageType, ServerEnvelope,
-        ServerMessage, Status,
+        server_message::Content, ClientEnvelope, ClientMessage, ClientMessageType,
+        ExtraDevicesStatus, MissingDevicesError, ServerEnvelope, ServerMessage, ServerMessageType,
     },
 };
 use tokio::sync::mpsc::{channel, Receiver, Sender};
@@ -24,7 +24,10 @@ use super::{
 
 enum ServerStatus {
     Ack(MessageId),
-    Status(MessageId, Status),
+    ExtraDevices(MessageId, ExtraDevicesStatus),
+    MissingDevices(MessageId, MissingDevicesError),
+    EmptyMessage,
+    NeedsSync,
 }
 
 struct SamProtocolReceiver {
@@ -49,7 +52,7 @@ impl SamProtocolReceiver {
             .send(Message::Binary(
                 ClientMessage::builder()
                     .id(id.into())
-                    .r#type(MessageType::Ack as i32)
+                    .r#type(ClientMessageType::ClientAck.into())
                     .build()
                     .encode_to_vec()
                     .into(),
@@ -58,7 +61,7 @@ impl SamProtocolReceiver {
             .map_err(ProtocolError::WebSocketError)
     }
 
-    async fn handle_server_message(
+    async fn validate_and_enqueue(
         &mut self,
         message: ServerMessage,
     ) -> Result<Option<MessageId>, ProtocolError> {
@@ -66,33 +69,62 @@ impl SamProtocolReceiver {
             .map_err(|_| ProtocolError::MalformedServerMessage)?;
 
         let content = match message.r#type() {
-            MessageType::Message | MessageType::Status => message
-                .content
-                .ok_or(ProtocolError::MalformedServerMessage)?,
-            MessageType::Ack => {
+            ServerMessageType::ServerAck => {
+                return self.dispatch_server_status(ServerStatus::Ack(id)).await
+            }
+            ServerMessageType::NeedsSync => {
+                return self.dispatch_server_status(ServerStatus::NeedsSync).await
+            }
+            ServerMessageType::EmptyMessage => {
                 return self
-                    .handle_server_status(ServerStatus::Ack(id))
+                    .dispatch_server_status(ServerStatus::EmptyMessage)
                     .await
-                    .map(|_| None);
+            }
+            ServerMessageType::ServerMessage => {
+                let content = message
+                    .content
+                    .ok_or(ProtocolError::MalformedServerMessage)?;
+                if !matches!(content, Content::ServerEnvelope(_)) {
+                    return Err(ProtocolError::MalformedServerMessage);
+                }
+                content
+            }
+            ServerMessageType::NotEncryptedForAllDevices => {
+                let content = message
+                    .content
+                    .ok_or(ProtocolError::MalformedServerMessage)?;
+                if !matches!(content, Content::MissingDevices(_)) {
+                    return Err(ProtocolError::MalformedServerMessage);
+                }
+                content
+            }
+            ServerMessageType::EncryptedForExtraMessages => {
+                let content = message
+                    .content
+                    .ok_or(ProtocolError::MalformedServerMessage)?;
+                if !matches!(content, Content::ExtraDevices(_)) {
+                    return Err(ProtocolError::MalformedServerMessage);
+                }
+                content
             }
         };
 
         match content {
-            Content::Message(envelope) => self
-                .handle_server_envelope(envelope)
-                .await
-                .map(|_| Some(id)),
-            Content::Status(status) => self
-                .handle_server_status(ServerStatus::Status(id, status))
-                .await
-                .map(|_| None),
+            Content::ServerEnvelope(envelope) => {
+                self.dispatch_envelope(envelope).await.map(|_| Some(id))
+            }
+            Content::MissingDevices(err) => {
+                self.dispatch_server_status(ServerStatus::MissingDevices(id, err))
+                    .await
+            }
+            Content::ExtraDevices(status) => {
+                self.dispatch_server_status(ServerStatus::ExtraDevices(id, status))
+                    .await
+            }
         }
     }
 
-    async fn handle_server_envelope(
-        &mut self,
-        envelope: ServerEnvelope,
-    ) -> Result<(), ProtocolError> {
+    async fn dispatch_envelope(&mut self, envelope: ServerEnvelope) -> Result<(), ProtocolError> {
         match &self.enqueue_envelope {
             Some(sender) => sender
                 .send(envelope)
@@ -102,101 +134,15 @@ impl SamProtocolReceiver {
         }
     }
 
-    async fn handle_server_status(&mut self, status: ServerStatus) -> Result<(), ProtocolError> {
+    async fn dispatch_server_status(
+        &mut self,
+        status: ServerStatus,
+    ) -> Result<Option<MessageId>, ProtocolError> {
         self.enqueue_status
             .send(status)
             .await
             .map_err(|_| ProtocolError::WebSocketError(WebSocketError::Disconnected))
-    }
-}
-
-pub struct ProtocolClient {
-    client: Arc<Mutex<WebSocketClient>>,
-    status_messages: Option<Receiver<ServerStatus>>,
-}
-
-impl ProtocolClient {
-    pub fn new(client: WebSocketClient) -> Self {
-        Self {
-            client: Arc::new(Mutex::new(client)),
-            status_messages: None,
-        }
-    }
-
-    async fn send_client_message(
-        &mut self,
-        id: MessageId,
-        envelope: ClientEnvelope,
-    ) -> Result<(), ProtocolError> {
-        let message = ClientMessage::builder()
-            .id(id.into())
-            .r#type(MessageType::Message as i32)
-            .message(envelope)
-            .build();
-        self.client
-            .lock()
-            .await
-            .send(Message::Binary(message.encode_to_vec().into()))
-            .await
-            .map_err(ProtocolError::WebSocketError)
-    }
-
-    async fn handle_server_status(
-        &mut self,
-        req_id: MessageId,
-        status: ServerStatus,
-    ) -> Result<MessageStatus, ProtocolError> {
-        match status {
-            ServerStatus::Ack(message_id) => self
-                .check_id(req_id, message_id)
-                .await
-                .map(|_| MessageStatus::Ok),
-            ServerStatus::Status(message_id, status) => {
-                self.handle_status(req_id, message_id, status).await
-            }
-        }
-    }
-
-    async fn check_id(
-        &mut self,
-        req_id: MessageId,
-        res_id: MessageId,
-    ) -> Result<(), ProtocolError> {
-        if res_id != req_id {
-            self.client
-                .lock()
-                .await
-                .send(Message::Close(Some(CloseFrame {
-                    code: CloseCode::Error,
-                    reason: "Request and Response Id did not match".into(),
-                })))
-                .await
-                .map_err(ProtocolError::WebSocketError)
-        } else {
-            Ok(())
-        }
-    }
-
-    async fn handle_status(
-        &mut self,
-        req_id: MessageId,
-        res_id: MessageId,
-        status: Status,
-    ) -> Result<MessageStatus, ProtocolError> {
-        self.check_id(req_id, res_id).await?;
-
-        match status.code() {
-            sam_message::StatusCode::EmptyMessage => Err(ProtocolError::EmptyMessage),
-            sam_message::StatusCode::NotEncryptedForAllDevices => {
-                Ok(MessageStatus::MissingDevices(status.device_lists))
-            }
-
-            sam_message::StatusCode::EncryptedForExtraDevices => {
-                Ok(MessageStatus::ExtraDevices(status.device_lists))
-            }
-
-            sam_message::StatusCode::NeedsSync => Ok(MessageStatus::NeedsSync),
-        }
+            .map(|_| None)
     }
 }
 
@@ -223,7 +169,7 @@ impl WebSocketReceiver<ServerEnvelope> for SamProtocolReceiver {
                 }
             };
 
-            let res = match self.handle_server_message(msg).await {
+            let res = match self.validate_and_enqueue(msg).await {
                 Ok(Some(id)) => self.send_ack(id).await,
                 Err(x) => {
                     error!("Failed to handle server message '{x}', disconnecting...");
@@ -237,6 +183,85 @@ impl WebSocketReceiver<ServerEnvelope> for SamProtocolReceiver {
             }
         }
         self.enqueue_envelope = None;
+    }
+}
+
+pub struct ProtocolClient {
+    client: Arc<Mutex<WebSocketClient>>,
+    status_messages: Option<Receiver<ServerStatus>>,
+}
+
+impl ProtocolClient {
+    pub fn new(client: WebSocketClient) -> Self {
+        Self {
+            client: Arc::new(Mutex::new(client)),
+            status_messages: None,
+        }
+    }
+
+    async fn send_client_message(
+        &mut self,
+        id: MessageId,
+        envelope: ClientEnvelope,
+    ) -> Result<(), ProtocolError> {
+        let message = ClientMessage::builder()
+            .id(id.into())
+            .r#type(ClientMessageType::ClientMessage.into())
+            .message(envelope)
+            .build();
+        self.client
+            .lock()
+            .await
+            .send(Message::Binary(message.encode_to_vec().into()))
+            .await
+            .map_err(ProtocolError::WebSocketError)
+    }
+
+    async fn handle_server_status(
+        &mut self,
+        req_id: MessageId,
+        status: ServerStatus,
+    ) -> Result<MessageStatus, ProtocolError> {
+        match status {
+            ServerStatus::Ack(res_id) => self
+                .check_id(req_id, res_id)
+                .await
+                .map(|_| MessageStatus::Ok),
+            ServerStatus::ExtraDevices(res_id, extra) => self
+                .check_id(req_id, res_id)
+                .await
+                .map(|_| MessageStatus::ExtraDevices(extra.device_lists)),
+            ServerStatus::MissingDevices(res_id, missing) => self
+                .check_id(req_id, res_id)
+                .await
+                .map(|_| MessageStatus::MissingDevices(missing.device_lists)),
+            ServerStatus::EmptyMessage => Err(ProtocolError::EmptyMessage),
+            ServerStatus::NeedsSync => Ok(MessageStatus::NeedsSync),
+        }
+    }
+
+    async fn check_id(
+        &mut self,
+        req_id: MessageId,
+        res_id: MessageId,
+    ) -> Result<MessageId, ProtocolError> {
+        if res_id != req_id {
+            let res = self
+                .client
+                .lock()
+                .await
+                .send(Message::Close(Some(CloseFrame {
+                    code: CloseCode::Error,
+                    reason: "Request and Response Id did not match".into(),
+                })))
+                .await;
+            match res {
+                Ok(()) => Err(ProtocolError::ReceivedWrongResponseId),
+                Err(err) => Err(ProtocolError::WebSocketError(err)),
+            }
+        } else {
+            Ok(req_id)
+        }
     }
 }
 
@@ -305,8 +330,8 @@ mod test {
     use sam_common::{
         address::{AccountId, MessageId},
         sam_message::{
-            server_message::Content, ClientEnvelope, ClientMessage, MessageType, SamMessageType,
-            ServerEnvelope, ServerMessage,
+            server_message::Content, ClientEnvelope, ClientMessage, ClientMessageType,
+            SamMessageType, ServerEnvelope, ServerMessage, ServerMessageType,
         },
     };
     use tokio::{
@@ -324,11 +349,11 @@ mod test {
     fn server_env(id: MessageId) -> ServerMessage {
         ServerMessage::builder()
             .id(id.into())
-            .r#type(MessageType::Message as i32)
-            .content(Content::Message(
+            .r#type(ServerMessageType::ServerMessage.into())
+            .content(Content::ServerEnvelope(
                 ServerEnvelope::builder()
                     .id(id.into())
-                    .r#type(SamMessageType::PlaintextContent as i32)
+                    .r#type(SamMessageType::PlaintextContent.into())
                     .content(vec![1, 2, 3])
                     .destination_account_id(AccountId::generate().into())
                     .destination_device_id(1u32)
@@ -342,7 +367,7 @@ mod test {
     fn server_ack(id: Vec<u8>) -> ServerMessage {
         ServerMessage::builder()
             .id(id)
-            .r#type(MessageType::Ack as i32)
+            .r#type(ServerMessageType::ServerAck.into())
             .build()
     }
 
@@ -431,7 +456,7 @@ mod test {
                 }
             };
 
-            if msg.r#type() != MessageType::Ack {
+            if msg.r#type() != ClientMessageType::ClientAck {
                 oneshot(
                     tx,
                     Err("Expected Ack message got something else".to_string()),
