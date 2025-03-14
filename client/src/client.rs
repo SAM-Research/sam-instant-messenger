@@ -379,7 +379,7 @@ impl<T: StoreType, U: ApiClient, V: SamProtocolClient> Client<T, U, V> {
         if !self.store.contact_store.contains_contact(recipient).await? {
             return Err(ClientError::NoContact);
         }
-        let envelope = encrypt(msg, recipient, &mut self.store).await?;
+        let envelope = encrypt(msg, vec![recipient], &mut self.store).await?;
         self.protocol_client
             .send_message(envelope)
             .await
