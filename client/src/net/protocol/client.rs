@@ -27,7 +27,6 @@ enum ServerStatus {
     ExtraDevices(MessageId, ExtraDevicesStatus),
     MissingDevices(MessageId, MissingDevicesError),
     EmptyMessage,
-    NeedsSync,
 }
 
 struct SamProtocolReceiver {
@@ -71,9 +70,6 @@ impl SamProtocolReceiver {
         let content = match message.r#type() {
             ServerMessageType::ServerAck => {
                 return self.dispatch_server_status(ServerStatus::Ack(id)).await
-            }
-            ServerMessageType::NeedsSync => {
-                return self.dispatch_server_status(ServerStatus::NeedsSync).await
             }
             ServerMessageType::EmptyMessage => {
                 return self
@@ -227,16 +223,27 @@ impl ProtocolClient {
                 .check_id(req_id, res_id)
                 .await
                 .map(|_| MessageStatus::Ok),
-            ServerStatus::ExtraDevices(res_id, extra) => self
-                .check_id(req_id, res_id)
-                .await
-                .map(|_| MessageStatus::ExtraDevices(extra.device_lists)),
-            ServerStatus::MissingDevices(res_id, missing) => self
-                .check_id(req_id, res_id)
-                .await
-                .map(|_| MessageStatus::MissingDevices(missing.device_lists)),
+            ServerStatus::ExtraDevices(res_id, extra) => {
+                let lists = extra
+                    .device_lists
+                    .into_iter()
+                    .map(|li| li.try_into())
+                    .collect::<Result<Vec<_>, _>>()?;
+                self.check_id(req_id, res_id)
+                    .await
+                    .map(|_| MessageStatus::ExtraDevices(lists))
+            }
+            ServerStatus::MissingDevices(res_id, missing) => {
+                let lists = missing
+                    .device_lists
+                    .into_iter()
+                    .map(|li| li.try_into())
+                    .collect::<Result<Vec<_>, _>>()?;
+                self.check_id(req_id, res_id)
+                    .await
+                    .map(|_| MessageStatus::MissingDevices(lists))
+            }
             ServerStatus::EmptyMessage => Err(ProtocolError::EmptyMessage),
-            ServerStatus::NeedsSync => Ok(MessageStatus::NeedsSync),
         }
     }
 

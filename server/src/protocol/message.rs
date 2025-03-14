@@ -78,18 +78,6 @@ async fn handle_client_envelope<T: StateType>(
     let sender_account_id = auth_user.account().id();
     let sender_device_id = auth_user.device().id();
 
-    let is_sync = dest_acc_ids.contains_key(&auth_user.account().id());
-
-    let needs_sync = !is_sync
-        && !state
-            .devices
-            .get_devices(sender_account_id)
-            .await?
-            .into_iter()
-            .filter(|id| *id != sender_device_id)
-            .collect::<Vec<DeviceId>>()
-            .is_empty();
-
     let mut extra_devices: HashMap<AccountId, Vec<DeviceId>> = HashMap::new();
 
     if dest_acc_ids.is_empty() {
@@ -171,13 +159,6 @@ async fn handle_client_envelope<T: StateType>(
                     })
                     .collect(),
             }))
-            .id(message_id.into())
-            .build());
-    }
-
-    if needs_sync {
-        return Ok(ServerMessage::builder()
-            .r#type(ServerMessageType::NeedsSync.into())
             .id(message_id.into())
             .build());
     }
