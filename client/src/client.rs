@@ -514,7 +514,7 @@ impl<T: StoreType, U: ApiClient, V: SamProtocolClient> Client<T, U, V> {
     }
 
     /// Fetch key bundles for account_id
-    pub async fn fetch_prekeys(
+    async fn fetch_prekeys(
         &mut self,
         account_id: AccountId,
         devices: Option<Vec<DeviceId>>,
