@@ -1,0 +1,20 @@
+{
+  "db_name": "SQLite",
+  "query": "\n            SELECT\n                MAX(kyber_pre_key_id) AS pkid\n            FROM\n                DeviceKyberPreKeyStore\n            ",
+  "describe": {
+    "columns": [
+      {
+        "name": "pkid",
+        "ordinal": 0,
+        "type_info": "Integer"
+      }
+    ],
+    "parameters": {
+      "Right": 0
+    },
+    "nullable": [
+      true
+    ]
+  },
+  "hash": "f6252aba7d4823da96508cd8ecb96366160fe5da260bba48d6cfa93e8b724177"
+}
