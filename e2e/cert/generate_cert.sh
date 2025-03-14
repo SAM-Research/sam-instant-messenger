@@ -3,7 +3,7 @@ openssl genrsa -out rootCA.key 2048
 
 # Generate self-signed root certificate
 openssl req -x509 -new -nodes -key rootCA.key -sha256 -days 3650 -out rootCA.crt \
-    -subj "/C=US/ST=Nordjylland/L=Aalborg/O=Denim/OU=IT/CN=localhost"
+    -subj "/C=US/ST=Nordjylland/L=Aalborg/O=SAM/OU=IT/CN=localhost"
 
 # Generate server private key
 openssl genrsa -out server.key 2048
