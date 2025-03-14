@@ -2,9 +2,9 @@ name: Rust
 
 on:
   push:
-    branches: ["main"]
+    branches: [ "main" ]
   pull_request:
-    branches: ["main"]
+    branches: [ "main" ]
 
 env:
   CARGO_TERM_COLOR: always
@@ -172,6 +172,9 @@ jobs:
           else
             echo "cargo-llvm-cov found in cache, skipping installation"
           fi
+
+      - name: Generate Certificates
+        run: ./e2e/cert/generate_cert.sh
 
       - name: Test & Coverage
         run: cargo llvm-cov --workspace --lcov --output-path lcov.info
