@@ -1,28 +1,15 @@
 use super::{in_mem, sqlite};
-use crate::test_pre_key_store;
 use libsignal_protocol::{KeyPair, PreKeyRecord, PreKeyStore};
 use rand::rngs::OsRng;
+use rand::{rngs::StdRng, SeedableRng as _};
+use rstest::rstest;
+use sam_client::storage::key_generation::PreKeyGenerator;
 
-#[macro_export]
-macro_rules! test_pre_key_store {
-    ( [ $( ($struct:ty, $factory:expr) ),* ]) => {
-        $(
-            paste::paste! {
-                #[tokio::test]
-                async fn [< $struct _pre_key_can_be_saved_and_retrieved >]() {
-                    pre_key_can_be_saved_and_retrieved($factory().await.pre_key_store).await;
-                }
-
-                #[tokio::test]
-                async fn [< $struct _pre_key_can_be_removed >]() {
-                    pre_key_can_be_removed($factory().await.pre_key_store).await;
-                }
-            }
-        )*
-    };
-}
-
-async fn pre_key_can_be_saved_and_retrieved(mut pre_key_store: impl PreKeyStore) {
+#[rstest]
+#[case(in_mem().await.pre_key_store)]
+#[case(sqlite().await.pre_key_store)]
+#[tokio::test]
+async fn pre_key_can_be_saved_and_retrieved(#[case] mut pre_key_store: impl PreKeyStore) {
     let id = 0.into();
     let mut csprng = OsRng;
     let pre_key_record = PreKeyRecord::new(id, &KeyPair::generate(&mut csprng));
@@ -47,7 +34,11 @@ async fn pre_key_can_be_saved_and_retrieved(mut pre_key_store: impl PreKeyStore)
     );
 }
 
-async fn pre_key_can_be_removed(mut pre_key_store: impl PreKeyStore) {
+#[rstest]
+#[case(in_mem().await.pre_key_store)]
+#[case(sqlite().await.pre_key_store)]
+#[tokio::test]
+async fn pre_key_can_be_removed(#[case] mut pre_key_store: impl PreKeyStore) {
     let id = 0.into();
     let mut csprng = OsRng;
     let pre_key_record = PreKeyRecord::new(id, &KeyPair::generate(&mut csprng));
@@ -70,7 +61,30 @@ async fn pre_key_can_be_removed(mut pre_key_store: impl PreKeyStore) {
         .expect_err("We should not be able to retrive the key after deletion");
 }
 
-test_pre_key_store!([
-    (sqlite_pre_key_store, sqlite),
-    (in_memory_pre_key_store, in_mem)
-]);
+#[rstest]
+#[case(in_mem().await.pre_key_store)]
+#[case(sqlite().await.pre_key_store)]
+#[tokio::test]
+async fn pre_keys_ids_are_generated_properly(
+    #[case] mut generator: impl PreKeyStore + PreKeyGenerator,
+) {
+    let _ = env_logger::try_init();
+    let mut rng = StdRng::seed_from_u64(128);
+    let expected: Vec<u32> = (1u32..=10u32).collect();
+
+    let mut ids: Vec<u32> = Vec::new();
+
+    for _ in 1u32..=10u32 {
+        ids.push(
+            generator
+                .generate_key(&mut rng)
+                .await
+                .expect("Can generate keys")
+                .id()
+                .expect("Can get id of key")
+                .into(),
+        );
+    }
+
+    assert_eq!(expected, ids)
+}

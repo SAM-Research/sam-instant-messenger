@@ -24,26 +24,15 @@ impl ProvidesKeyId<KyberPreKeyId> for SqliteKyberPreKeyStore {
     async fn next_key_id(&self) -> Result<KyberPreKeyId, ClientError> {
         sqlx::query!(
             r#"
-            WITH max_signed_pre_key_id_table AS (
-                SELECT
-                    1 AS _id,
-                    MAX(signed_pre_key_id) AS max_signed_pre_key_id
-                FROM
-                    DeviceSignedPreKeyStore
-                )
-                SELECT
-                    CASE WHEN spk.max_signed_pre_key_id IS NOT NULL
-                    THEN spk.max_signed_pre_key_id
-                    ELSE
-                    0
-                    END AS spkid
-                FROM
-                    max_signed_pre_key_id_table spk
-                "#
+            SELECT
+                MAX(kyber_pre_key_id) AS pkid
+            FROM
+                DeviceKyberPreKeyStore
+            "#
         )
         .fetch_one(&self.database)
         .await
-        .map(|row| KyberPreKeyId::from(row.spkid as u32))
+        .map(|row| KyberPreKeyId::from(row.pkid.unwrap_or(0) as u32 + 1))
         .map_err(|err| ClientError::Database(format!("{err}")))
     }
 }

@@ -1,28 +1,15 @@
 use std::collections::HashSet;
 
 use super::{in_mem, sqlite};
+use rstest::rstest;
 use sam_client::storage::ContactStore;
 use sam_common::address::AccountId;
 
-macro_rules! test_contact_store {
-    ( [ $( ($struct:ty, $factory:expr) ),* ]) => {
-        $(
-            paste::paste! {
-                #[tokio::test]
-                async fn [< $struct _contact_device_can_be_stored_and_retrieved >]() {
-                    contact_device_can_be_stored_and_retrieved($factory().await.contact_store).await;
-                }
-
-                #[tokio::test]
-                async fn [< $struct _contact_device_can_be_deleted >]() {
-                    contact_device_can_be_deleted($factory().await.contact_store).await;
-                }
-            }
-        )*
-    };
-}
-
-async fn contact_device_can_be_stored_and_retrieved(mut contact_store: impl ContactStore) {
+#[rstest]
+#[case(in_mem().await.contact_store)]
+#[case(sqlite().await.contact_store)]
+#[tokio::test]
+async fn contact_device_can_be_stored_and_retrieved(#[case] mut contact_store: impl ContactStore) {
     let account_id = AccountId::generate();
     let device_id = 1.into();
     assert!(contact_store
@@ -39,7 +26,11 @@ async fn contact_device_can_be_stored_and_retrieved(mut contact_store: impl Cont
         .is_ok_and(|devices| devices == HashSet::from([device_id])));
 }
 
-async fn contact_device_can_be_deleted(mut contact_store: impl ContactStore) {
+#[rstest]
+#[case(in_mem().await.contact_store)]
+#[case(sqlite().await.contact_store)]
+#[tokio::test]
+async fn contact_device_can_be_deleted(#[case] mut contact_store: impl ContactStore) {
     let account_id = AccountId::generate();
     let device_id = 1.into();
 
@@ -58,8 +49,3 @@ async fn contact_device_can_be_deleted(mut contact_store: impl ContactStore) {
         .await
         .is_ok_and(|devices| devices.is_empty()));
 }
-
-test_contact_store!([
-    (sqlite_contact_store, sqlite),
-    (in_memory_contact_store, in_mem)
-]);
