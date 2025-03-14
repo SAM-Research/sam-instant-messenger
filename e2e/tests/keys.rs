@@ -8,13 +8,13 @@ mod utils;
 use crate::utils::server::TestServer;
 
 /*
-   PORTS USED: 9384-9386
+   PORTS USED: 939x
 */
 
 #[tokio::test]
 pub async fn alice_can_upload_keys() {
     let _ = env_logger::try_init();
-    let address = "127.0.0.1:9384".to_owned();
+    let address = "127.0.0.1:9390".to_owned();
     let mut server = TestServer::start(&address, None).await;
 
     server
@@ -26,8 +26,8 @@ pub async fn alice_can_upload_keys() {
         .username("Alice")
         .device_name("Alice's Device")
         .store_config(SqliteStoreConfig::in_memory().await)
-        .api_client_config(HttpClientConfig::new(address.clone(), None))
-        .protocol_config(WebSocketProtocolClientConfig::new(address.clone(), None))
+        .api_client_config(HttpClientConfig::new(address.clone()))
+        .protocol_config(WebSocketProtocolClientConfig::new(address.clone()))
         .call()
         .await
         .unwrap();
@@ -46,7 +46,7 @@ pub async fn alice_can_upload_keys() {
 #[tokio::test]
 pub async fn bob_can_fetch_alices_keys() {
     let _ = env_logger::try_init();
-    let address = "127.0.0.1:9385".to_owned();
+    let address = "127.0.0.1:9391".to_owned();
     let mut server = TestServer::start(&address, None).await;
 
     server
@@ -58,8 +58,8 @@ pub async fn bob_can_fetch_alices_keys() {
         .username("Alice")
         .device_name("Alice's Device")
         .store_config(SqliteStoreConfig::in_memory().await)
-        .api_client_config(HttpClientConfig::new(address.clone(), None))
-        .protocol_config(WebSocketProtocolClientConfig::new(address.clone(), None))
+        .api_client_config(HttpClientConfig::new(address.clone()))
+        .protocol_config(WebSocketProtocolClientConfig::new(address.clone()))
         .call()
         .await
         .unwrap();
@@ -68,8 +68,8 @@ pub async fn bob_can_fetch_alices_keys() {
         .username("Bob")
         .device_name("Bob's Device")
         .store_config(SqliteStoreConfig::in_memory().await)
-        .api_client_config(HttpClientConfig::new(address.clone(), None))
-        .protocol_config(WebSocketProtocolClientConfig::new(address, None))
+        .api_client_config(HttpClientConfig::new(address.clone()))
+        .protocol_config(WebSocketProtocolClientConfig::new(address))
         .call()
         .await
         .unwrap();
@@ -93,7 +93,7 @@ pub async fn bob_can_fetch_alices_keys() {
 #[tokio::test]
 pub async fn bob_can_fetch_alices_keys_for_specific_devices() {
     let _ = env_logger::try_init();
-    let address = "127.0.0.1:9386".to_owned();
+    let address = "127.0.0.1:9392".to_owned();
     let mut server = TestServer::start(&address, None).await;
 
     server
@@ -105,8 +105,8 @@ pub async fn bob_can_fetch_alices_keys_for_specific_devices() {
         .username("Alice")
         .device_name("Alice's Device")
         .store_config(SqliteStoreConfig::in_memory().await)
-        .api_client_config(HttpClientConfig::new(address.clone(), None))
-        .protocol_config(WebSocketProtocolClientConfig::new(address.clone(), None))
+        .api_client_config(HttpClientConfig::new(address.clone()))
+        .protocol_config(WebSocketProtocolClientConfig::new(address.clone()))
         .call()
         .await
         .unwrap();
@@ -115,8 +115,8 @@ pub async fn bob_can_fetch_alices_keys_for_specific_devices() {
         .username("Bob")
         .device_name("Bob's Device")
         .store_config(SqliteStoreConfig::in_memory().await)
-        .api_client_config(HttpClientConfig::new(address.clone(), None))
-        .protocol_config(WebSocketProtocolClientConfig::new(address, None))
+        .api_client_config(HttpClientConfig::new(address.clone()))
+        .protocol_config(WebSocketProtocolClientConfig::new(address))
         .call()
         .await
         .unwrap();

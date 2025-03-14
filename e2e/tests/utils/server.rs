@@ -1,4 +1,3 @@
-use axum_server::tls_rustls::RustlsConfig;
 use sam_server::{
     managers::in_memory::{
         account::InMemoryAccountManager, device::InMemoryDeviceManager, keys::InMemoryKeyManager,
@@ -6,6 +5,7 @@ use sam_server::{
     },
     start_server, ServerConfig, ServerState,
 };
+use std::sync::Arc;
 use tokio::{
     sync::oneshot::{self, Receiver},
     task::JoinHandle,
@@ -23,11 +23,11 @@ impl Drop for TestServer {
 }
 
 impl TestServer {
-    pub async fn start(address: &str, maybe_tls_config: Option<RustlsConfig>) -> Self {
+    pub async fn start(address: &str, tls_config: Option<Arc<rustls::ServerConfig>>) -> Self {
         let config = ServerConfig {
             state: in_memory_server_state(),
             addr: address.parse().expect("Unable to parse socket address"),
-            maybe_tls_config,
+            tls_config,
         };
         let (tx, started_rx) = oneshot::channel::<()>();
         let thread = tokio::spawn(async move {

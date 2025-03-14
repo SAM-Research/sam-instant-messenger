@@ -7,13 +7,13 @@ use sam_client::Client;
 mod utils;
 
 /*
-   PORTS USED: 9388-9390
+   PORTS USED: 938x
 */
 
 #[tokio::test]
 async fn can_link_device() {
     let _ = env_logger::try_init();
-    let address = "127.0.0.1:9388";
+    let address = "127.0.0.1:9380";
     let mut server = TestServer::start(address, None).await;
 
     server
@@ -25,8 +25,8 @@ async fn can_link_device() {
     let device_name = "Alice's Device";
 
     let store_config = SqliteStoreConfig::in_memory().await;
-    let protocol_config = WebSocketProtocolClientConfig::new(address.to_owned(), None);
-    let api_client_config = HttpClientConfig::new(address.to_owned(), None);
+    let protocol_config = WebSocketProtocolClientConfig::new(address.to_owned());
+    let api_client_config = HttpClientConfig::new(address.to_owned());
 
     let mut alice = Client::from_registration()
         .store_config(store_config)
@@ -44,8 +44,8 @@ async fn can_link_device() {
         .expect("Can create a link token");
 
     let store_config = SqliteStoreConfig::in_memory().await;
-    let protocol_config = WebSocketProtocolClientConfig::new(address.to_owned(), None);
-    let api_client_config = HttpClientConfig::new(address.to_owned(), None);
+    let protocol_config = WebSocketProtocolClientConfig::new(address.to_owned());
+    let api_client_config = HttpClientConfig::new(address.to_owned());
     let id_key_pair = alice
         .identity_key_pair()
         .await
@@ -66,7 +66,7 @@ async fn can_link_device() {
 #[tokio::test]
 async fn can_delete_device() {
     let _ = env_logger::try_init();
-    let address = "127.0.0.1:9389";
+    let address = "127.0.0.1:9381";
     let mut server = TestServer::start(address, None).await;
 
     server
@@ -78,8 +78,8 @@ async fn can_delete_device() {
     let device_name = "Alice's Device";
 
     let store_config = SqliteStoreConfig::in_memory().await;
-    let protocol_config = WebSocketProtocolClientConfig::new(address.to_owned(), None);
-    let api_client_config = HttpClientConfig::new(address.to_owned(), None);
+    let protocol_config = WebSocketProtocolClientConfig::new(address.to_owned());
+    let api_client_config = HttpClientConfig::new(address.to_owned());
 
     let mut alice = Client::from_registration()
         .store_config(store_config)
@@ -97,8 +97,8 @@ async fn can_delete_device() {
         .expect("Can create a link token");
 
     let store_config = SqliteStoreConfig::in_memory().await;
-    let protocol_config = WebSocketProtocolClientConfig::new(address.to_owned(), None);
-    let api_client_config = HttpClientConfig::new(address.to_owned(), None);
+    let protocol_config = WebSocketProtocolClientConfig::new(address.to_owned());
+    let api_client_config = HttpClientConfig::new(address.to_owned());
     let id_key_pair = alice
         .identity_key_pair()
         .await
@@ -124,7 +124,7 @@ async fn can_delete_device() {
 #[tokio::test]
 async fn can_delete_account() {
     let _ = env_logger::try_init();
-    let address = "127.0.0.1:9390";
+    let address = "127.0.0.1:9382";
     let mut server = TestServer::start(address, None).await;
 
     server
@@ -136,8 +136,8 @@ async fn can_delete_account() {
     let device_name = "Alice's Device";
 
     let store_config = SqliteStoreConfig::in_memory().await;
-    let protocol_config = WebSocketProtocolClientConfig::new(address.to_owned(), None);
-    let api_client_config = HttpClientConfig::new(address.to_owned(), None);
+    let protocol_config = WebSocketProtocolClientConfig::new(address.to_owned());
+    let api_client_config = HttpClientConfig::new(address.to_owned());
 
     let alice = Client::from_registration()
         .store_config(store_config)

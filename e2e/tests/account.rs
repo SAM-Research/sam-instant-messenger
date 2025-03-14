@@ -1,5 +1,6 @@
 use crate::utils::server::TestServer;
 
+use crate::utils::tls::{make_rustls_client_config, make_rustls_server_config};
 use libsignal_protocol::IdentityKeyPair;
 use rand::rngs::OsRng;
 use sam_client::{
@@ -19,7 +20,7 @@ use sam_common::{address::RegistrationId, AccountId};
 mod utils;
 
 /*
-   Ports used: 9380 - 9384
+   Ports used: 937x
 */
 pub async fn register_alice(
     address: String,
@@ -28,8 +29,8 @@ pub async fn register_alice(
         .username("Alice")
         .device_name("Alice's Device")
         .store_config(SqliteStoreConfig::in_memory().await)
-        .api_client_config(HttpClientConfig::new(address.clone(), None))
-        .protocol_config(WebSocketProtocolClientConfig::new(address, None))
+        .api_client_config(HttpClientConfig::new(address.clone()))
+        .protocol_config(WebSocketProtocolClientConfig::new(address))
         .call()
         .await
 }
@@ -37,7 +38,7 @@ pub async fn register_alice(
 #[tokio::test]
 pub async fn one_client_can_register() {
     let _ = env_logger::try_init();
-    let address = "127.0.0.1:9380".to_owned();
+    let address = "127.0.0.1:9370".to_owned();
     let mut server = TestServer::start(&address, None).await;
 
     server
@@ -53,7 +54,7 @@ pub async fn one_client_can_register() {
 #[tokio::test]
 pub async fn can_delete_account() {
     let _ = env_logger::try_init();
-    let address = "127.0.0.1:9381".to_owned();
+    let address = "127.0.0.1:9371".to_owned();
     let mut server = TestServer::start(&address, None).await;
 
     server
@@ -69,7 +70,7 @@ pub async fn can_delete_account() {
 #[tokio::test]
 pub async fn cannot_create_client_without_valid_account() {
     let _ = env_logger::try_init();
-    let address = "127.0.0.1:9382".to_owned();
+    let address = "127.0.0.1:9372".to_owned();
     let mut server = TestServer::start(&address, None).await;
 
     server
@@ -104,8 +105,8 @@ pub async fn cannot_create_client_without_valid_account() {
         .await
         .expect("Can set password");
 
-    let api_client = HttpClientConfig::new(address.clone(), None);
-    let protocol_client = WebSocketProtocolClientConfig::new(address, None);
+    let api_client = HttpClientConfig::new(address.clone());
+    let protocol_client = WebSocketProtocolClientConfig::new(address);
 
     let client = Client::from_store()
         .store(store)
@@ -120,7 +121,7 @@ pub async fn cannot_create_client_without_valid_account() {
 #[tokio::test]
 pub async fn can_delete_a_device() {
     let _ = env_logger::try_init();
-    let address = "127.0.0.1:9383".to_owned();
+    let address = "127.0.0.1:9373".to_owned();
     let mut server = TestServer::start(&address, None).await;
 
     server
@@ -141,7 +142,7 @@ pub async fn can_delete_a_device() {
 #[tokio::test]
 pub async fn alice_can_find_bobs_account_id() {
     let _ = env_logger::try_init();
-    let address = "127.0.0.1:9384".to_owned();
+    let address = "127.0.0.1:9374".to_owned();
     let mut server = TestServer::start(&address, None).await;
 
     server
@@ -157,8 +158,8 @@ pub async fn alice_can_find_bobs_account_id() {
         .username("Bob")
         .device_name("Bob's Device")
         .store_config(SqliteStoreConfig::in_memory().await)
-        .api_client_config(HttpClientConfig::new(address.clone(), None))
-        .protocol_config(WebSocketProtocolClientConfig::new(address, None))
+        .api_client_config(HttpClientConfig::new(address.clone()))
+        .protocol_config(WebSocketProtocolClientConfig::new(address))
         .call()
         .await
         .unwrap();
@@ -167,4 +168,36 @@ pub async fn alice_can_find_bobs_account_id() {
 
     assert!(result.is_ok());
     assert_eq!(bob.account_id().await.unwrap(), result.unwrap())
+}
+
+#[tokio::test]
+pub async fn one_client_can_register_with_tls() {
+    let _ = env_logger::try_init();
+    let _ = rustls::crypto::ring::default_provider().install_default();
+    let address = "127.0.0.1:9375".to_owned();
+    let server_config = make_rustls_server_config("./cert/server.crt", "./cert/server.key");
+    let client_config = make_rustls_client_config("./cert/rootCA.crt").expect("Can make config");
+    let mut server = TestServer::start(&address, Some(server_config)).await;
+
+    server
+        .started_rx()
+        .await
+        .expect("Should be able to start server");
+
+    let client = Client::from_registration()
+        .username("Alice")
+        .device_name("Alice's Device")
+        .store_config(SqliteStoreConfig::in_memory().await)
+        .api_client_config(HttpClientConfig::new_with_tls(
+            address.clone(),
+            client_config.clone(),
+        ))
+        .protocol_config(WebSocketProtocolClientConfig::new_with_tls(
+            address,
+            client_config.clone(),
+        ))
+        .call()
+        .await;
+
+    assert!(client.is_ok());
 }

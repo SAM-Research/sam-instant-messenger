@@ -20,16 +20,17 @@ pub struct HttpClientConfig {
 }
 
 impl HttpClientConfig {
-    pub fn new(base_url: String, maybe_config: Option<ClientConfig>) -> Self {
-        match maybe_config {
-            None => Self {
-                base_url: format!("http://{}", base_url),
-                client_builder: ReqwestClient::builder(),
-            },
-            Some(config) => Self {
-                base_url: format!("https://{}", base_url),
-                client_builder: ReqwestClient::builder().use_preconfigured_tls(config),
-            },
+    pub fn new(base_url: String) -> Self {
+        Self {
+            base_url: format!("http://{}", base_url),
+            client_builder: ReqwestClient::builder(),
+        }
+    }
+
+    pub fn new_with_tls(base_url: String, config: ClientConfig) -> Self {
+        Self {
+            base_url: format!("https://{}", base_url),
+            client_builder: ReqwestClient::builder().use_preconfigured_tls(config),
         }
     }
 }

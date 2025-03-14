@@ -16,14 +16,21 @@ mod websocket;
 
 pub struct WebSocketProtocolClientConfig {
     base_url: String,
-    maybe_config: Option<ClientConfig>,
+    config: Option<ClientConfig>,
 }
 
 impl WebSocketProtocolClientConfig {
-    pub fn new(base_url: String, maybe_config: Option<ClientConfig>) -> Self {
+    pub fn new(base_url: String) -> Self {
         Self {
             base_url,
-            maybe_config,
+            config: None,
+        }
+    }
+
+    pub fn new_with_tls(base_url: String, config: ClientConfig) -> Self {
+        Self {
+            base_url,
+            config: Some(config),
         }
     }
 }
@@ -38,7 +45,7 @@ impl ProtocolConfig for WebSocketProtocolClientConfig {
         device_id: DeviceId,
         password: String,
     ) -> Result<Self::ProtocolClient, error::ProtocolError> {
-        let (url, maybe_connector) = match self.maybe_config {
+        let (url, connector) = match self.config {
             None => (format!("ws://{}", self.base_url), None),
             Some(config) => (
                 format!("wss://{}", self.base_url),
@@ -48,7 +55,7 @@ impl ProtocolConfig for WebSocketProtocolClientConfig {
         let basic = format!("{account_id}.{device_id}:{password}");
         let basic = format!("Basic {}", BASE64_STANDARD.encode(basic));
         let ws_client = WebSocketClientConfig::builder()
-            .maybe_tls(maybe_connector)
+            .maybe_tls(connector)
             .url(format!("{}/api/v1/websocket", url))
             .headers(vec![(
                 http::header::AUTHORIZATION,
