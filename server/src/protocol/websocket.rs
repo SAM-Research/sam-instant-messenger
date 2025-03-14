@@ -3,7 +3,7 @@ use futures_util::{
     stream::{SplitSink, SplitStream},
     SinkExt, StreamExt,
 };
-use log::{error, info};
+use log::{debug, error, info};
 use prost::Message as _;
 use sam_common::{
     address::MessageId,
@@ -36,7 +36,6 @@ pub async fn init_websocket<T: StateType>(
     dispatch: Receiver<MessageId>,
 ) {
     info!("{} Connected!", auth_user.account().username());
-
     let (sender, receiver) = socket.split();
     let (msg_producer, msg_consumer) = mpsc::channel(state.messages.channel_buffer().await);
 
@@ -102,10 +101,13 @@ async fn websocket_message_sender<T: StateType>(
 ) {
     while let Some(msg_res) = message_consumer.recv().await {
         let send_res = match msg_res {
-            Ok(Some(msg)) => sender
-                .send(Message::Binary(msg.encode_to_vec().into()))
-                .await
-                .map_err(|_| WebSocketSessionError::from(WebSocketError::WebSocketSendError)),
+            Ok(Some(msg)) => {
+                debug!("Sending message to '{}'", auth_user.account().username());
+                sender
+                    .send(Message::Binary(msg.encode_to_vec().into()))
+                    .await
+                    .map_err(|_| WebSocketSessionError::from(WebSocketError::WebSocketSendError))
+            }
             Err(WebSocketSessionError::WebSocket(WebSocketError::WebSocketDisconnected)) => Err(
                 WebSocketSessionError::from(WebSocketError::WebSocketDisconnected),
             ),
@@ -130,7 +132,7 @@ async fn websocket_message_sender<T: StateType>(
             Err(err) => {
                 match err {
                     WebSocketSessionError::WebSocket(WebSocketError::WebSocketDisconnected) => {
-                        break
+                        break;
                     }
                     _ => closing_err!(auth_user.account().username(), err),
                 }
@@ -138,7 +140,6 @@ async fn websocket_message_sender<T: StateType>(
             }
         }
     }
-
     state
         .messages
         .unsubscribe(auth_user.account().id(), auth_user.device().id())
@@ -152,6 +153,10 @@ async fn websocket_dispatcher<T: StateType>(
     auth_user: AuthenticatedUser,
 ) {
     while let Some(msg_id) = dispatch.recv().await {
+        debug!(
+            "Dispatching message to user '{}'",
+            auth_user.account().username()
+        );
         let msg_res = state
             .messages
             .get_envelope(auth_user.account().id(), auth_user.device().id(), msg_id)

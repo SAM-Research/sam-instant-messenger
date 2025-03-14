@@ -1,7 +1,7 @@
 use bon::Builder;
 use sam_common::{AccountId, DeviceId};
 
-#[derive(Debug, Builder)]
+#[derive(Debug, Clone, Builder)]
 pub struct DecryptedEnvelope {
     content: Vec<u8>,
     source_account_id: AccountId,

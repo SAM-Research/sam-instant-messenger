@@ -14,7 +14,7 @@ mod utils;
 async fn can_link_device() {
     let _ = env_logger::try_init();
     let address = "127.0.0.1:9388";
-    let mut server = TestServer::start("127.0.0.1:9388", None).await;
+    let mut server = TestServer::start(address, None).await;
 
     server
         .started_rx()
@@ -67,7 +67,7 @@ async fn can_link_device() {
 async fn can_delete_device() {
     let _ = env_logger::try_init();
     let address = "127.0.0.1:9389";
-    let mut server = TestServer::start("127.0.0.1:9389", None).await;
+    let mut server = TestServer::start(address, None).await;
 
     server
         .started_rx()
@@ -125,7 +125,7 @@ async fn can_delete_device() {
 async fn can_delete_account() {
     let _ = env_logger::try_init();
     let address = "127.0.0.1:9390";
-    let mut server = TestServer::start("127.0.0.1:9390", None).await;
+    let mut server = TestServer::start(address, None).await;
 
     server
         .started_rx()

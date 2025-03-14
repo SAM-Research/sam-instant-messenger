@@ -4,6 +4,7 @@ use contact::SqliteContactStore;
 use identity::SqliteIdentityKeyStore;
 use kyber::SqliteKyberPreKeyStore;
 use libsignal_protocol::IdentityKeyPair;
+use message::SqliteMessageStore;
 use pre_key::SqlitePreKeyStore;
 use sender_key::SqliteSenderKeyStore;
 use session::SqliteSessionStore;
@@ -12,18 +13,13 @@ use sqlx::{sqlite::SqlitePoolOptions, Pool, Sqlite};
 
 use crate::ClientError;
 
-use super::{
-    store_builder::{
-        SetAccountStore, SetContactStore, SetKyberPreKeyStore, SetPreKeyStore, SetSenderKeyStore,
-        SetSessionStore, SetSignedPreKeyStore,
-    },
-    Store, StoreBuilder, StoreConfig, StoreType,
-};
+use super::{Store, StoreConfig, StoreType};
 
 pub mod account;
 pub mod contact;
 pub mod identity;
 pub mod kyber;
+pub mod message;
 pub mod pre_key;
 pub mod sender_key;
 pub mod session;
@@ -48,6 +44,8 @@ impl StoreType for SqliteStoreType {
     type SessionStore = SqliteSessionStore;
 
     type SenderKeyStore = SqliteSenderKeyStore;
+
+    type MessageStore = SqliteMessageStore;
 }
 
 pub type SqliteStore = Store<SqliteStoreType>;
@@ -80,23 +78,6 @@ impl SqliteStoreConfig {
     }
 }
 
-type BuilderProperties = SetSessionStore<
-    SetSenderKeyStore<
-        SetKyberPreKeyStore<SetSignedPreKeyStore<SetPreKeyStore<SetAccountStore<SetContactStore>>>>,
-    >,
->;
-type PreparedStoreBuilder = StoreBuilder<SqliteStoreType, BuilderProperties>;
-fn pre_build_store(database: Pool<Sqlite>) -> PreparedStoreBuilder {
-    SqliteStore::builder()
-        .contact_store(SqliteContactStore::new(database.clone()))
-        .account_store(SqliteAccountStore::new(database.clone()))
-        .pre_key_store(SqlitePreKeyStore::new(database.clone()))
-        .signed_pre_key_store(SqliteSignedPreKeyStore::new(database.clone()))
-        .kyber_pre_key_store(SqliteKyberPreKeyStore::new(database.clone()))
-        .sender_key_store(SqliteSenderKeyStore::new(database.clone()))
-        .session_store(SqliteSessionStore::new(database.clone()))
-}
-
 #[async_trait(?Send)]
 impl StoreConfig for SqliteStoreConfig {
     type StoreType = SqliteStoreType;
@@ -105,21 +86,35 @@ impl StoreConfig for SqliteStoreConfig {
         key_pair: IdentityKeyPair,
         registration_id: ID,
     ) -> Result<SqliteStore, ClientError> {
-        Ok(pre_build_store(self.database.clone())
+        let database = self.database;
+        Ok(SqliteStore::builder()
+            .contact_store(SqliteContactStore::new(database.clone()))
+            .account_store(SqliteAccountStore::new(database.clone()))
+            .pre_key_store(SqlitePreKeyStore::new(database.clone()))
+            .signed_pre_key_store(SqliteSignedPreKeyStore::new(database.clone()))
+            .kyber_pre_key_store(SqliteKyberPreKeyStore::new(database.clone()))
+            .sender_key_store(SqliteSenderKeyStore::new(database.clone()))
+            .session_store(SqliteSessionStore::new(database.clone()))
+            .message_store(SqliteMessageStore::new(database.clone(), 10))
             .identity_key_store(
-                SqliteIdentityKeyStore::create(
-                    self.database.clone(),
-                    key_pair,
-                    registration_id.into(),
-                )
-                .await?,
+                SqliteIdentityKeyStore::create(database.clone(), key_pair, registration_id.into())
+                    .await?,
             )
             .build())
     }
 
     async fn load_store(self) -> Result<SqliteStore, ClientError> {
-        Ok(pre_build_store(self.database.clone())
-            .identity_key_store(SqliteIdentityKeyStore::load(self.database.clone()).await?)
+        let database = self.database;
+        Ok(SqliteStore::builder()
+            .contact_store(SqliteContactStore::new(database.clone()))
+            .account_store(SqliteAccountStore::new(database.clone()))
+            .pre_key_store(SqlitePreKeyStore::new(database.clone()))
+            .signed_pre_key_store(SqliteSignedPreKeyStore::new(database.clone()))
+            .kyber_pre_key_store(SqliteKyberPreKeyStore::new(database.clone()))
+            .sender_key_store(SqliteSenderKeyStore::new(database.clone()))
+            .session_store(SqliteSessionStore::new(database.clone()))
+            .message_store(SqliteMessageStore::new(database.clone(), 10))
+            .identity_key_store(SqliteIdentityKeyStore::load(database.clone()).await?)
             .build())
     }
 }

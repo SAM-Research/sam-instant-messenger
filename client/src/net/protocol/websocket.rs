@@ -1,8 +1,9 @@
-use derive_more::Display;
+use derive_more::{Display, Error};
 use futures_util::{
     stream::{SplitSink, SplitStream},
     SinkExt, StreamExt,
 };
+use log::error;
 use std::sync::{
     atomic::{AtomicBool, Ordering},
     Arc,
@@ -17,7 +18,7 @@ use tokio_tungstenite::{
     Connector, MaybeTlsStream, WebSocketStream,
 };
 
-#[derive(Debug, Display)]
+#[derive(Debug, Display, Error)]
 pub enum WebSocketError {
     UrlError,
     ConnectionFailed,
@@ -85,6 +86,7 @@ impl WebSocketClient {
             self.config.tls.clone(),
         )
         .await
+        .inspect_err(|e| error!("{}", e))
         .map_err(|_| WebSocketError::ConnectionFailed)?;
         Ok(ws)
     }

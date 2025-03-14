@@ -18,14 +18,15 @@ use tokio_tungstenite::tungstenite::{
 
 use super::{
     error::ProtocolError,
-    traits::SamProtocolClient,
-    websocket::{WebSocket, WebSocketClient, WebSocketReceiver},
+    traits::{MessageStatus, SamProtocolClient},
+    websocket::{WebSocket, WebSocketClient, WebSocketError, WebSocketReceiver},
 };
 
 enum ServerStatus {
     Ack(MessageId),
     Status(MessageId, Status),
 }
+
 struct SamProtocolReceiver {
     client: Arc<Mutex<WebSocketClient>>,
     enqueue_status: Sender<ServerStatus>,
@@ -54,7 +55,7 @@ impl SamProtocolReceiver {
                     .into(),
             ))
             .await
-            .map_err(|_| ProtocolError::Disconnected)
+            .map_err(ProtocolError::WebSocketError)
     }
 
     async fn handle_server_message(
@@ -96,8 +97,8 @@ impl SamProtocolReceiver {
             Some(sender) => sender
                 .send(envelope)
                 .await
-                .map_err(|_| ProtocolError::Disconnected),
-            None => Err(ProtocolError::Disconnected),
+                .map_err(|_| ProtocolError::WebSocketError(WebSocketError::Disconnected)),
+            None => Err(ProtocolError::WebSocketError(WebSocketError::Disconnected)),
         }
     }
 
@@ -105,7 +106,7 @@ impl SamProtocolReceiver {
         self.enqueue_status
             .send(status)
             .await
-            .map_err(|_| ProtocolError::Disconnected)
+            .map_err(|_| ProtocolError::WebSocketError(WebSocketError::Disconnected))
     }
 }
 
@@ -137,16 +138,19 @@ impl ProtocolClient {
             .await
             .send(Message::Binary(message.encode_to_vec().into()))
             .await
-            .map_err(|_| ProtocolError::Disconnected)
+            .map_err(ProtocolError::WebSocketError)
     }
 
     async fn handle_server_status(
         &mut self,
         req_id: MessageId,
         status: ServerStatus,
-    ) -> Result<bool, ProtocolError> {
+    ) -> Result<MessageStatus, ProtocolError> {
         match status {
-            ServerStatus::Ack(message_id) => self.check_id(req_id, message_id).await.map(|_| false),
+            ServerStatus::Ack(message_id) => self
+                .check_id(req_id, message_id)
+                .await
+                .map(|_| MessageStatus::Ok),
             ServerStatus::Status(message_id, status) => {
                 self.handle_status(req_id, message_id, status).await
             }
@@ -167,7 +171,7 @@ impl ProtocolClient {
                     reason: "Request and Response Id did not match".into(),
                 })))
                 .await
-                .map_err(|_| ProtocolError::Disconnected)
+                .map_err(ProtocolError::WebSocketError)
         } else {
             Ok(())
         }
@@ -178,19 +182,20 @@ impl ProtocolClient {
         req_id: MessageId,
         res_id: MessageId,
         status: Status,
-    ) -> Result<bool, ProtocolError> {
+    ) -> Result<MessageStatus, ProtocolError> {
         self.check_id(req_id, res_id).await?;
 
         match status.code() {
+            sam_message::StatusCode::EmptyMessage => Err(ProtocolError::EmptyMessage),
             sam_message::StatusCode::NotEncryptedForAllDevices => {
-                Err(ProtocolError::MissingDevices(status.device_lists))
+                Ok(MessageStatus::MissingDevices(status.device_lists))
             }
 
             sam_message::StatusCode::EncryptedForExtraDevices => {
-                Err(ProtocolError::ExtraDevices(status.device_lists))
+                Ok(MessageStatus::ExtraDevices(status.device_lists))
             }
 
-            sam_message::StatusCode::NeedsSync => Ok(true),
+            sam_message::StatusCode::NeedsSync => Ok(MessageStatus::NeedsSync),
         }
     }
 }
@@ -248,7 +253,8 @@ impl SamProtocolClient for ProtocolClient {
             .await
             .connect(handler)
             .await
-            .map_err(|_| ProtocolError::Disconnected)
+            .inspect_err(|e| error!("ProtocolClient Error: {e}"))
+            .map_err(ProtocolError::WebSocketError)
     }
     async fn disconnect(&mut self) -> Result<(), ProtocolError> {
         self.status_messages = None;
@@ -260,14 +266,17 @@ impl SamProtocolClient for ProtocolClient {
                 reason: "bye!".into(),
             })))
             .await
-            .map_err(|_| ProtocolError::Disconnected)
+            .map_err(ProtocolError::WebSocketError)
     }
 
     async fn is_connected(&self) -> bool {
         self.client.lock().await.is_connected()
     }
 
-    async fn send_message(&mut self, message: ClientEnvelope) -> Result<bool, ProtocolError> {
+    async fn send_message(
+        &mut self,
+        message: ClientEnvelope,
+    ) -> Result<MessageStatus, ProtocolError> {
         let id = MessageId::generate();
 
         self.send_client_message(id, message).await?;
@@ -275,8 +284,11 @@ impl SamProtocolClient for ProtocolClient {
         let response = match &mut self.status_messages {
             // Client can only send one message at a time, and receive a response to that message
             // This means that the next status in the queue is always for the current message
-            Some(status) => status.recv().await.ok_or(ProtocolError::Disconnected),
-            None => Err(ProtocolError::Disconnected),
+            Some(status) => status
+                .recv()
+                .await
+                .ok_or(ProtocolError::WebSocketError(WebSocketError::Disconnected)),
+            None => Err(ProtocolError::WebSocketError(WebSocketError::Disconnected)),
         }?;
 
         self.handle_server_status(id, response).await

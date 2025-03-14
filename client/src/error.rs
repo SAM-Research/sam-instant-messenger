@@ -20,7 +20,9 @@ pub enum ClientError {
     NoAccountId,
     NoPassword,
     NoUsername,
+    SendError,
     NoDeviceId,
+    NoContact,
     FailedToConvertPreKeyBundle,
     FailedToProcessPrekeyBundle,
 }

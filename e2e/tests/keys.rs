@@ -15,7 +15,7 @@ use crate::utils::server::TestServer;
 pub async fn alice_can_upload_keys() {
     let _ = env_logger::try_init();
     let address = "127.0.0.1:9384".to_owned();
-    let mut server = TestServer::start("127.0.0.1:9384", None).await;
+    let mut server = TestServer::start(&address, None).await;
 
     server
         .started_rx()
@@ -47,7 +47,7 @@ pub async fn alice_can_upload_keys() {
 pub async fn bob_can_fetch_alices_keys() {
     let _ = env_logger::try_init();
     let address = "127.0.0.1:9385".to_owned();
-    let mut server = TestServer::start("127.0.0.1:9385", None).await;
+    let mut server = TestServer::start(&address, None).await;
 
     server
         .started_rx()
@@ -94,7 +94,7 @@ pub async fn bob_can_fetch_alices_keys() {
 pub async fn bob_can_fetch_alices_keys_for_specific_devices() {
     let _ = env_logger::try_init();
     let address = "127.0.0.1:9386".to_owned();
-    let mut server = TestServer::start("127.0.0.1:9386", None).await;
+    let mut server = TestServer::start(&address, None).await;
 
     server
         .started_rx()

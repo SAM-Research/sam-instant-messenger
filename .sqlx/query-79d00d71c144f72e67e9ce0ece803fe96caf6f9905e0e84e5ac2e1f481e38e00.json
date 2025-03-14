@@ -1,0 +1,20 @@
+{
+  "db_name": "SQLite",
+  "query": "\n            SELECT EXISTS(\n                SELECT 1 FROM Contacts WHERE account_id = ?\n            )\n            ",
+  "describe": {
+    "columns": [
+      {
+        "name": "EXISTS(\n                SELECT 1 FROM Contacts WHERE account_id = ?\n            )",
+        "ordinal": 0,
+        "type_info": "Integer"
+      }
+    ],
+    "parameters": {
+      "Right": 1
+    },
+    "nullable": [
+      false
+    ]
+  },
+  "hash": "79d00d71c144f72e67e9ce0ece803fe96caf6f9905e0e84e5ac2e1f481e38e00"
+}

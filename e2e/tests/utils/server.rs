@@ -27,7 +27,7 @@ impl TestServer {
         let config = ServerConfig {
             state: in_memory_server_state(),
             addr: address.parse().expect("Unable to parse socket address"),
-            maybe_tls_config: maybe_tls_config,
+            maybe_tls_config,
         };
         let (tx, started_rx) = oneshot::channel::<()>();
         let thread = tokio::spawn(async move {

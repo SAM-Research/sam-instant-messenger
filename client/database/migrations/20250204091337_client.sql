@@ -63,3 +63,9 @@ CREATE TABLE Contacts (
   device_id  INTEGER NOT NULL
 );
 
+CREATE TABLE MessageStore (
+  id INTEGER PRIMARY KEY,
+  contact_id INTEGER NOT NULL,
+  content BLOB NOT NULL,
+  FOREIGN KEY (contact_id) REFERENCES Contacts(id)
+);

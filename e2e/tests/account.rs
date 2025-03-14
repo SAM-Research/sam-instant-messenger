@@ -1,4 +1,5 @@
 use crate::utils::server::TestServer;
+
 use libsignal_protocol::IdentityKeyPair;
 use rand::rngs::OsRng;
 use sam_client::{
@@ -37,7 +38,7 @@ pub async fn register_alice(
 pub async fn one_client_can_register() {
     let _ = env_logger::try_init();
     let address = "127.0.0.1:9380".to_owned();
-    let mut server = TestServer::start("127.0.0.1:9380", None).await;
+    let mut server = TestServer::start(&address, None).await;
 
     server
         .started_rx()
@@ -53,7 +54,7 @@ pub async fn one_client_can_register() {
 pub async fn can_delete_account() {
     let _ = env_logger::try_init();
     let address = "127.0.0.1:9381".to_owned();
-    let mut server = TestServer::start("127.0.0.1:9381", None).await;
+    let mut server = TestServer::start(&address, None).await;
 
     server
         .started_rx()
@@ -66,10 +67,10 @@ pub async fn can_delete_account() {
 }
 
 #[tokio::test]
-pub async fn cannot_delete_a_client_that_does_not_exist() {
+pub async fn cannot_create_client_without_valid_account() {
     let _ = env_logger::try_init();
     let address = "127.0.0.1:9382".to_owned();
-    let mut server = TestServer::start("127.0.0.1:9382", None).await;
+    let mut server = TestServer::start(&address, None).await;
 
     server
         .started_rx()
@@ -111,18 +112,16 @@ pub async fn cannot_delete_a_client_that_does_not_exist() {
         .api_client_config(api_client)
         .protocol_config(protocol_client)
         .call()
-        .await
-        .expect("Can create client from store");
+        .await;
 
-    let result = client.delete_account().await;
-    assert!(result.is_err_and(|(_, err)| matches!(err, ClientError::Api(_))))
+    assert!(client.is_err_and(|e| matches!(e, ClientError::Protocol(_))))
 }
 
 #[tokio::test]
 pub async fn can_delete_a_device() {
     let _ = env_logger::try_init();
     let address = "127.0.0.1:9383".to_owned();
-    let mut server = TestServer::start("127.0.0.1:9383", None).await;
+    let mut server = TestServer::start(&address, None).await;
 
     server
         .started_rx()
@@ -143,7 +142,7 @@ pub async fn can_delete_a_device() {
 pub async fn alice_can_find_bobs_account_id() {
     let _ = env_logger::try_init();
     let address = "127.0.0.1:9384".to_owned();
-    let mut server = TestServer::start("127.0.0.1:9384", None).await;
+    let mut server = TestServer::start(&address, None).await;
 
     server
         .started_rx()
