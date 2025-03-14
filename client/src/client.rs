@@ -375,15 +375,37 @@ impl<T: StoreType, U: ApiClient, V: SamProtocolClient> Client<T, U, V> {
         &mut self,
         recipient: AccountId,
         msg: impl Into<Vec<u8>>,
-    ) -> Result<MessageStatus, ClientError> {
+    ) -> Result<(), ClientError> {
         if !self.store.contact_store.contains_contact(recipient).await? {
-            return Err(ClientError::NoContact);
+            self.fetch_prekeys(recipient, None).await?;
         }
-        let envelope = encrypt(msg, recipient, &mut self.store).await?;
-        self.protocol_client
-            .send_message(envelope)
-            .await
-            .map_err(ClientError::from)
+
+        let my_id = self.account_id().await?;
+        if !self.store.contact_store.contains_contact(my_id).await? {
+            self.fetch_prekeys(my_id, None).await?;
+        }
+
+        let envelope = encrypt(msg, vec![recipient, my_id], &mut self.store).await?;
+        let status = self.protocol_client.send_message(envelope).await?;
+
+        match status {
+            MessageStatus::ExtraDevices(device_lists) => {
+                for list in device_lists {
+                    for device in list.devices {
+                        self.remove_device_for(list.account_id, device).await?;
+                    }
+                }
+                Ok(())
+            }
+            MessageStatus::MissingDevices(device_lists) => {
+                for list in device_lists {
+                    self.fetch_prekeys(list.account_id, Some(list.devices))
+                        .await?;
+                }
+                Err(ClientError::MissingDevices)
+            }
+            MessageStatus::Ok => Ok(()),
+        }
     }
 
     /// Returns a broadcast receiver for incoming messages that have been decrypted
@@ -492,7 +514,7 @@ impl<T: StoreType, U: ApiClient, V: SamProtocolClient> Client<T, U, V> {
     }
 
     /// Fetch key bundles for account_id
-    pub async fn fetch_prekeys(
+    async fn fetch_prekeys(
         &mut self,
         account_id: AccountId,
         devices: Option<Vec<DeviceId>>,

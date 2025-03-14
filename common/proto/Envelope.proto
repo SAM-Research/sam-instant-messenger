@@ -1,6 +1,5 @@
 package sam_message;
 
-
 enum SamMessageType {
   SIGNAL_MESSAGE = 1;
   PRE_KEY_SIGNAL_MESSAGE = 2;
@@ -29,42 +28,49 @@ message ServerEnvelope {
   required bytes  id = 7;
 }
 
-enum MessageType {
-  MESSAGE = 1;
-  ACK = 2;
-  STATUS = 3;
-}
+
 
 message DeviceList {
   required bytes  account_id = 1;
   repeated uint32 device_ids = 2;
 }
 
-
-enum StatusCode {
-  NEEDS_SYNC = 1;
-  NOT_ENCRYPTED_FOR_ALL_DEVICES=2;
-  ENCRYPTED_FOR_EXTRA_DEVICES=3;
-  EMPTY_MESSAGE = 4;
-}
-
-message Status {
-  required StatusCode code = 1;
-  repeated DeviceList device_lists = 2;
+enum ClientMessageType {
+  CLIENT_MESSAGE = 1;
+  CLIENT_ACK = 2;
 }
 
 message ClientMessage {
-  required MessageType type = 1;
+  required ClientMessageType type = 1;
   required bytes id = 2;
   optional ClientEnvelope message = 3;
 }
 
+enum ServerMessageType {
+  SERVER_MESSAGE = 1;
+  SERVER_ACK = 2;
+
+  EMPTY_MESSAGE = 5;
+  NOT_ENCRYPTED_FOR_ALL_DEVICES = 6;
+  ENCRYPTED_FOR_EXTRA_MESSAGES = 7;
+}
+
+
+message MissingDevicesError {
+  repeated DeviceList device_lists = 1;
+}
+
+message ExtraDevicesStatus {
+  repeated DeviceList device_lists = 1;
+}
+
 message ServerMessage {
   required bytes id = 1;
-  required MessageType type = 2;
+  required ServerMessageType type = 2;
 
   oneof content {
-    ServerEnvelope message = 3;
-    Status status = 4;
+    ServerEnvelope server_envelope = 3;
+    MissingDevicesError missing_devices = 4;
+    ExtraDevicesStatus extra_devices = 5;
   };
 }

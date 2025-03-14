@@ -1,4 +1,4 @@
-use std::time::SystemTime;
+use std::{collections::HashMap, time::SystemTime};
 
 use libsignal_core::ProtocolAddress;
 use libsignal_protocol::{
@@ -35,38 +35,44 @@ use super::envelope::DecryptedEnvelope;
 /// * `Err(ClientError)` if encryption fails.
 pub async fn encrypt(
     message: impl Into<Vec<u8>>,
-    recipient: AccountId,
+    recipients: Vec<AccountId>,
     store: &mut Store<impl StoreType>,
 ) -> Result<ClientEnvelope, ClientError> {
     let bytes = message.into();
 
-    let addresses = store
-        .contact_store
-        .get_all_devices(recipient)
-        .await?
-        .into_iter()
-        .map(|dev| ProtocolAddress::new(recipient.to_string(), (*dev).into()));
+    let mut recipient_addrs = HashMap::new();
 
-    let mut messages = Vec::with_capacity(addresses.len());
-
-    for address in addresses {
-        let message = message_encrypt(
-            &bytes,
-            &address,
-            &mut store.session_store,
-            &mut store.identity_key_store,
-            SystemTime::now(),
-        )
-        .await?;
-
-        messages.push(
-            SamMessage::builder()
-                .r#type(Into::<SamMessageType>::into(message.message_type()).into())
-                .destination_account_id(recipient.into_bytes().to_vec())
-                .destination_device_id(address.device_id().into())
-                .content(message.serialize().to_vec())
-                .build(),
+    for recipient in recipients {
+        recipient_addrs.insert(
+            recipient,
+            store.contact_store.get_all_devices(recipient).await?,
         );
+    }
+
+    let addr_len = recipient_addrs.values().map(|v| v.len()).sum();
+    let mut messages = Vec::with_capacity(addr_len);
+
+    for (recipient, addresses) in recipient_addrs {
+        for device_id in addresses {
+            let addr = ProtocolAddress::new(recipient.to_string(), (*device_id).into());
+            let message = message_encrypt(
+                &bytes,
+                &addr,
+                &mut store.session_store,
+                &mut store.identity_key_store,
+                SystemTime::now(),
+            )
+            .await?;
+
+            messages.push(
+                SamMessage::builder()
+                    .r#type(Into::<SamMessageType>::into(message.message_type()).into())
+                    .destination_account_id(recipient.into_bytes().to_vec())
+                    .destination_device_id(addr.device_id().into())
+                    .content(message.serialize().to_vec())
+                    .build(),
+            );
+        }
     }
 
     Ok(ClientEnvelope::builder().messages(messages).build())
@@ -265,7 +271,7 @@ mod test {
         )
         .await;
 
-        let client_envelope = encrypt(my_struct.clone(), bob, &mut alice_store)
+        let client_envelope = encrypt(my_struct.clone(), vec![bob], &mut alice_store)
             .await
             .expect("Can encrypt message");
 
