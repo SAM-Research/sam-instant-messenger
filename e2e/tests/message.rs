@@ -56,7 +56,7 @@ async fn client_device(
 }
 
 /*
-   PORTS USED: 9180-9189
+   PORTS USED: 9180-9184
 */
 
 #[tokio::test]
