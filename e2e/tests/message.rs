@@ -16,6 +16,7 @@ use sam_common::api::LinkDeviceToken;
 use tokio::time::timeout;
 
 use crate::utils::server::TestServer;
+use crate::utils::tls::{make_rustls_client_config, make_rustls_server_config};
 
 const TIMEOUT_SECS: u64 = 120;
 
@@ -30,6 +31,31 @@ async fn client(
         .store_config(InMemoryStoreConfig::default())
         .api_client_config(HttpClientConfig::new(address.to_string()))
         .protocol_config(WebSocketProtocolClientConfig::new(address.to_string()))
+        .upload_prekey_count(5)
+        .call()
+        .await
+        .expect("Can register Client")
+}
+
+async fn tls_client(
+    address: &str,
+    username: &str,
+    device_name: &str,
+) -> Client<InMemoryStoreType, HttpClient, ProtocolClient> {
+    let client_config =
+        make_rustls_client_config("./cert/rootCA.crt").expect("Should make client config");
+    Client::from_registration()
+        .username(username)
+        .device_name(device_name)
+        .store_config(InMemoryStoreConfig::default())
+        .api_client_config(HttpClientConfig::new_with_tls(
+            address.to_string(),
+            client_config.clone(),
+        ))
+        .protocol_config(WebSocketProtocolClientConfig::new_with_tls(
+            address.to_string(),
+            client_config,
+        ))
         .upload_prekey_count(5)
         .call()
         .await
@@ -56,14 +82,14 @@ async fn client_device(
 }
 
 /*
-   PORTS USED: 9180-9184
+   PORTS USED: 9180-9189
 */
 
 #[tokio::test]
 async fn test_alice_send_to_bob() {
     timeout(Duration::from_secs(TIMEOUT_SECS), async {
         let address = "127.0.0.1:9180";
-        let mut server = TestServer::start(address).await;
+        let mut server = TestServer::start(address, None).await;
         server
             .started_rx()
             .await
@@ -81,7 +107,7 @@ async fn test_alice_send_to_bob() {
             .await
             .expect("Alice can send message");
 
-        bob.process_messages()
+        bob.process_messages_blocking()
             .await
             .expect("Bob can process messages");
 
@@ -99,7 +125,7 @@ async fn test_alice_send_to_bob() {
 async fn test_alice_send_to_bob_offline() {
     timeout(Duration::from_secs(TIMEOUT_SECS), async {
         let address = "127.0.0.1:9181";
-        let mut server = TestServer::start(address).await;
+        let mut server = TestServer::start(address, None).await;
         server
             .started_rx()
             .await
@@ -139,7 +165,7 @@ async fn test_alice_send_to_bob_offline() {
 async fn test_alice_send_to_bob_two_devices() {
     timeout(Duration::from_secs(TIMEOUT_SECS), async {
         let address = "127.0.0.1:9183";
-        let mut server = TestServer::start(address).await;
+        let mut server = TestServer::start(address, None).await;
         server
             .started_rx()
             .await
@@ -195,7 +221,7 @@ async fn test_alice_send_to_bob_two_devices() {
 async fn test_alice_send_to_bob_and_self() {
     timeout(Duration::from_secs(TIMEOUT_SECS), async {
         let address = "127.0.0.1:9184";
-        let mut server = TestServer::start(address).await;
+        let mut server = TestServer::start(address, None).await;
         server
             .started_rx()
             .await
@@ -234,6 +260,45 @@ async fn test_alice_send_to_bob_and_self() {
         let bob_msg = String::from_utf8_lossy(res.content_bytes());
 
         assert!(bob_msg == "Hello bob!")
+    })
+    .await
+    .expect("Test took to long to complete")
+}
+
+#[tokio::test]
+async fn test_alice_send_to_bob_with_tls() {
+    timeout(Duration::from_secs(TIMEOUT_SECS), async {
+        let _ = env_logger::try_init();
+        let _ = rustls::crypto::ring::default_provider().install_default();
+        let address = "127.0.0.1:9185";
+        let server_config = make_rustls_server_config("./cert/server.crt", "./cert/server.key");
+        let mut server = TestServer::start(address, Some(server_config)).await;
+        server
+            .started_rx()
+            .await
+            .expect("Should be able to start server");
+
+        let mut alice = tls_client(address, "alice", "alice device").await;
+        let mut bob = tls_client(address, "bob", "bob device").await;
+
+        let bob_id = bob.account_id().await.expect("Bob can get his id");
+
+        let mut bob_recv = bob.subscribe();
+
+        alice
+            .send_message(bob_id, "Hello bob!")
+            .await
+            .expect("Alice can send message");
+
+        bob.process_messages_blocking()
+            .await
+            .expect("Bob can process messages");
+
+        let res = bob_recv.recv().await.expect("receiver works");
+
+        let msg = String::from_utf8_lossy(res.content_bytes());
+
+        assert!(msg == "Hello bob!")
     })
     .await
     .expect("Test took to long to complete")

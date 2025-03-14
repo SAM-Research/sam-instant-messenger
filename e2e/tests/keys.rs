@@ -8,14 +8,14 @@ mod utils;
 use crate::utils::server::TestServer;
 
 /*
-   PORTS USED: 9384
+   PORTS USED: 939x
 */
 
 #[tokio::test]
 pub async fn alice_can_upload_keys() {
     let _ = env_logger::try_init();
-    let address = "127.0.0.1:9384".to_owned();
-    let mut server = TestServer::start("127.0.0.1:9384").await;
+    let address = "127.0.0.1:9390".to_owned();
+    let mut server = TestServer::start(&address, None).await;
 
     server
         .started_rx()

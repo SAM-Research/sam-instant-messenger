@@ -3,7 +3,8 @@ use super::{
     ApiClientError,
 };
 use async_trait::async_trait;
-use reqwest::{Client as ReqwestClient, Method, Request, Response, Url};
+use reqwest::{Client as ReqwestClient, ClientBuilder, Method, Request, Response, Url};
+use rustls::ClientConfig;
 use sam_common::{
     api::{
         keys::PreKeyBundles, LinkDeviceRequest, LinkDeviceResponse, LinkDeviceToken,
@@ -15,12 +16,21 @@ use sam_common::{
 #[derive(Debug)]
 pub struct HttpClientConfig {
     base_url: String,
+    client_builder: ClientBuilder,
 }
 
 impl HttpClientConfig {
     pub fn new(base_url: String) -> Self {
         Self {
             base_url: format!("http://{}", base_url),
+            client_builder: ReqwestClient::builder(),
+        }
+    }
+
+    pub fn new_with_tls(base_url: String, config: ClientConfig) -> Self {
+        Self {
+            base_url: format!("https://{}", base_url),
+            client_builder: ReqwestClient::builder().use_preconfigured_tls(config),
         }
     }
 }
@@ -31,7 +41,10 @@ impl ApiClientConfig for HttpClientConfig {
 
     async fn create(self) -> Result<Self::ApiClient, ApiClientError> {
         Ok(Self::ApiClient {
-            http_client: ReqwestClient::new(),
+            http_client: self
+                .client_builder
+                .build()
+                .map_err(|_| ApiClientError::FailedToBuildApiClient)?,
             base_url: self.base_url,
         })
     }
