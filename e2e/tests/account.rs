@@ -14,7 +14,6 @@ use sam_client::{
     Client, ClientError,
 };
 use sam_common::{address::RegistrationId, AccountId};
-use sam_server::server::CertificatePaths;
 
 mod utils;
 
@@ -28,14 +27,8 @@ pub async fn register_alice(
         .username("Alice")
         .device_name("Alice's Device")
         .store_config(SqliteStoreConfig::in_memory().await)
-        .api_client_config(HttpClientConfig::new(
-            address.clone(),
-            Some("./cert/rootCA.crt".to_string()),
-        ))
-        .protocol_config(WebSocketProtocolClientConfig::new(
-            address,
-            Some("./cert/rootCA.crt".to_string()),
-        ))
+        .api_client_config(HttpClientConfig::new(address.clone(), None))
+        .protocol_config(WebSocketProtocolClientConfig::new(address, None))
         .call()
         .await
 }
@@ -44,11 +37,7 @@ pub async fn register_alice(
 pub async fn one_client_can_register() {
     let _ = env_logger::try_init();
     let address = "127.0.0.1:9380".to_owned();
-    let paths = CertificatePaths {
-        key: "./cert/server.key".to_string(),
-        cert: "./cert/server.crt".to_string(),
-    };
-    let mut server = TestServer::start("127.0.0.1:9380", Some(paths)).await;
+    let mut server = TestServer::start("127.0.0.1:9380", None).await;
 
     server
         .started_rx()
@@ -64,11 +53,7 @@ pub async fn one_client_can_register() {
 pub async fn can_delete_account() {
     let _ = env_logger::try_init();
     let address = "127.0.0.1:9381".to_owned();
-    let paths = CertificatePaths {
-        key: "./cert/server.key".to_string(),
-        cert: "./cert/server.crt".to_string(),
-    };
-    let mut server = TestServer::start("127.0.0.1:9381", Some(paths)).await;
+    let mut server = TestServer::start("127.0.0.1:9381", None).await;
 
     server
         .started_rx()
@@ -84,12 +69,7 @@ pub async fn can_delete_account() {
 pub async fn cannot_delete_a_client_that_does_not_exist() {
     let _ = env_logger::try_init();
     let address = "127.0.0.1:9382".to_owned();
-    let paths = CertificatePaths {
-        key: "./cert/server.key".to_string(),
-        cert: "./cert/server.crt".to_string(),
-    };
-    let root_ca = Some("./cert/rootCA.crt".to_string());
-    let mut server = TestServer::start("127.0.0.1:9382", Some(paths)).await;
+    let mut server = TestServer::start("127.0.0.1:9382", None).await;
 
     server
         .started_rx()
@@ -123,8 +103,8 @@ pub async fn cannot_delete_a_client_that_does_not_exist() {
         .await
         .expect("Can set password");
 
-    let api_client = HttpClientConfig::new(address.clone(), root_ca.clone());
-    let protocol_client = WebSocketProtocolClientConfig::new(address, root_ca);
+    let api_client = HttpClientConfig::new(address.clone(), None);
+    let protocol_client = WebSocketProtocolClientConfig::new(address, None);
 
     let client = Client::from_store()
         .store(store)
@@ -142,11 +122,7 @@ pub async fn cannot_delete_a_client_that_does_not_exist() {
 pub async fn can_delete_a_device() {
     let _ = env_logger::try_init();
     let address = "127.0.0.1:9383".to_owned();
-    let paths = CertificatePaths {
-        key: "./cert/server.key".to_string(),
-        cert: "./cert/server.crt".to_string(),
-    };
-    let mut server = TestServer::start("127.0.0.1:9383", Some(paths)).await;
+    let mut server = TestServer::start("127.0.0.1:9383", None).await;
 
     server
         .started_rx()
@@ -167,12 +143,7 @@ pub async fn can_delete_a_device() {
 pub async fn alice_can_find_bobs_account_id() {
     let _ = env_logger::try_init();
     let address = "127.0.0.1:9384".to_owned();
-    let paths = CertificatePaths {
-        key: "./cert/server.key".to_string(),
-        cert: "./cert/server.crt".to_string(),
-    };
-    let root_ca = Some("./cert/rootCA.crt".to_string());
-    let mut server = TestServer::start("127.0.0.1:9384", Some(paths)).await;
+    let mut server = TestServer::start("127.0.0.1:9384", None).await;
 
     server
         .started_rx()
@@ -187,8 +158,8 @@ pub async fn alice_can_find_bobs_account_id() {
         .username("Bob")
         .device_name("Bob's Device")
         .store_config(SqliteStoreConfig::in_memory().await)
-        .api_client_config(HttpClientConfig::new(address.clone(), root_ca.clone()))
-        .protocol_config(WebSocketProtocolClientConfig::new(address, root_ca))
+        .api_client_config(HttpClientConfig::new(address.clone(), None))
+        .protocol_config(WebSocketProtocolClientConfig::new(address, None))
         .call()
         .await
         .unwrap();

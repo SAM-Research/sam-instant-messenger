@@ -3,9 +3,8 @@ use super::{
     ApiClientError,
 };
 use async_trait::async_trait;
-use reqwest::{
-    Certificate, Client as ReqwestClient, ClientBuilder, Method, Request, Response, Url,
-};
+use reqwest::{Client as ReqwestClient, ClientBuilder, Method, Request, Response, Url};
+use rustls::ClientConfig;
 use sam_common::{
     api::{
         keys::PreKeyBundles, LinkDeviceRequest, LinkDeviceResponse, LinkDeviceToken,
@@ -13,7 +12,6 @@ use sam_common::{
     },
     AccountId, DeviceId,
 };
-use std::fs;
 
 #[derive(Debug)]
 pub struct HttpClientConfig {
@@ -22,21 +20,16 @@ pub struct HttpClientConfig {
 }
 
 impl HttpClientConfig {
-    pub fn new(base_url: String, cert_path: Option<String>) -> Self {
-        match cert_path {
+    pub fn new(base_url: String, maybe_config: Option<ClientConfig>) -> Self {
+        match maybe_config {
             None => Self {
                 base_url: format!("http://{}", base_url),
                 client_builder: ReqwestClient::builder(),
             },
-            Some(path) => {
-                let cert_bytes = fs::read(path).expect("Could not read certificate.");
-                let cert =
-                    Certificate::from_pem(&cert_bytes).expect("Could not parse certificate.");
-                Self {
-                    base_url: format!("https://{}", base_url),
-                    client_builder: ReqwestClient::builder().add_root_certificate(cert),
-                }
-            }
+            Some(config) => Self {
+                base_url: format!("https://{}", base_url),
+                client_builder: ReqwestClient::builder().use_preconfigured_tls(config),
+            },
         }
     }
 }

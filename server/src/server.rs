@@ -16,7 +16,7 @@ pub struct CertificatePaths {
 pub struct ServerConfig<T: StateType> {
     pub state: ServerState<T>,
     pub addr: SocketAddr,
-    pub tls: Option<CertificatePaths>,
+    pub maybe_tls_config: Option<RustlsConfig>,
 }
 
 async fn log_request(req: Request, next: Next) -> impl IntoResponse {
@@ -36,17 +36,17 @@ pub async fn start_server<T: StateType>(config: ServerConfig<T>) -> Result<(), s
 
     info!(
         "Starting SAM Server on http{}://{}...",
-        if config.tls.is_some() { "s" } else { "" },
+        if config.maybe_tls_config.is_some() {
+            "s"
+        } else {
+            ""
+        },
         config.addr
     );
-    if let Some(tls_config) = config.tls {
-        let _ = rustls::crypto::ring::default_provider().install_default();
-        axum_server::bind_rustls(
-            config.addr,
-            RustlsConfig::from_pem_file(tls_config.cert, tls_config.key).await?,
-        )
-        .serve(app.into_make_service_with_connect_info::<SocketAddr>())
-        .await?;
+    if let Some(tls_config) = config.maybe_tls_config {
+        axum_server::bind_rustls(config.addr, tls_config)
+            .serve(app.into_make_service_with_connect_info::<SocketAddr>())
+            .await?;
     } else {
         axum_server::bind(config.addr)
             .serve(app.into_make_service_with_connect_info::<SocketAddr>())

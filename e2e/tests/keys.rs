@@ -2,7 +2,6 @@ use sam_client::net::http_client::HttpClientConfig;
 use sam_client::net::protocol::WebSocketProtocolClientConfig;
 use sam_client::storage::sqlite::SqliteStoreConfig;
 use sam_client::Client;
-use sam_server::server::CertificatePaths;
 
 mod utils;
 
@@ -16,12 +15,7 @@ use crate::utils::server::TestServer;
 pub async fn alice_can_upload_keys() {
     let _ = env_logger::try_init();
     let address = "127.0.0.1:9384".to_owned();
-    let paths = CertificatePaths {
-        key: "./cert/server.key".to_string(),
-        cert: "./cert/server.crt".to_string(),
-    };
-    let root_ca = Some("./cert/rootCA.crt".to_string());
-    let mut server = TestServer::start("127.0.0.1:9384", Some(paths)).await;
+    let mut server = TestServer::start("127.0.0.1:9384", None).await;
 
     server
         .started_rx()
@@ -32,8 +26,8 @@ pub async fn alice_can_upload_keys() {
         .username("Alice")
         .device_name("Alice's Device")
         .store_config(SqliteStoreConfig::in_memory().await)
-        .api_client_config(HttpClientConfig::new(address.clone(), root_ca.clone()))
-        .protocol_config(WebSocketProtocolClientConfig::new(address.clone(), root_ca))
+        .api_client_config(HttpClientConfig::new(address.clone(), None))
+        .protocol_config(WebSocketProtocolClientConfig::new(address.clone(), None))
         .call()
         .await
         .unwrap();
@@ -52,14 +46,8 @@ pub async fn alice_can_upload_keys() {
 #[tokio::test]
 pub async fn bob_can_fetch_alices_keys() {
     let _ = env_logger::try_init();
-
     let address = "127.0.0.1:9385".to_owned();
-    let paths = CertificatePaths {
-        key: "./cert/server.key".to_string(),
-        cert: "./cert/server.crt".to_string(),
-    };
-    let root_ca = Some("./cert/rootCA.crt".to_string());
-    let mut server = TestServer::start("127.0.0.1:9385", Some(paths)).await;
+    let mut server = TestServer::start("127.0.0.1:9385", None).await;
 
     server
         .started_rx()
@@ -70,11 +58,8 @@ pub async fn bob_can_fetch_alices_keys() {
         .username("Alice")
         .device_name("Alice's Device")
         .store_config(SqliteStoreConfig::in_memory().await)
-        .api_client_config(HttpClientConfig::new(address.clone(), root_ca.clone()))
-        .protocol_config(WebSocketProtocolClientConfig::new(
-            address.clone(),
-            root_ca.clone(),
-        ))
+        .api_client_config(HttpClientConfig::new(address.clone(), None))
+        .protocol_config(WebSocketProtocolClientConfig::new(address.clone(), None))
         .call()
         .await
         .unwrap();
@@ -83,8 +68,8 @@ pub async fn bob_can_fetch_alices_keys() {
         .username("Bob")
         .device_name("Bob's Device")
         .store_config(SqliteStoreConfig::in_memory().await)
-        .api_client_config(HttpClientConfig::new(address.clone(), root_ca.clone()))
-        .protocol_config(WebSocketProtocolClientConfig::new(address, root_ca.clone()))
+        .api_client_config(HttpClientConfig::new(address.clone(), None))
+        .protocol_config(WebSocketProtocolClientConfig::new(address, None))
         .call()
         .await
         .unwrap();
@@ -109,12 +94,7 @@ pub async fn bob_can_fetch_alices_keys() {
 pub async fn bob_can_fetch_alices_keys_for_specific_devices() {
     let _ = env_logger::try_init();
     let address = "127.0.0.1:9386".to_owned();
-    let paths = CertificatePaths {
-        key: "./cert/server.key".to_string(),
-        cert: "./cert/server.crt".to_string(),
-    };
-    let root_ca = Some("./cert/rootCA.crt".to_string());
-    let mut server = TestServer::start("127.0.0.1:9386", Some(paths)).await;
+    let mut server = TestServer::start("127.0.0.1:9386", None).await;
 
     server
         .started_rx()
@@ -125,11 +105,8 @@ pub async fn bob_can_fetch_alices_keys_for_specific_devices() {
         .username("Alice")
         .device_name("Alice's Device")
         .store_config(SqliteStoreConfig::in_memory().await)
-        .api_client_config(HttpClientConfig::new(address.clone(), root_ca.clone()))
-        .protocol_config(WebSocketProtocolClientConfig::new(
-            address.clone(),
-            root_ca.clone(),
-        ))
+        .api_client_config(HttpClientConfig::new(address.clone(), None))
+        .protocol_config(WebSocketProtocolClientConfig::new(address.clone(), None))
         .call()
         .await
         .unwrap();
@@ -138,8 +115,8 @@ pub async fn bob_can_fetch_alices_keys_for_specific_devices() {
         .username("Bob")
         .device_name("Bob's Device")
         .store_config(SqliteStoreConfig::in_memory().await)
-        .api_client_config(HttpClientConfig::new(address.clone(), root_ca.clone()))
-        .protocol_config(WebSocketProtocolClientConfig::new(address, root_ca))
+        .api_client_config(HttpClientConfig::new(address.clone(), None))
+        .protocol_config(WebSocketProtocolClientConfig::new(address, None))
         .call()
         .await
         .unwrap();

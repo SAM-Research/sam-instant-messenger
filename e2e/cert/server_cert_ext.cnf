@@ -11,7 +11,7 @@ x509_extensions    = v3_req
 C = DK
 ST = Nordjylland
 L = Aalborg
-O = Denim
+O = SAM
 OU = IT
 CN = localhost
 
