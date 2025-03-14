@@ -1,9 +1,7 @@
 use bon::bon;
 use libsignal_core::ProtocolAddress;
-use libsignal_protocol::{
-    kem, process_prekey_bundle, IdentityKey, IdentityKeyPair, IdentityKeyStore, PreKeyBundle,
-    PublicKey,
-};
+use libsignal_protocol::{process_prekey_bundle, IdentityKeyPair, IdentityKeyStore};
+use log::error;
 use rand::rngs::OsRng;
 use sam_common::{
     address::RegistrationId,
@@ -11,24 +9,31 @@ use sam_common::{
         device::DeviceActivationInfo, keys::RegistrationPreKeys, LinkDeviceRequest,
         LinkDeviceToken, PqPreKey, PublishPreKeys, RegistrationRequest, SignedEcPreKey,
     },
+    sam_message::ServerEnvelope,
     AccountId, DeviceId,
 };
 use std::time::SystemTime;
 use tokio::sync::broadcast::Receiver;
+use tokio::sync::mpsc::Receiver as MpscReceiver;
 
 use crate::{
-    encryption::{envelope::DecryptedEnvelope, password::generate_password},
+    encryption::{
+        encrypt::{decrypt, encrypt},
+        envelope::DecryptedEnvelope,
+        password::generate_password,
+    },
     net::{
         api_trait::ApiClientConfig,
-        protocol::traits::{ProtocolConfig, SamProtocolClient},
+        protocol::traits::{MessageStatus, ProtocolConfig, SamProtocolClient},
         ApiClient,
     },
     storage::{
         key_generation::{
-            generate_ec_pre_keys, generate_pq_pre_keys, KyberKeyGenerator as _,
-            SignedPreKeyGenerator as _,
+            generate_ec_pre_keys, generate_pq_pre_keys, into_libsignal_bundle,
+            KyberKeyGenerator as _, SignedPreKeyGenerator as _,
         },
-        AccountStore, Store, StoreConfig, StoreType,
+        traits::message::MessageStore,
+        AccountStore, ContactStore, Store, StoreConfig, StoreType,
     },
     ClientError,
 };
@@ -36,7 +41,8 @@ use crate::{
 pub struct Client<T: StoreType, U: ApiClient, V: SamProtocolClient> {
     store: Store<T>,
     api_client: U,
-    _protocol_client: V,
+    protocol_client: V,
+    envelope_queue: MpscReceiver<ServerEnvelope>,
 }
 
 #[bon]
@@ -99,8 +105,6 @@ impl<T: StoreType, U: ApiClient, V: SamProtocolClient> Client<T, U, V> {
             .link_device(device_name, &password, request)
             .await?;
 
-        let protocol_client = protocol_config.create().await?;
-
         store.account_store.set_username(response.username).await?;
         store
             .account_store
@@ -110,12 +114,19 @@ impl<T: StoreType, U: ApiClient, V: SamProtocolClient> Client<T, U, V> {
             .account_store
             .set_device_id(response.device_id)
             .await?;
-        store.account_store.set_password(password).await?;
+        store.account_store.set_password(password.clone()).await?;
+
+        let mut protocol_client = protocol_config
+            .create(response.account_id, response.device_id, password.clone())
+            .await?;
+
+        let queue = protocol_client.connect().await?;
 
         Ok(Self {
             store,
             api_client,
-            _protocol_client: protocol_client,
+            protocol_client,
+            envelope_queue: queue,
         })
     }
 
@@ -180,7 +191,9 @@ impl<T: StoreType, U: ApiClient, V: SamProtocolClient> Client<T, U, V> {
 
         let account_id = response.account_id;
 
-        let protocol_client = protocol_config.create().await?;
+        let mut protocol_client = protocol_config
+            .create(account_id, 1.into(), password.clone())
+            .await?;
 
         store
             .account_store
@@ -190,10 +203,13 @@ impl<T: StoreType, U: ApiClient, V: SamProtocolClient> Client<T, U, V> {
         store.account_store.set_device_id(1.into()).await?;
         store.account_store.set_password(password).await?;
 
-        Ok(Client {
+        let queue = protocol_client.connect().await?;
+
+        Ok(Self {
             store,
-            _protocol_client: protocol_client,
+            protocol_client,
             api_client,
+            envelope_queue: queue,
         })
     }
 
@@ -204,10 +220,18 @@ impl<T: StoreType, U: ApiClient, V: SamProtocolClient> Client<T, U, V> {
         protocol_config: impl ProtocolConfig<ProtocolClient = V>,
         api_client_config: impl ApiClientConfig<ApiClient = U>,
     ) -> Result<Self, ClientError> {
+        let account_id = store.account_store.get_account_id().await?;
+        let device_id = store.account_store.get_device_id().await?;
+        let password = store.account_store.get_password().await?;
+        let mut protocol_client = protocol_config
+            .create(account_id, device_id, password)
+            .await?;
+        let queue = protocol_client.connect().await?;
         Ok(Self {
             store,
-            _protocol_client: protocol_config.create().await?,
+            protocol_client,
             api_client: api_client_config.create().await?,
+            envelope_queue: queue,
         })
     }
 
@@ -318,19 +342,88 @@ impl<T: StoreType, U: ApiClient, V: SamProtocolClient> Client<T, U, V> {
         Ok(account_id)
     }
 
-    /// Send any message to receipient
+    pub async fn remove_device_for(
+        &mut self,
+        account_id: AccountId,
+        device_id: DeviceId,
+    ) -> Result<(), ClientError> {
+        self.store
+            .contact_store
+            .remove_device(account_id, device_id)
+            .await
+    }
+
+    pub async fn disconnect(&mut self) -> Result<(), ClientError> {
+        self.protocol_client
+            .disconnect()
+            .await
+            .map_err(ClientError::from)
+    }
+
+    pub async fn connect(&mut self) -> Result<(), ClientError> {
+        self.envelope_queue = self.protocol_client.connect().await?;
+        Ok(())
+    }
+
+    pub async fn is_connected(&self) -> bool {
+        self.protocol_client.is_connected().await
+    }
+
+    /// Send any message to recipient
     /// Should also send to users other devices
     pub async fn send_message(
         &mut self,
-        _receipient: AccountId,
-        _msg: impl Into<Vec<u8>>,
-    ) -> Result<bool, ClientError> {
-        todo!()
+        recipient: AccountId,
+        msg: impl Into<Vec<u8>>,
+    ) -> Result<MessageStatus, ClientError> {
+        if !self.store.contact_store.contains_contact(recipient).await? {
+            return Err(ClientError::NoContact);
+        }
+        let envelope = encrypt(msg, recipient, &mut self.store).await?;
+        self.protocol_client
+            .send_message(envelope)
+            .await
+            .map_err(ClientError::from)
     }
 
     /// Returns a broadcast receiver for incoming messages that have been decrypted
-    pub async fn subscribe(&mut self) -> Result<Receiver<DecryptedEnvelope>, ClientError> {
-        todo!()
+    pub fn subscribe(&self) -> Receiver<DecryptedEnvelope> {
+        self.store.message_store.subscribe()
+    }
+
+    async fn _process_messages(&mut self, block: bool) -> Result<(), ClientError> {
+        if !block && self.envelope_queue.is_empty() {
+            return Ok(());
+        }
+        while let Some(envelope) = self.envelope_queue.recv().await {
+            // TODO: How should we handle failure to decrypt and/or store message?
+            let envelope = match decrypt(envelope, &mut self.store).await {
+                Ok(denvelope) => denvelope,
+                Err(e) => {
+                    error!("Failed to decrypt message: {e}");
+                    break;
+                }
+            };
+
+            let _ = self
+                .store
+                .message_store
+                .store_message(envelope)
+                .await
+                .inspect_err(|e| error!("Failed to store message {e}"));
+            if self.envelope_queue.is_empty() {
+                break;
+            }
+        }
+        Ok(())
+    }
+
+    pub async fn process_messages_blocking(&mut self) -> Result<(), ClientError> {
+        self._process_messages(true).await
+    }
+
+    pub async fn process_messages(&mut self) -> Result<(), ClientError> {
+        self._process_messages(false).await
     }
 
     /// publish ec, pq, last resort or last resort of amount
@@ -419,6 +512,10 @@ impl<T: StoreType, U: ApiClient, V: SamProtocolClient> Client<T, U, V> {
 
         for bundle in prekey_bundles.bundles {
             let device_id = bundle.device_id;
+            self.store
+                .contact_store
+                .add_device(account_id, device_id.into())
+                .await?;
             let libsignal_bundle = into_libsignal_bundle(bundle, prekey_bundles.identity_key)
                 .map_err(|_| ClientError::FailedToConvertPreKeyBundle)?;
             process_prekey_bundle(
@@ -447,28 +544,4 @@ impl<T: StoreType, U: ApiClient, V: SamProtocolClient> Client<T, U, V> {
             )
             .await?)
     }
-}
-
-fn into_libsignal_bundle(
-    bundle: sam_common::api::PreKeyBundle,
-    identity_key_pair: IdentityKey,
-) -> Result<PreKeyBundle, ClientError> {
-    let libsignal_bundle = PreKeyBundle::with_kyber_pre_key(
-        PreKeyBundle::new(
-            bundle.registration_id,
-            bundle.device_id.into(),
-            match bundle.pre_key {
-                None => None,
-                Some(key) => Some((key.key_id.into(), PublicKey::deserialize(&key.public_key)?)),
-            },
-            bundle.signed_pre_key.key_id.into(),
-            PublicKey::deserialize(&bundle.signed_pre_key.public_key)?,
-            Vec::from(bundle.signed_pre_key.signature),
-            identity_key_pair,
-        )?,
-        bundle.pq_pre_key.key_id.into(),
-        kem::PublicKey::try_from(&*bundle.pq_pre_key.public_key)?,
-        Vec::from(bundle.pq_pre_key.signature),
-    );
-    Ok(libsignal_bundle)
 }

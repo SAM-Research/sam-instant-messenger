@@ -12,6 +12,10 @@ pub struct InMemoryContactStore {
 
 #[async_trait(?Send)]
 impl ContactStore for InMemoryContactStore {
+    async fn contains_contact(&self, account_id: AccountId) -> Result<bool, ClientError> {
+        Ok(self.contacts.contains_key(&account_id))
+    }
+
     async fn get_all_devices(
         &self,
         account_id: AccountId,

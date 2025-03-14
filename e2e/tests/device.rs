@@ -14,7 +14,7 @@ mod utils;
 #[tokio::test]
 async fn can_link_device() {
     let _ = env_logger::try_init();
-    let address = "http://127.0.0.1:9388";
+    let address = "127.0.0.1:9388";
     let mut server = TestServer::start("127.0.0.1:9388").await;
 
     server
@@ -67,7 +67,7 @@ async fn can_link_device() {
 #[tokio::test]
 async fn can_delete_device() {
     let _ = env_logger::try_init();
-    let address = "http://127.0.0.1:9389";
+    let address = "127.0.0.1:9389";
     let mut server = TestServer::start("127.0.0.1:9389").await;
 
     server
@@ -125,7 +125,7 @@ async fn can_delete_device() {
 #[tokio::test]
 async fn can_delete_account() {
     let _ = env_logger::try_init();
-    let address = "http://127.0.0.1:9390";
+    let address = "127.0.0.1:9390";
     let mut server = TestServer::start("127.0.0.1:9390").await;
 
     server

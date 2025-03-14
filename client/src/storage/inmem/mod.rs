@@ -8,12 +8,14 @@ use libsignal_protocol::{
     IdentityKeyPair, InMemIdentityKeyStore, InMemKyberPreKeyStore, InMemPreKeyStore,
     InMemSenderKeyStore, InMemSessionStore, InMemSignedPreKeyStore,
 };
+use message::InMemoryMessageStore;
 use rand::rngs::OsRng;
 use sam_common::address::RegistrationId;
 
 pub mod account;
 pub mod contact;
 pub mod kyber;
+pub mod message;
 pub mod pre_key;
 pub mod signed_pre_key;
 
@@ -36,6 +38,7 @@ impl StoreType for InMemoryStoreType {
     type SessionStore = InMemSessionStore;
 
     type SenderKeyStore = InMemSenderKeyStore;
+    type MessageStore = InMemoryMessageStore;
 }
 
 pub type InMemoryStore = Store<InMemoryStoreType>;
@@ -60,6 +63,7 @@ impl StoreConfig for InMemoryStoreConfig {
             .session_store(InMemSessionStore::default())
             .account_store(InMemoryAccountStore::default())
             .contact_store(InMemoryContactStore::default())
+            .message_store(InMemoryMessageStore::new(10))
             .build())
     }
 

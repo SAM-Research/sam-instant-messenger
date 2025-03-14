@@ -108,6 +108,19 @@ async fn handle_client_envelope<T: StateType>(
             .is_empty();
 
     let mut extra_devices: HashMap<AccountId, Vec<DeviceId>> = HashMap::new();
+
+    if dest_acc_ids.is_empty() {
+        return Ok(ServerMessage::builder()
+            .id(message_id.into())
+            .r#type(MessageType::Status.into())
+            .content(Content::Status(
+                Status::builder()
+                    .code(StatusCode::EmptyMessage.into())
+                    .build(),
+            ))
+            .build());
+    }
+
     for (recipient, devices) in dest_acc_ids {
         let mut all_devices = state.devices.get_devices(recipient).await?;
 

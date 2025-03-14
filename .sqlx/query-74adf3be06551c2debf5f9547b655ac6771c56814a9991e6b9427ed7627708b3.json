@@ -1,0 +1,12 @@
+{
+  "db_name": "SQLite",
+  "query": "\n            INSERT INTO MessageStore (contact_id, content)\n            VALUES (\n            (SELECT id FROM Contacts WHERE account_id = ? AND device_id = ?),\n            ?\n            );\n            ",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Right": 3
+    },
+    "nullable": []
+  },
+  "hash": "74adf3be06551c2debf5f9547b655ac6771c56814a9991e6b9427ed7627708b3"
+}
