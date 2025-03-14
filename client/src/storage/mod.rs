@@ -6,6 +6,7 @@ use libsignal_protocol::{
     SenderKeyStore, SessionStore, SignedPreKeyId, SignedPreKeyStore,
 };
 use std::fmt::Debug;
+use traits::message::MessageStore;
 
 use crate::storage::key_generation::{KyberKeyGenerator, PreKeyGenerator, SignedPreKeyGenerator};
 pub use traits::{account::AccountStore, contact::ContactStore};
@@ -44,6 +45,7 @@ pub trait StoreType {
     type KyberPreKeyStore: KyberPreKeyStore + ProvidesKeyId<KyberPreKeyId> + KyberKeyGenerator;
     type SessionStore: SessionStore;
     type SenderKeyStore: SenderKeyStore;
+    type MessageStore: MessageStore;
 }
 
 #[derive(Debug, Builder)]
@@ -56,4 +58,5 @@ pub struct Store<T: StoreType> {
     pub kyber_pre_key_store: T::KyberPreKeyStore,
     pub session_store: T::SessionStore,
     pub sender_key_store: T::SenderKeyStore,
+    pub message_store: T::MessageStore,
 }

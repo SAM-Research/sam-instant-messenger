@@ -45,6 +45,7 @@ enum StatusCode {
   NEEDS_SYNC = 1;
   NOT_ENCRYPTED_FOR_ALL_DEVICES=2;
   ENCRYPTED_FOR_EXTRA_DEVICES=3;
+  EMPTY_MESSAGE = 4;
 }
 
 message Status {

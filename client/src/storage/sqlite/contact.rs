@@ -19,6 +19,21 @@ impl SqliteContactStore {
 
 #[async_trait(?Send)]
 impl ContactStore for SqliteContactStore {
+    async fn contains_contact(&self, account_id: AccountId) -> Result<bool, ClientError> {
+        let aci_str = account_id.to_string();
+        sqlx::query_scalar!(
+            r#"
+            SELECT EXISTS(
+                SELECT 1 FROM Contacts WHERE account_id = ?
+            )
+            "#,
+            aci_str
+        )
+        .fetch_one(&self.database)
+        .await
+        .map(|exists| exists == 1)
+        .map_err(|err| ClientError::Database(format!("{err}")))
+    }
     async fn get_all_devices(
         &self,
         account_id: AccountId,
