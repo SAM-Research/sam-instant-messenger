@@ -1,5 +1,6 @@
 use crate::utils::server::TestServer;
 
+use crate::utils::tls::{make_rustls_client_config, make_rustls_server_config};
 use libsignal_protocol::IdentityKeyPair;
 use rand::rngs::OsRng;
 use sam_client::{
@@ -19,11 +20,11 @@ use sam_common::{address::RegistrationId, AccountId};
 mod utils;
 
 /*
-   Ports used: 9380 - 9383
+   Ports used: 937x
 */
 pub async fn register_alice(
     address: String,
-) -> Client<SqliteStoreType, HttpClient, ProtocolClient> {
+) -> Result<Client<SqliteStoreType, HttpClient, ProtocolClient>, ClientError> {
     Client::from_registration()
         .username("Alice")
         .device_name("Alice's Device")
@@ -32,28 +33,20 @@ pub async fn register_alice(
         .protocol_config(WebSocketProtocolClientConfig::new(address))
         .call()
         .await
-        .expect("Can register Alice")
 }
 
 #[tokio::test]
 pub async fn one_client_can_register() {
     let _ = env_logger::try_init();
-    let address = "127.0.0.1:9480".to_owned();
-    let mut server = TestServer::start(&address).await;
+    let address = "127.0.0.1:9370".to_owned();
+    let mut server = TestServer::start(&address, None).await;
 
     server
         .started_rx()
         .await
         .expect("Should be able to start server");
 
-    let client = Client::from_registration()
-        .username("Alice")
-        .device_name("Alice's Device")
-        .store_config(SqliteStoreConfig::in_memory().await)
-        .api_client_config(HttpClientConfig::new(address.clone()))
-        .protocol_config(WebSocketProtocolClientConfig::new(address))
-        .call()
-        .await;
+    let client = register_alice(address).await;
 
     assert!(client.is_ok());
 }
@@ -61,23 +54,15 @@ pub async fn one_client_can_register() {
 #[tokio::test]
 pub async fn can_delete_account() {
     let _ = env_logger::try_init();
-    let address = "127.0.0.1:9381".to_owned();
-    let mut server = TestServer::start("127.0.0.1:9381").await;
+    let address = "127.0.0.1:9371".to_owned();
+    let mut server = TestServer::start(&address, None).await;
 
     server
         .started_rx()
         .await
         .expect("Should be able to start server");
 
-    let client = Client::from_registration()
-        .username("Alice")
-        .device_name("Alice's Device")
-        .store_config(SqliteStoreConfig::in_memory().await)
-        .api_client_config(HttpClientConfig::new(address.clone()))
-        .protocol_config(WebSocketProtocolClientConfig::new(address))
-        .call()
-        .await
-        .expect("Can register account");
+    let client = register_alice(address).await.expect("Can register account");
 
     assert!(client.delete_account().await.is_ok());
 }
@@ -85,8 +70,8 @@ pub async fn can_delete_account() {
 #[tokio::test]
 pub async fn cannot_create_client_without_valid_account() {
     let _ = env_logger::try_init();
-    let address = "127.0.0.1:9482".to_owned();
-    let mut server = TestServer::start("127.0.0.1:9482").await;
+    let address = "127.0.0.1:9372".to_owned();
+    let mut server = TestServer::start(&address, None).await;
 
     server
         .started_rx()
@@ -136,15 +121,15 @@ pub async fn cannot_create_client_without_valid_account() {
 #[tokio::test]
 pub async fn can_delete_a_device() {
     let _ = env_logger::try_init();
-    let address = "127.0.0.1:9383".to_owned();
-    let mut server = TestServer::start("127.0.0.1:9383").await;
+    let address = "127.0.0.1:9373".to_owned();
+    let mut server = TestServer::start(&address, None).await;
 
     server
         .started_rx()
         .await
         .expect("Should be able to start server");
 
-    let client = register_alice(address).await;
+    let client = register_alice(address).await.expect("Can register account");
 
     let result = client.delete_account().await;
     assert!(
@@ -157,23 +142,17 @@ pub async fn can_delete_a_device() {
 #[tokio::test]
 pub async fn alice_can_find_bobs_account_id() {
     let _ = env_logger::try_init();
-    let address = "127.0.0.1:9484".to_owned();
-    let mut server = TestServer::start("127.0.0.1:9484").await;
+    let address = "127.0.0.1:9374".to_owned();
+    let mut server = TestServer::start(&address, None).await;
 
     server
         .started_rx()
         .await
         .expect("Should be able to start server");
 
-    let alice = Client::from_registration()
-        .username("Alice")
-        .device_name("Alice's Device")
-        .store_config(SqliteStoreConfig::in_memory().await)
-        .api_client_config(HttpClientConfig::new(address.clone()))
-        .protocol_config(WebSocketProtocolClientConfig::new(address.clone()))
-        .call()
+    let alice = register_alice(address.clone())
         .await
-        .unwrap();
+        .expect("Can create account");
 
     let bob = Client::from_registration()
         .username("Bob")
@@ -189,4 +168,36 @@ pub async fn alice_can_find_bobs_account_id() {
 
     assert!(result.is_ok());
     assert_eq!(bob.account_id().await.unwrap(), result.unwrap())
+}
+
+#[tokio::test]
+pub async fn one_client_can_register_with_tls() {
+    let _ = env_logger::try_init();
+    let _ = rustls::crypto::ring::default_provider().install_default();
+    let address = "127.0.0.1:9375".to_owned();
+    let server_config = make_rustls_server_config("./cert/server.crt", "./cert/server.key");
+    let client_config = make_rustls_client_config("./cert/rootCA.crt").expect("Can make config");
+    let mut server = TestServer::start(&address, Some(server_config)).await;
+
+    server
+        .started_rx()
+        .await
+        .expect("Should be able to start server");
+
+    let client = Client::from_registration()
+        .username("Alice")
+        .device_name("Alice's Device")
+        .store_config(SqliteStoreConfig::in_memory().await)
+        .api_client_config(HttpClientConfig::new_with_tls(
+            address.clone(),
+            client_config.clone(),
+        ))
+        .protocol_config(WebSocketProtocolClientConfig::new_with_tls(
+            address,
+            client_config.clone(),
+        ))
+        .call()
+        .await;
+
+    assert!(client.is_ok());
 }

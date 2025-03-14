@@ -1,21 +1,20 @@
+use crate::utils::server::TestServer;
 use sam_client::net::http_client::HttpClientConfig;
 use sam_client::net::protocol::WebSocketProtocolClientConfig;
 use sam_client::storage::sqlite::SqliteStoreConfig;
 use sam_client::Client;
 
-use crate::utils::server::TestServer;
-
 mod utils;
 
 /*
-   PORTS USED: 9388-9390
+   PORTS USED: 938x
 */
 
 #[tokio::test]
 async fn can_link_device() {
     let _ = env_logger::try_init();
-    let address = "127.0.0.1:9388";
-    let mut server = TestServer::start("127.0.0.1:9388").await;
+    let address = "127.0.0.1:9380";
+    let mut server = TestServer::start(address, None).await;
 
     server
         .started_rx()
@@ -67,8 +66,8 @@ async fn can_link_device() {
 #[tokio::test]
 async fn can_delete_device() {
     let _ = env_logger::try_init();
-    let address = "127.0.0.1:9389";
-    let mut server = TestServer::start("127.0.0.1:9389").await;
+    let address = "127.0.0.1:9381";
+    let mut server = TestServer::start(address, None).await;
 
     server
         .started_rx()
@@ -125,8 +124,8 @@ async fn can_delete_device() {
 #[tokio::test]
 async fn can_delete_account() {
     let _ = env_logger::try_init();
-    let address = "127.0.0.1:9390";
-    let mut server = TestServer::start("127.0.0.1:9390").await;
+    let address = "127.0.0.1:9382";
+    let mut server = TestServer::start(address, None).await;
 
     server
         .started_rx()

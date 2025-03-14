@@ -1,14 +1,13 @@
-use std::sync::{
-    atomic::{AtomicBool, Ordering},
-    Arc,
-};
-
 use derive_more::{Display, Error};
 use futures_util::{
     stream::{SplitSink, SplitStream},
     SinkExt, StreamExt,
 };
 use log::error;
+use std::sync::{
+    atomic::{AtomicBool, Ordering},
+    Arc,
+};
 use tokio::{
     net::TcpStream,
     sync::mpsc::{self, Receiver, Sender},
