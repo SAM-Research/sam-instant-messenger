@@ -147,7 +147,7 @@ async fn test_alice_send_to_bob_offline() {
 #[tokio::test]
 async fn test_alice_send_to_bob_missing_devices() {
     timeout(Duration::from_secs(TIMEOUT_SECS), async {
-        let address = "127.0.0.1:9181";
+        let address = "127.0.0.1:9182";
         let mut server = TestServer::start(address).await;
         server
             .started_rx()
@@ -190,7 +190,7 @@ async fn test_alice_send_to_bob_missing_devices() {
 #[tokio::test]
 async fn test_alice_send_to_bob_two_devices() {
     timeout(Duration::from_secs(TIMEOUT_SECS), async {
-        let address = "127.0.0.1:9181";
+        let address = "127.0.0.1:9183";
         let mut server = TestServer::start(address).await;
         server
             .started_rx()
@@ -251,7 +251,7 @@ async fn test_alice_send_to_bob_two_devices() {
 #[tokio::test]
 async fn alice_send_to_bob_needs_sync() {
     timeout(Duration::from_secs(TIMEOUT_SECS), async {
-        let address = "127.0.0.1:9181";
+        let address = "127.0.0.1:9184";
         let mut server = TestServer::start(address).await;
         server
             .started_rx()
