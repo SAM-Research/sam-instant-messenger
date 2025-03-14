@@ -75,10 +75,7 @@ async fn test_alice_send_to_bob() {
         let bob_id = bob.account_id().await.expect("Bob can get his id");
 
         let mut bob_recv = bob.subscribe();
-        alice
-            .fetch_prekeys(bob_id, None)
-            .await
-            .expect("Can fetch bob keys");
+
         alice
             .send_message(bob_id, "Hello bob!")
             .await
@@ -115,10 +112,6 @@ async fn test_alice_send_to_bob_offline() {
 
         bob.disconnect().await.expect("Bob can disconnect");
 
-        alice
-            .fetch_prekeys(bob_id, None)
-            .await
-            .expect("Can fetch bob keys");
         alice
             .send_message(bob_id, "Hello bob!")
             .await
@@ -168,10 +161,6 @@ async fn test_alice_send_to_bob_two_devices() {
             token,
         )
         .await;
-        alice
-            .fetch_prekeys(bob_id, None)
-            .await
-            .expect("Can fetch bob keys");
 
         alice
             .send_message(bob_id, "Hello bob!")
@@ -229,10 +218,6 @@ async fn test_alice_send_to_bob_and_self() {
         )
         .await;
 
-        alice
-            .fetch_prekeys(bob_id, None)
-            .await
-            .expect("Can fetch bob keys");
         alice
             .send_message(bob_id, "Hello bob!")
             .await
