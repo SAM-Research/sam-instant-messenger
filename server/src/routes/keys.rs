@@ -37,21 +37,32 @@ impl<T: StateType> FromRequest<ServerState<T>> for Option<Json<Vec<DeviceId>>> {
 /// Returns key bundles for users devices
 async fn key_bundles_for_some_devices_endpoint<T: StateType>(
     Path(account_id): Path<AccountId>,
-    _auth_user: AuthenticatedUser,
+    auth_user: AuthenticatedUser,
     State(mut state): State<ServerState<T>>,
     json: Option<Json<Vec<DeviceId>>>,
 ) -> Result<Json<PreKeyBundles>, ServerError> {
     match json {
-        None => get_keybundles_for_all_devices(&mut state, account_id)
-            .await
-            .map(Json),
+        None => get_keybundles_for_all_devices(
+            &mut state,
+            account_id,
+            auth_user.account().id(),
+            auth_user.device().id(),
+        )
+        .await
+        .map(Json),
         Some(Json(device_ids)) => {
             if device_ids.is_empty() {
                 return Err(RouterError::NoDeviceIdsInRequest)?;
             };
-            get_keybundles(&mut state, account_id, device_ids)
-                .await
-                .map(Json)
+            get_keybundles(
+                &mut state,
+                account_id,
+                device_ids,
+                auth_user.account().id(),
+                auth_user.device().id(),
+            )
+            .await
+            .map(Json)
         }
     }
 }
@@ -128,6 +139,7 @@ mod test {
         let mut state = ServerState::in_memory_test();
         let (pair, account_id, device_id) =
             create_user(&mut state, "alice", "phone", "bob", OsRng).await;
+        let (_, bob_id, _) = create_user(&mut state, "bob", "phone", "password", OsRng).await;
 
         let keys = create_publish_pre_keys(
             Some(vec![1]),
@@ -150,7 +162,7 @@ mod test {
         let server = test_server(state, key_routes);
         let basic = format!(
             "Basic {}",
-            BASE64_STANDARD.encode(format!("{}.1:{}", account_id, "bob"))
+            BASE64_STANDARD.encode(format!("{}.1:{}", bob_id, "password"))
         );
 
         let res = server
@@ -178,7 +190,7 @@ mod test {
         let mut state = ServerState::in_memory_test();
         let (pair, account_id, device_id) =
             create_user(&mut state, "alice", "phone", "bob", OsRng).await;
-
+        let (_, bob_id, _) = create_user(&mut state, "bob", "phone", "password", OsRng).await;
         let keys = create_publish_pre_keys(
             Some(vec![1]),
             Some(3),
@@ -200,7 +212,7 @@ mod test {
         let server = test_server(state, key_routes);
         let basic = format!(
             "Basic {}",
-            BASE64_STANDARD.encode(format!("{}.1:{}", account_id, "bob"))
+            BASE64_STANDARD.encode(format!("{}.1:{}", bob_id, "password"))
         );
 
         let device_ids: Vec<DeviceId> = vec![1.into()];

@@ -6,12 +6,14 @@ use crate::{
     state::{state_type::StateType, ServerState},
     ServerError,
 };
-use log::{error, warn};
+use log::warn;
 use sam_common::{
-    address::MessageId,
-    address::{AccountId, DeviceId},
-    sam_message::{server_message::Content, ClientMessage, ServerEnvelope, ServerMessage},
-    sam_message::{ClientEnvelope, DeviceList, MessageType, SamMessage, Status, StatusCode},
+    address::{AccountId, DeviceId, MessageId},
+    sam_message::{
+        server_message::Content, ClientEnvelope, ClientMessage, ClientMessageType, DeviceList,
+        ExtraDevicesStatus, MissingDevicesError, SamMessage, ServerEnvelope, ServerMessage,
+        ServerMessageType,
+    },
 };
 
 pub async fn handle_client_message<T: StateType>(
@@ -25,22 +27,20 @@ pub async fn handle_client_message<T: StateType>(
     };
 
     match message.r#type() {
-        MessageType::Message => {
-            if let Some(envelope) = message.message {
-                Ok(Some(
-                    handle_client_envelope(state, auth_user, message_id, envelope).await?,
-                ))
-            } else {
-                Err(ServerError::EnvelopeMalformed)
-            }
-        }
-        MessageType::Ack => {
+        ClientMessageType::ClientMessage => match message.message {
+            Some(envelope) => Ok(Some(
+                handle_client_envelope(state, auth_user, message_id, envelope).await?,
+            )),
+            None => Err(ServerError::EnvelopeMalformed),
+        },
+        ClientMessageType::ClientAck => {
             let account_id = auth_user.account().id();
             let device_id = auth_user.device().id();
             let pending_res = state
                 .messages
                 .remove_pending_message(account_id, device_id, message_id)
                 .await;
+
             match pending_res {
                 Ok(_) => {
                     let remove_res = state
@@ -62,23 +62,6 @@ pub async fn handle_client_message<T: StateType>(
                 }
             }
         }
-        MessageType::Status => {
-            let account_id = auth_user.account().id();
-            let device_id = auth_user.device().id();
-            let pending_res = state
-                .messages
-                .remove_pending_message(account_id, device_id, message_id)
-                .await;
-            error!(
-                "User '{}' failed to process message with id '{}'",
-                auth_user.account().username(),
-                message_id
-            );
-            match pending_res {
-                Ok(_) => Ok(None),
-                Err(e) => Err(e),
-            }
-        }
     }
 }
 
@@ -92,40 +75,23 @@ async fn handle_client_envelope<T: StateType>(
         .recipients()
         .ok_or(ServerError::EnvelopeMalformed)?;
 
-    let sender_acc_id = auth_user.account().id();
-    let sender_dev_id = auth_user.device().id();
-
-    let is_sync = dest_acc_ids.contains_key(&auth_user.account().id());
-
-    let needs_sync = !is_sync
-        && !state
-            .devices
-            .get_devices(sender_acc_id)
-            .await?
-            .into_iter()
-            .filter(|id| *id != sender_dev_id)
-            .collect::<Vec<DeviceId>>()
-            .is_empty();
+    let sender_account_id = auth_user.account().id();
+    let sender_device_id = auth_user.device().id();
 
     let mut extra_devices: HashMap<AccountId, Vec<DeviceId>> = HashMap::new();
 
     if dest_acc_ids.is_empty() {
         return Ok(ServerMessage::builder()
             .id(message_id.into())
-            .r#type(MessageType::Status.into())
-            .content(Content::Status(
-                Status::builder()
-                    .code(StatusCode::EmptyMessage.into())
-                    .build(),
-            ))
+            .r#type(ServerMessageType::EmptyMessage.into())
             .build());
     }
 
     for (recipient, devices) in dest_acc_ids {
         let mut all_devices = state.devices.get_devices(recipient).await?;
 
-        if recipient == sender_acc_id {
-            all_devices.retain(|id| *id != sender_dev_id);
+        if recipient == sender_account_id {
+            all_devices.retain(|id| *id != sender_device_id);
         }
 
         let recipient_id_as_vec = Into::<Vec<u8>>::into(recipient);
@@ -145,9 +111,8 @@ async fn handle_client_envelope<T: StateType>(
 
         if !missing_devices.is_empty() {
             return Ok(ServerMessage::builder()
-                .r#type(MessageType::Status as i32)
-                .content(Content::Status(Status {
-                    code: StatusCode::NotEncryptedForAllDevices.into(),
+                .r#type(ServerMessageType::NotEncryptedForAllDevices.into())
+                .content(Content::MissingDevices(MissingDevicesError {
                     device_lists: vec![DeviceList {
                         account_id: recipient.into(),
                         device_ids: missing_devices.into_iter().map(|id| id.into()).collect(),
@@ -171,8 +136,8 @@ async fn handle_client_envelope<T: StateType>(
                 .r#type(message.r#type)
                 .destination_account_id(message.destination_account_id.clone())
                 .destination_device_id(message.destination_device_id)
-                .source_account_id(sender_acc_id.into())
-                .source_device_id(sender_dev_id.into())
+                .source_account_id(sender_account_id.into())
+                .source_device_id(sender_device_id.into())
                 .content(message.content.clone())
                 .id(id.into_bytes().to_vec())
                 .build();
@@ -184,9 +149,8 @@ async fn handle_client_envelope<T: StateType>(
     }
     if !extra_devices.iter().all(|(_, list)| list.is_empty()) {
         return Ok(ServerMessage::builder()
-            .r#type(MessageType::Status as i32)
-            .content(Content::Status(Status {
-                code: StatusCode::EncryptedForExtraDevices.into(),
+            .r#type(ServerMessageType::EncryptedForExtraMessages.into())
+            .content(Content::ExtraDevices(ExtraDevicesStatus {
                 device_lists: extra_devices
                     .into_iter()
                     .map(|(account_id, device_ids)| DeviceList {
@@ -199,23 +163,13 @@ async fn handle_client_envelope<T: StateType>(
             .build());
     }
 
-    if needs_sync {
-        return Ok(ServerMessage::builder()
-            .r#type(MessageType::Status as i32)
-            .content(Content::Status(
-                Status::builder().code(StatusCode::NeedsSync.into()).build(),
-            ))
-            .id(message_id.into())
-            .build());
-    }
-
     Ok(ServerMessage::builder()
         .id(message_id.into())
-        .r#type(MessageType::Ack.into())
+        .r#type(ServerMessageType::ServerAck.into())
         .build())
 }
 
-pub async fn handle_server_envelope<T: StateType>(
+pub async fn prepare_server_envelope<T: StateType>(
     state: &mut ServerState<T>,
     auth_user: &AuthenticatedUser,
     envelope: ServerEnvelope,
@@ -230,8 +184,8 @@ pub async fn handle_server_envelope<T: StateType>(
     Ok(Some(
         ServerMessage::builder()
             .id(id.into())
-            .r#type(MessageType::Message.into())
-            .content(Content::Message(envelope))
+            .r#type(ServerMessageType::ServerMessage.into())
+            .content(Content::ServerEnvelope(envelope))
             .build(),
     ))
 }

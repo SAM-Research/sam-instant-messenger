@@ -50,7 +50,8 @@ mod test {
     use sam_common::{
         address::{AccountId, DeviceId, MessageId},
         sam_message::{
-            ClientEnvelope, ClientMessage, MessageType, SamMessage, SamMessageType, ServerMessage,
+            ClientEnvelope, ClientMessage, ClientMessageType, SamMessage, SamMessageType,
+            ServerMessage, ServerMessageType,
         },
     };
 
@@ -160,7 +161,7 @@ mod test {
         let msg = ClientMessage::builder()
             .id(msg_id.into())
             .message(envelope)
-            .r#type(MessageType::Message as i32)
+            .r#type(ClientMessageType::ClientMessage.into())
             .build();
 
         let mut alice = connect_user(alice_id, 1.into(), "alice", "bob", &address).await;
@@ -196,6 +197,6 @@ mod test {
 
         println!("MESSAGE: {:?}", server_msg);
 
-        assert_eq!(server_msg.r#type(), MessageType::Ack);
+        assert_eq!(server_msg.r#type(), ServerMessageType::ServerAck);
     }
 }

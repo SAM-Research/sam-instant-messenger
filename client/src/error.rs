@@ -17,6 +17,7 @@ pub enum ClientError {
     Curve(CurveError),
     Api(ApiClientError),
     Protocol(ProtocolError),
+    MissingDevices,
     NoAccountId,
     NoPassword,
     NoUsername,
