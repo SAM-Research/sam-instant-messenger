@@ -13,7 +13,7 @@ use tokio::sync::mpsc;
 use tokio::sync::mpsc::{Receiver, Sender};
 
 use crate::protocol::error::{WebSocketError, WebSocketSessionError};
-use crate::protocol::message::{handle_client_message, handle_server_envelope};
+use crate::protocol::message::{handle_client_message, prepare_server_envelope};
 use crate::{
     auth::authenticated_user::AuthenticatedUser,
     managers::traits::message_manager::MessageManager,
@@ -163,7 +163,7 @@ async fn websocket_dispatcher<T: StateType>(
             .await;
 
         let msg_res = match msg_res {
-            Ok(envelope) => handle_server_envelope(&mut state, &auth_user, envelope)
+            Ok(envelope) => prepare_server_envelope(&mut state, &auth_user, envelope)
                 .await
                 .map_err(WebSocketSessionError::from),
             Err(e) => Err(WebSocketSessionError::from(e)),
