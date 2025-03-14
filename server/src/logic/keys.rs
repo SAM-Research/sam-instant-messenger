@@ -107,9 +107,15 @@ pub async fn add_keybundle<T: StateType>(
 pub async fn get_keybundles<T: StateType>(
     state: &mut ServerState<T>,
     account_id: AccountId,
-    device_ids: Vec<DeviceId>,
+    mut device_ids: Vec<DeviceId>,
+    auth_account_id: AccountId,
+    auth_device_id: DeviceId,
 ) -> Result<PreKeyBundles, ServerError> {
     let identity_key = { *state.accounts.get_account(account_id).await?.identity() };
+
+    if account_id == auth_account_id {
+        device_ids.retain(|d| *d != auth_device_id);
+    };
 
     let devices = {
         let mut device_vec = vec![];
@@ -137,11 +143,17 @@ pub async fn get_keybundles<T: StateType>(
 pub async fn get_keybundles_for_all_devices<T: StateType>(
     state: &mut ServerState<T>,
     account_id: AccountId,
+    auth_account_id: AccountId,
+    auth_device_id: DeviceId,
 ) -> Result<PreKeyBundles, ServerError> {
+    let device_ids = state.devices.get_devices(account_id).await?;
+
     let key_bundles = get_keybundles(
         state,
         account_id,
-        state.devices.get_devices(account_id).await?,
+        device_ids,
+        auth_account_id,
+        auth_device_id,
     )
     .await?;
     Ok(key_bundles)
@@ -162,6 +174,7 @@ pub async fn publish_keybundle<T: StateType>(
 mod test {
     use libsignal_protocol::IdentityKeyPair;
     use rand::rngs::OsRng;
+
     use sam_common::{address::AccountId, api::Key};
 
     use crate::logic::keys::get_keybundles_for_all_devices;
@@ -393,9 +406,10 @@ mod test {
             .await
             .expect("Alice can publish bundle");
 
-        let bundles = get_keybundles_for_all_devices(&mut state, account_id)
-            .await
-            .expect("User can get alices bundles");
+        let bundles =
+            get_keybundles_for_all_devices(&mut state, account_id, AccountId::generate(), 1.into())
+                .await
+                .expect("User can get alices bundles");
 
         assert!(bundles.identity_key.serialize() == account.identity().serialize());
         assert!(bundles.bundles.len() == 1);
