@@ -402,7 +402,7 @@ impl<T: StoreType, U: ApiClient, V: SamProtocolClient> Client<T, U, V> {
                     self.fetch_prekeys(list.account_id, Some(list.devices))
                         .await?;
                 }
-                Ok(())
+                Err(ClientError::MissingDevices)
             }
             MessageStatus::Ok => Ok(()),
         }
