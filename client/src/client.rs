@@ -391,8 +391,8 @@ impl<T: StoreType, U: ApiClient, V: SamProtocolClient> Client<T, U, V> {
         self.store.message_store.subscribe()
     }
 
-    pub async fn process_messages(&mut self) -> Result<(), ClientError> {
-        if self.envelope_queue.is_empty() {
+    async fn _process_messages(&mut self, block: bool) -> Result<(), ClientError> {
+        if !block && self.envelope_queue.is_empty() {
             return Ok(());
         }
         while let Some(envelope) = self.envelope_queue.recv().await {
@@ -416,6 +416,14 @@ impl<T: StoreType, U: ApiClient, V: SamProtocolClient> Client<T, U, V> {
             }
         }
         Ok(())
+    }
+
+    pub async fn process_messages_blocking(&mut self) -> Result<(), ClientError> {
+        self._process_messages(true).await
+    }
+
+    pub async fn process_messages(&mut self) -> Result<(), ClientError> {
+        self._process_messages(false).await
     }
 
     /// publish ec, pq, last resort or last resort of amount

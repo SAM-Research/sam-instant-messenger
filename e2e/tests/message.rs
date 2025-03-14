@@ -28,6 +28,7 @@ async fn client(
         .store_config(InMemoryStoreConfig::default())
         .api_client_config(HttpClientConfig::new(address.to_string()))
         .protocol_config(WebSocketProtocolClientConfig::new(address.to_string()))
+        .upload_prekey_count(5)
         .call()
         .await
         .expect("Can register Client")
@@ -46,6 +47,7 @@ async fn client_device(
         .device_name(device_name)
         .id_key_pair(id_pair)
         .token(token)
+        .upload_prekey_count(5)
         .call()
         .await
         .expect("Can provision device")
@@ -123,12 +125,9 @@ async fn test_alice_send_to_bob_offline() {
 
     let mut bob_recv = bob.subscribe();
 
-    // give time for the websocket client to process and respond to server
-    tokio::time::sleep(Duration::from_millis(300)).await;
+    let process_timeout = timeout(Duration::from_secs(1), bob.process_messages_blocking()).await;
 
-    bob.process_messages()
-        .await
-        .expect("Bob can process messages");
+    assert!(matches!(process_timeout, Ok(Ok(()))));
 
     let res = timeout(Duration::from_millis(300), bob_recv.recv())
         .await
@@ -143,7 +142,6 @@ async fn test_alice_send_to_bob_offline() {
 
 #[tokio::test]
 async fn alice_send_to_bob_missing_devices() {
-    let _ = env_logger::try_init();
     let address = "127.0.0.1:9181";
     let mut server = TestServer::start(address).await;
     server
