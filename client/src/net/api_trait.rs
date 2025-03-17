@@ -16,7 +16,7 @@ pub trait ApiClient {
     /// # Arguments
     ///
     /// * `username` - The username of the account.
-    /// * `password` - The password of the account.
+    /// * `password` - The password of the device.
     /// * `request` - A [`RegistrationRequest`] containing the necessary details for account creation.
     ///
     /// # Returns
@@ -36,7 +36,7 @@ pub trait ApiClient {
     ///
     /// * `account_id` - A [`AccountId`] containing the id of the account.
     /// * `device_id` - A [`DeviceId`] containing the id for the device on that account.
-    /// * `password` - The password of the account.
+    /// * `password` - The password of the device.
     ///
     /// # Returns
     ///
@@ -58,7 +58,7 @@ pub trait ApiClient {
     ///
     /// * `account_id` - A [`AccountId`] containing the id of the account.
     /// * `device_id` - A [`DeviceId`] containing the id for the device on that account.
-    /// * `password` - The password of the account.
+    /// * `password` - The password of the device.
     /// * `receiver_account_id` - The [`AccountId`] for which pre-keys should be fetched.
     /// * `specific_devices` - A [`Option<Vec<DeviceId>>`] if client only wants to fetch for some devices.
     ///
@@ -83,7 +83,7 @@ pub trait ApiClient {
     ///
     /// * `account_id` - A [`AccountId`] containing the id of the account.
     /// * `device_id` - A [`DeviceId`] containing the id for the device on that account.
-    /// * `password` - The password of the account.
+    /// * `password` - The password of the device.
     /// * `pre_keys` - A [`PublishPreKeys`] containing the new pre-keys to be published.
     ///
     /// # Returns
@@ -106,7 +106,7 @@ pub trait ApiClient {
     ///
     /// * `account_id` - A [`AccountId`] containing the id of the account.
     /// * `device_id` - A [`DeviceId`] containing the id for the device on that account.
-    /// * `password` - The password of the account.
+    /// * `password` - The password of the device.
     ///
     /// # Returns
     ///
@@ -125,9 +125,7 @@ pub trait ApiClient {
     ///
     /// # Arguments
     ///
-    /// * `account_id` - A [`AccountId`] containing the id of the account.
-    /// * `device_id` - A [`DeviceId`] containing the id for the device on that account.
-    /// * `password` - The password of the account.
+    /// * `password` - The password of the device.
     /// * `request` - A [`LinkDeviceRequest`] containing the necessary details for linking the device.
     ///
     /// # Returns
@@ -149,7 +147,7 @@ pub trait ApiClient {
     ///
     /// * `account_id` - A [`AccountId`] containing the id of the account.
     /// * `device_id` - A [`DeviceId`] containing the id for the device on that account.
-    /// * `password` - The password of the account.
+    /// * `password` - The password of the device.
     /// * `removed_device` - The [`DeviceId`] of the device to be deleted.
     ///
     /// # Returns
