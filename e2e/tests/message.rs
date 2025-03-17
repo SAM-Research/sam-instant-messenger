@@ -13,9 +13,11 @@ use sam_client::{
         },
         ApiClient, HttpClient,
     },
-    storage::sqlite::{SqliteStoreConfig, SqliteStoreType},
-    storage::StoreType,
-    Client,
+    storage::{
+        sqlite::{SqliteStoreConfig, SqliteStoreType},
+        StoreType,
+    },
+    Client, ClientError,
 };
 use sam_common::{api::LinkDeviceToken, AccountId};
 use tokio::{sync::broadcast::Receiver, time::timeout};
@@ -187,9 +189,127 @@ async fn test_alice_send_to_bob_two_devices() {
 }
 
 #[tokio::test]
-async fn test_alice_send_to_bob_and_self() {
+async fn test_alice_send_to_bob_missing_devices() {
     timeout(Duration::from_secs(TIMEOUT_SECS), async {
         let address = "127.0.0.1:9184";
+        let mut server = TestServer::start(address, None).await;
+        server
+            .started_rx()
+            .await
+            .expect("Should be able to start server");
+
+        let mut alice = client(address, "alice", "alice device").await;
+        let mut bob = client(address, "bob", "bob device").await;
+
+        let token = bob
+            .create_provision()
+            .await
+            .expect("bob can init provisioning");
+        let bob_id = bob.account_id().await.expect("Bob can get account id");
+
+        alice
+            .send_message(bob_id, "Hello bob!")
+            .await
+            .expect("Alice can send message");
+
+        let _bob_device = client_device(
+            address,
+            "bob_device",
+            bob.identity_key_pair().await.expect("can get id pair"),
+            token,
+        )
+        .await;
+
+        assert!(matches!(
+            alice.send_message(bob_id, "Hello again, Bob").await,
+            Err(ClientError::MissingDevices)
+        ));
+
+        assert!(alice.send_message(bob_id, "Hello again, Bob").await.is_ok());
+    })
+    .await
+    .expect("Test took to long to complete")
+}
+
+#[tokio::test]
+async fn test_alice_send_to_bob_extra_devices() {
+    timeout(Duration::from_secs(TIMEOUT_SECS), async {
+        let address = "127.0.0.1:9185";
+        let mut server = TestServer::start(address, None).await;
+        server
+            .started_rx()
+            .await
+            .expect("Should be able to start server");
+
+        let mut alice = client(address, "alice", "alice device").await;
+        let mut bob = client(address, "bob", "bob device").await;
+
+        let token = bob
+            .create_provision()
+            .await
+            .expect("bob can init provisioning");
+        let bob_id = bob.account_id().await.expect("Bob can get account id");
+
+        let mut bob_device = client_device(
+            address,
+            "bob_device",
+            bob.identity_key_pair().await.expect("can get id pair"),
+            token,
+        )
+        .await;
+
+        alice
+            .send_message(bob_id, "Hello bob!")
+            .await
+            .expect("Alice can send message");
+
+        let mut bob_device_recv = bob_device.subscribe();
+        let mut bob_recv = bob.subscribe();
+
+        bob.process_messages_blocking()
+            .await
+            .expect("Bob can process messages");
+        bob_device
+            .process_messages_blocking()
+            .await
+            .expect("Bob device can process messages");
+
+        let res = bob_recv.recv().await.expect("receiver works");
+        let bob_msg = String::from_utf8_lossy(res.content_bytes());
+
+        let res = bob_device_recv.recv().await.expect("receiver works");
+        let bob_device_msg = String::from_utf8_lossy(res.content_bytes());
+
+        assert!(bob_msg == "Hello bob!");
+        assert!(bob_device_msg == "Hello bob!");
+
+        assert!(
+            bob_device.delete_device().await.is_ok(),
+            "Bob can delete his device"
+        );
+
+        alice
+            .send_message(bob_id, "Hello again, Bob")
+            .await
+            .expect("Alice can send again");
+
+        bob.process_messages_blocking()
+            .await
+            .expect("Bob can process messages again");
+
+        let res = bob_recv.recv().await.expect("receiver works");
+        let bob_msg = String::from_utf8_lossy(res.content_bytes());
+
+        assert!(bob_msg == "Hello again, Bob");
+    })
+    .await
+    .expect("Test took to long to complete")
+}
+
+#[tokio::test]
+async fn test_alice_send_to_bob_and_self() {
+    timeout(Duration::from_secs(TIMEOUT_SECS), async {
+        let address = "127.0.0.1:9186";
         let mut server = TestServer::start(address, None).await;
         server
             .started_rx()
@@ -239,7 +359,7 @@ async fn test_alice_send_to_bob_with_tls() {
     timeout(Duration::from_secs(TIMEOUT_SECS), async {
         let _ = env_logger::try_init();
         let _ = rustls::crypto::ring::default_provider().install_default();
-        let address = "127.0.0.1:9185";
+        let address = "127.0.0.1:9187";
         let server_config = make_rustls_server_config("./cert/server.crt", "./cert/server.key");
         let mut server = TestServer::start(address, Some(server_config)).await;
         server
@@ -302,9 +422,9 @@ async fn send(
 }
 
 #[rstest]
-#[case(vec![Message::Alice("a"), Message::Bob("b"), Message::Alice("aa"), Message::Alice("aaa"), Message::Bob("bb")], "9086")]
-#[case(vec![Message::Alice("a"), Message::Alice("aa"), Message::Alice("aaa"), Message::Bob("b"), Message::Bob("bb")], "9087")]
-#[case(vec![Message::Bob("b"), Message::Alice("a")], "9088")]
+#[case(vec![Message::Alice("a"), Message::Bob("b"), Message::Alice("aa"), Message::Alice("aaa"), Message::Bob("bb")], "9088")]
+#[case(vec![Message::Alice("a"), Message::Alice("aa"), Message::Alice("aaa"), Message::Bob("b"), Message::Bob("bb")], "9089")]
+#[case(vec![Message::Bob("b"), Message::Alice("a")], "9080")]
 #[tokio::test]
 async fn test_ongoing_communication<'a>(#[case] sequence: Vec<Message<'a>>, #[case] port: &str) {
     timeout(Duration::from_secs(TIMEOUT_SECS), async {
