@@ -1,4 +1,3 @@
-use crate::ClientError;
 use async_trait::async_trait;
 use bon::Builder;
 use libsignal_protocol::{
@@ -6,15 +5,25 @@ use libsignal_protocol::{
     SenderKeyStore, SessionStore, SignedPreKeyId, SignedPreKeyStore,
 };
 use std::fmt::Debug;
-use traits::message::MessageStore;
 
 use crate::storage::key_generation::{KyberKeyGenerator, PreKeyGenerator, SignedPreKeyGenerator};
-pub use traits::{account::AccountStore, contact::ContactStore};
+use crate::ClientError;
 
 pub mod inmem;
 pub mod key_generation;
 pub mod sqlite;
 pub mod traits;
+
+pub use inmem::{
+    InMemoryAccountStore, InMemoryContactStore, InMemoryMessageStore, InMemoryStore,
+    InMemoryStoreConfig, InMemoryStoreType,
+};
+pub use sqlite::{
+    SqliteContactStore, SqliteIdentityKeyStore, SqliteKyberPreKeyStore, SqliteMessageStore,
+    SqlitePreKeyStore, SqliteSenderKeyStore, SqliteSessionStore, SqliteSignedPreKeyStore,
+    SqliteStore, SqliteStoreConfig, SqliteStoreType,
+};
+pub use traits::{account::AccountStore, contact::ContactStore, message::MessageStore};
 
 #[async_trait(?Send)]
 pub trait StoreConfig {

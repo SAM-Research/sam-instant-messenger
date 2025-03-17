@@ -108,7 +108,7 @@ impl<T: StoreType, U: ApiClient, V: SamProtocolClient> Client<T, U, V> {
         })
     }
 
-    /// Register a new account from a clean store
+    /// Register a new account.
     #[builder]
     pub async fn from_registration(
         store_config: impl StoreConfig<StoreType = T>,
@@ -170,7 +170,7 @@ impl<T: StoreType, U: ApiClient, V: SamProtocolClient> Client<T, U, V> {
         })
     }
 
-    /// Instantiate a client from a valid store
+    /// Instantiate a client from a valid store.
     #[builder]
     pub async fn from_store(
         store: Store<T>,
@@ -208,7 +208,8 @@ impl<T: StoreType, U: ApiClient, V: SamProtocolClient> Client<T, U, V> {
             .await?)
     }
 
-    /// Delete Account and consume client
+    /// Delete Account and consumes the client.
+    /// If account deletion fails, the client is returned along with the error.
     pub async fn delete_account(self) -> Result<(), (Self, ClientError)> {
         let account_id = self.account_id().await;
         let device_id = self.device_id().await;
@@ -238,9 +239,10 @@ impl<T: StoreType, U: ApiClient, V: SamProtocolClient> Client<T, U, V> {
         Ok(())
     }
 
-    /// Delete this device and consume client.
-    /// This cannot be done for the primary device. See `unlink_device` if you want to delete
-    /// another device.
+    /// Delete this device and consumes the client.
+    /// This cannot be done for the primary device.
+    ///
+    /// See `unlink_device` if you want to delete another device.
     pub async fn delete_device(self) -> Result<(), (Self, ClientError)> {
         let account_id = self.account_id().await;
         let device_id = self.device_id().await;
@@ -310,6 +312,7 @@ impl<T: StoreType, U: ApiClient, V: SamProtocolClient> Client<T, U, V> {
             .await
     }
 
+    /// Disconnect from the server.
     pub async fn disconnect(&mut self) -> Result<(), ClientError> {
         self.protocol_client
             .disconnect()
@@ -317,17 +320,18 @@ impl<T: StoreType, U: ApiClient, V: SamProtocolClient> Client<T, U, V> {
             .map_err(ClientError::from)
     }
 
+    /// Connect to the server to recieve messages.
     pub async fn connect(&mut self) -> Result<(), ClientError> {
         self.envelope_queue = self.protocol_client.connect().await?;
         Ok(())
     }
 
+    /// Returns whether or not the client is connected to the server.
     pub async fn is_connected(&self) -> bool {
         self.protocol_client.is_connected().await
     }
 
-    /// Send any message to recipient
-    /// Should also send to users other devices
+    /// Send any message to recipient. Also sends syncs the message with your other devices.
     pub async fn send_message(
         &mut self,
         recipient: AccountId,
@@ -365,7 +369,7 @@ impl<T: StoreType, U: ApiClient, V: SamProtocolClient> Client<T, U, V> {
         }
     }
 
-    /// Returns a broadcast receiver for incoming messages that have been decrypted
+    /// Returns a broadcast receiver for incoming messages that have been decrypted.
     pub fn subscribe(&self) -> Receiver<DecryptedEnvelope> {
         self.store.message_store.subscribe()
     }
@@ -402,15 +406,17 @@ impl<T: StoreType, U: ApiClient, V: SamProtocolClient> Client<T, U, V> {
         Ok(())
     }
 
+    /// Recieve and decrypt messages. Block until at least one message is received.
     pub async fn process_messages_blocking(&mut self) -> Result<(), ClientError> {
         self._process_messages(true).await
     }
 
+    /// Recieve and decrypt messages.
     pub async fn process_messages(&mut self) -> Result<(), ClientError> {
         self._process_messages(false).await
     }
 
-    /// publish ec, pq, last resort or last resort of amount
+    /// Publish new prekeys.
     #[builder]
     pub async fn publish_prekeys(
         &mut self,
@@ -517,7 +523,7 @@ impl<T: StoreType, U: ApiClient, V: SamProtocolClient> Client<T, U, V> {
         Ok(())
     }
 
-    /// Create a provision token to be used on another client to activate
+    /// Create a provisioning token for linking a new device to your account.
     pub async fn create_provision(&mut self) -> Result<LinkDeviceToken, ClientError> {
         Ok(self
             .api_client
