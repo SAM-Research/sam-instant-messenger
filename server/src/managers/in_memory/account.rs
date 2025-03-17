@@ -39,7 +39,10 @@ impl AccountManager for InMemoryAccountManager {
             .ok_or(AccountManagerError::AccountDoesNotExist)?)
     }
 
-    async fn get_account_from_username(&self, username: String) -> Result<AccountId, ServerError> {
+    async fn get_account_id_from_username(
+        &self,
+        username: String,
+    ) -> Result<AccountId, ServerError> {
         let account = self
             .accounts
             .lock()
