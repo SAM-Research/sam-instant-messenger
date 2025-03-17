@@ -201,3 +201,36 @@ pub async fn one_client_can_register_with_tls() {
 
     assert!(client.is_ok());
 }
+
+#[tokio::test]
+pub async fn two_clients_cannot_have_the_same_username() {
+    let _ = env_logger::try_init();
+    let address = "127.0.0.1:9376".to_owned();
+    let mut server = TestServer::start(&address, None).await;
+
+    server
+        .started_rx()
+        .await
+        .expect("Should be able to start server");
+
+    let _alice = Client::from_registration()
+        .username("Alice")
+        .device_name("Alice's Device")
+        .store_config(SqliteStoreConfig::in_memory().await)
+        .api_client_config(HttpClientConfig::new(address.clone()))
+        .protocol_config(WebSocketProtocolClientConfig::new(address.clone()))
+        .call()
+        .await
+        .expect("Can make Alice");
+
+    let alice_2 = Client::from_registration()
+        .username("Alice")
+        .device_name("Alice's Device")
+        .store_config(SqliteStoreConfig::in_memory().await)
+        .api_client_config(HttpClientConfig::new(address.clone()))
+        .protocol_config(WebSocketProtocolClientConfig::new(address))
+        .call()
+        .await;
+
+    assert!(alice_2.is_err());
+}
