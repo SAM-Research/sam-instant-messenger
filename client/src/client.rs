@@ -342,7 +342,7 @@ impl<T: StoreType, U: ApiClient, V: SamProtocolClient> Client<T, U, V> {
         Ok(account_id)
     }
 
-    pub async fn remove_device_for(
+    async fn remove_device_for(
         &mut self,
         account_id: AccountId,
         device_id: DeviceId,
