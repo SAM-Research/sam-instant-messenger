@@ -5,4 +5,4 @@ pub mod protocol;
 
 pub use api_trait::ApiClient;
 pub use error::ApiClientError;
-pub use http_client::HttpClient;
+pub use http_client::{HttpClient, HttpClientConfig};

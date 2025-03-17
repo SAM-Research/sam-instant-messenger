@@ -26,4 +26,5 @@ pub enum ClientError {
     NoContact,
     FailedToConvertPreKeyBundle,
     FailedToProcessPrekeyBundle,
+    FailedToUnpadMessage,
 }
