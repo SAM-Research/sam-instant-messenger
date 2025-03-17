@@ -13,3 +13,4 @@ libsignal-protocol = { git = "https://github.com/signalapp/libsignal.git", versi
 env_logger = "0.11.6"
 rustls = "0.23.23"
 rustls-pemfile = "2.2.0"
+rstest = "0.24.0"
