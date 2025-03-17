@@ -5,41 +5,11 @@ use sam_client::ClientError;
 use sam_common::address::AccountId;
 use sam_common::DeviceId;
 
-macro_rules! test_account_store {
-    ( [ $( ($struct:ty, $factory:expr) ),* ]) => {
-        $(
-            paste::paste! {
-                #[tokio::test]
-                async fn [< $struct _username_can_be_stored_and_retrieved >]() {
-                    username_can_be_stored_and_retrieved($factory().await.account_store).await;
-                }
-
-                #[tokio::test]
-                async fn [< $struct _password_can_be_stored_and_retrieved >]() {
-                    password_can_be_stored_and_retrieved($factory().await.account_store).await;
-                }
-
-                #[tokio::test]
-                async fn [< $struct _account_id_can_be_stored_and_retrieved >]() {
-                    account_id_can_be_stored_and_retrieved($factory().await.account_store).await;
-                }
-
-                #[rstest]
-                #[case(0u32)]
-                #[case(1u32)]
-                #[case(u32::MAX)]
-                #[case(37480u32)]
-                #[tokio::test]
-                async fn [< $struct _device_id_can_be_stored_and_retrieved >](#[case] device_id: u32) {
-                    let device_id: DeviceId = device_id.into();
-                    device_id_can_be_stored_and_retrieved($factory().await.account_store, device_id).await;
-                }
-            }
-        )*
-    };
-}
-
-async fn account_id_can_be_stored_and_retrieved(mut account_store: impl AccountStore) {
+#[rstest]
+#[case(in_mem().await.account_store)]
+#[case(sqlite().await.account_store)]
+#[tokio::test]
+async fn account_id_can_be_stored_and_retrieved(#[case] mut account_store: impl AccountStore) {
     let account_id = AccountId::generate();
     assert!(matches!(
         account_store.get_account_id().await.unwrap_err(),
@@ -52,7 +22,11 @@ async fn account_id_can_be_stored_and_retrieved(mut account_store: impl AccountS
     assert_eq!(account_store.get_account_id().await.unwrap(), account_id);
 }
 
-async fn password_can_be_stored_and_retrieved(mut account_store: impl AccountStore) {
+#[rstest]
+#[case(in_mem().await.account_store)]
+#[case(sqlite().await.account_store)]
+#[tokio::test]
+async fn password_can_be_stored_and_retrieved(#[case] mut account_store: impl AccountStore) {
     let password = "MyPassword".to_owned();
     assert!(matches!(
         account_store.get_password().await.unwrap_err(),
@@ -65,7 +39,11 @@ async fn password_can_be_stored_and_retrieved(mut account_store: impl AccountSto
     assert_eq!(account_store.get_password().await.unwrap(), password);
 }
 
-async fn username_can_be_stored_and_retrieved(mut account_store: impl AccountStore) {
+#[rstest]
+#[case(in_mem().await.account_store)]
+#[case(sqlite().await.account_store)]
+#[tokio::test]
+async fn username_can_be_stored_and_retrieved(#[case] mut account_store: impl AccountStore) {
     let username = "MyUsername".to_owned();
     assert!(matches!(
         account_store.get_username().await.unwrap_err(),
@@ -78,10 +56,15 @@ async fn username_can_be_stored_and_retrieved(mut account_store: impl AccountSto
     assert_eq!(account_store.get_username().await.unwrap(), username);
 }
 
+#[rstest]
+#[case(in_mem().await.account_store)]
+#[case(sqlite().await.account_store)]
+#[tokio::test]
 async fn device_id_can_be_stored_and_retrieved(
-    mut account_store: impl AccountStore,
-    device_id: DeviceId,
+    #[case] mut account_store: impl AccountStore,
+    #[values(0u32, 1u32, u32::MAX, 37480u32)] device_id: u32,
 ) {
+    let device_id: DeviceId = device_id.into();
     assert!(matches!(
         account_store.get_device_id().await.unwrap_err(),
         ClientError::NoDeviceId
@@ -92,8 +75,3 @@ async fn device_id_can_be_stored_and_retrieved(
         .is_ok());
     assert_eq!(account_store.get_device_id().await.unwrap(), device_id);
 }
-
-test_account_store!([
-    (sqlite_account_store, sqlite),
-    (in_memory_account_store, in_mem)
-]);
