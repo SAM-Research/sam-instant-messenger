@@ -2,6 +2,7 @@ use std::str::FromStr as _;
 
 use crate::{storage::AccountStore, ClientError};
 use async_trait::async_trait;
+use log::debug;
 use sam_common::address::AccountId;
 use sam_common::DeviceId;
 use sqlx::{Error as SqlxError, Pool, Sqlite};
@@ -43,9 +44,11 @@ impl AccountStore for SqliteAccountStore {
         )
         .fetch_one(&self.database)
         .await
+        .inspect_err(|e| debug!("{e}"))
         {
             Err(SqlxError::RowNotFound) => Err(ClientError::NoAccountId),
             Ok(rec) => AccountId::from_str(&rec.account_id)
+                .inspect_err(|e| debug!("{e}"))
                 .map_err(|_| ClientError::InvalidAccountId(rec.account_id)),
             Err(err) => Err(ClientError::Database(format!("{err}"))),
         }

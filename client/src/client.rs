@@ -1,7 +1,7 @@
 use bon::bon;
 use libsignal_core::ProtocolAddress;
 use libsignal_protocol::{process_prekey_bundle, IdentityKeyPair, IdentityKeyStore};
-use log::error;
+use log::{debug, error};
 use rand::rngs::OsRng;
 use sam_common::{
     address::RegistrationId,
@@ -538,8 +538,7 @@ impl<T: StoreType, U: ApiClient, V: SamProtocolClient> Client<T, U, V> {
                 .contact_store
                 .add_device(account_id, device_id.into())
                 .await?;
-            let libsignal_bundle = into_libsignal_bundle(bundle, prekey_bundles.identity_key)
-                .map_err(|_| ClientError::FailedToConvertPreKeyBundle)?;
+            let libsignal_bundle = into_libsignal_bundle(bundle, prekey_bundles.identity_key)?;
             process_prekey_bundle(
                 &ProtocolAddress::new(account_id.to_string(), device_id.into()),
                 &mut self.store.session_store,
@@ -549,6 +548,7 @@ impl<T: StoreType, U: ApiClient, V: SamProtocolClient> Client<T, U, V> {
                 &mut OsRng,
             )
             .await
+            .inspect_err(|e| debug!("{e}"))
             .map_err(|_| ClientError::FailedToProcessPrekeyBundle)?;
         }
 

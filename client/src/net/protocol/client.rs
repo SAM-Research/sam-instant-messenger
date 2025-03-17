@@ -1,7 +1,7 @@
 use std::sync::Arc;
 
 use futures_util::{lock::Mutex, stream::SplitStream, StreamExt};
-use log::error;
+use log::{debug, error};
 use prost::Message as PMessage;
 use sam_common::{
     address::MessageId,
@@ -65,6 +65,7 @@ impl SamProtocolReceiver {
         message: ServerMessage,
     ) -> Result<Option<MessageId>, ProtocolError> {
         let id = MessageId::try_from(message.id.clone())
+            .inspect_err(|e| debug!("{e}"))
             .map_err(|_| ProtocolError::MalformedServerMessage)?;
 
         let content = match message.r#type() {
@@ -125,6 +126,7 @@ impl SamProtocolReceiver {
             Some(sender) => sender
                 .send(envelope)
                 .await
+                .inspect_err(|e| debug!("{e}"))
                 .map_err(|_| ProtocolError::WebSocketError(WebSocketError::Disconnected)),
             None => Err(ProtocolError::WebSocketError(WebSocketError::Disconnected)),
         }
@@ -137,6 +139,7 @@ impl SamProtocolReceiver {
         self.enqueue_status
             .send(status)
             .await
+            .inspect_err(|e| debug!("{e}"))
             .map_err(|_| ProtocolError::WebSocketError(WebSocketError::Disconnected))
             .map(|_| None)
     }
@@ -332,6 +335,7 @@ mod test {
     use std::time::Duration;
 
     use futures_util::{SinkExt, StreamExt};
+    use log::debug;
     use prost::{bytes::Bytes, Message as PMessage};
     use rstest::rstest;
     use sam_common::{
@@ -382,11 +386,14 @@ mod test {
         stream
             .send(Message::Binary(msg.encode_to_vec().into()))
             .await
+            .inspect_err(|e| debug!("{e}"))
             .map_err(|_| ())
     }
 
     fn decode_client_msg(bytes: Bytes) -> Result<ClientMessage, ()> {
-        ClientMessage::decode(bytes).map_err(|_| ())
+        ClientMessage::decode(bytes)
+            .inspect_err(|e| debug!("{e}"))
+            .map_err(|_| ())
     }
 
     fn client_env() -> ClientEnvelope {

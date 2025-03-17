@@ -3,6 +3,7 @@ use super::{
     ApiClientError,
 };
 use async_trait::async_trait;
+use log::debug;
 use reqwest::{Client as ReqwestClient, ClientBuilder, Method, Request, Response, Url};
 use rustls::ClientConfig;
 use sam_common::{
@@ -44,6 +45,7 @@ impl ApiClientConfig for HttpClientConfig {
             http_client: self
                 .client_builder
                 .build()
+                .inspect_err(|e| debug!("{e}"))
                 .map_err(|_| ApiClientError::FailedToBuildApiClient)?,
             base_url: self.base_url,
         })
@@ -69,6 +71,7 @@ impl HttpClient {
             .http_client
             .execute(request)
             .await
+            .inspect_err(|e| debug!("{e}"))
             .map_err(|_| ApiClientError::CouldNotSendRequest)?;
         let status = response.status();
 
@@ -96,13 +99,16 @@ impl ApiClient for HttpClient {
         registration_request: RegistrationRequest,
     ) -> Result<RegistrationResponse, ApiClientError> {
         let url_str = format!("{}/api/v1/account", self.base_url);
-        let url = Url::parse(&url_str).map_err(|_| ApiClientError::CouldNotParseUrl(url_str))?;
+        let url = Url::parse(&url_str)
+            .inspect_err(|e| debug!("{e}"))
+            .map_err(|_| ApiClientError::CouldNotParseUrl(url_str))?;
         let request = self
             .http_client
             .request(Method::POST, url)
             .json(&registration_request)
             .basic_auth(username, Some(password))
             .build()
+            .inspect_err(|e| debug!("{e}"))
             .map_err(|_| ApiClientError::CouldNotBuildRequest)?;
 
         let response = self.make_request(request).await?;
@@ -110,6 +116,7 @@ impl ApiClient for HttpClient {
         Ok(response
             .json()
             .await
+            .inspect_err(|e| debug!("{e}"))
             .map_err(|_| ApiClientError::CouldNotParseResponse)?)
     }
 
@@ -120,12 +127,15 @@ impl ApiClient for HttpClient {
         password: &str,
     ) -> Result<(), ApiClientError> {
         let url_str = format!("{}/api/v1/account", self.base_url);
-        let url = Url::parse(&url_str).map_err(|_| ApiClientError::CouldNotParseUrl(url_str))?;
+        let url = Url::parse(&url_str)
+            .inspect_err(|e| debug!("{e}"))
+            .map_err(|_| ApiClientError::CouldNotParseUrl(url_str))?;
         let request = self
             .http_client
             .request(Method::DELETE, url)
             .basic_auth(format!("{}.{}", account_id, device_id), Some(password))
             .build()
+            .inspect_err(|e| debug!("{e}"))
             .map_err(|_| ApiClientError::CouldNotBuildRequest)?;
 
         let _ = self.make_request(request).await?;
@@ -142,7 +152,9 @@ impl ApiClient for HttpClient {
         devices: Option<Vec<DeviceId>>,
     ) -> Result<PreKeyBundles, ApiClientError> {
         let url_str = format!("{}/api/v1/keys/{}", self.base_url, receiver_account_id);
-        let url = Url::parse(&url_str).map_err(|_| ApiClientError::CouldNotParseUrl(url_str))?;
+        let url = Url::parse(&url_str)
+            .inspect_err(|e| debug!("{e}"))
+            .map_err(|_| ApiClientError::CouldNotParseUrl(url_str))?;
 
         let request_builder = match devices {
             None => self
@@ -158,6 +170,7 @@ impl ApiClient for HttpClient {
 
         let request = request_builder
             .build()
+            .inspect_err(|e| debug!("{e}"))
             .map_err(|_| ApiClientError::CouldNotBuildRequest)?;
 
         let response = self.make_request(request).await?;
@@ -165,6 +178,7 @@ impl ApiClient for HttpClient {
         let prekey_bundles = response
             .json::<PreKeyBundles>()
             .await
+            .inspect_err(|e| debug!("{e}"))
             .map_err(|_| ApiClientError::CouldNotParseResponse)?;
 
         Ok(prekey_bundles)
@@ -178,7 +192,9 @@ impl ApiClient for HttpClient {
         bundle: PublishPreKeys,
     ) -> Result<(), ApiClientError> {
         let url_str = format!("{}/api/v1/keys", self.base_url);
-        let url = Url::parse(&url_str).map_err(|_| ApiClientError::CouldNotParseUrl(url_str))?;
+        let url = Url::parse(&url_str)
+            .inspect_err(|e| debug!("{e}"))
+            .map_err(|_| ApiClientError::CouldNotParseUrl(url_str))?;
 
         let request = self
             .http_client
@@ -186,6 +202,7 @@ impl ApiClient for HttpClient {
             .json(&bundle)
             .basic_auth(format!("{}.{}", account_id, device_id), Some(password))
             .build()
+            .inspect_err(|e| debug!("{e}"))
             .map_err(|_| ApiClientError::CouldNotBuildRequest)?;
 
         let _ = self.make_request(request).await?;
@@ -200,13 +217,16 @@ impl ApiClient for HttpClient {
         password: &str,
     ) -> Result<LinkDeviceToken, ApiClientError> {
         let url_str = format!("{}/api/v1/devices/provision", self.base_url);
-        let url = Url::parse(&url_str).map_err(|_| ApiClientError::CouldNotParseUrl(url_str))?;
+        let url = Url::parse(&url_str)
+            .inspect_err(|e| debug!("{e}"))
+            .map_err(|_| ApiClientError::CouldNotParseUrl(url_str))?;
 
         let request = self
             .http_client
             .request(Method::GET, url)
             .basic_auth(format!("{}.{}", account_id, device_id), Some(password))
             .build()
+            .inspect_err(|e| debug!("{e}"))
             .map_err(|_| ApiClientError::CouldNotBuildRequest)?;
 
         let response = self.make_request(request).await?;
@@ -214,6 +234,7 @@ impl ApiClient for HttpClient {
         let token = response
             .json::<LinkDeviceToken>()
             .await
+            .inspect_err(|e| debug!("{e}"))
             .map_err(|_| ApiClientError::CouldNotParseResponse)?;
 
         Ok(token)
@@ -226,7 +247,9 @@ impl ApiClient for HttpClient {
         request: LinkDeviceRequest,
     ) -> Result<LinkDeviceResponse, ApiClientError> {
         let url_str = format!("{}/api/v1/devices/link", self.base_url);
-        let url = Url::parse(&url_str).map_err(|_| ApiClientError::CouldNotParseUrl(url_str))?;
+        let url = Url::parse(&url_str)
+            .inspect_err(|e| debug!("{e}"))
+            .map_err(|_| ApiClientError::CouldNotParseUrl(url_str))?;
 
         let request = self
             .http_client
@@ -234,6 +257,7 @@ impl ApiClient for HttpClient {
             .json(&request)
             .basic_auth(username.to_owned(), Some(password))
             .build()
+            .inspect_err(|e| debug!("{e}"))
             .map_err(|_| ApiClientError::CouldNotBuildRequest)?;
 
         let response = self.make_request(request).await?;
@@ -241,6 +265,7 @@ impl ApiClient for HttpClient {
         let link_device_response = response
             .json::<LinkDeviceResponse>()
             .await
+            .inspect_err(|e| debug!("{e}"))
             .map_err(|_| ApiClientError::CouldNotParseResponse)?;
 
         Ok(link_device_response)
@@ -254,13 +279,16 @@ impl ApiClient for HttpClient {
         removed_device: DeviceId,
     ) -> Result<(), ApiClientError> {
         let url_str = format!("{}/api/v1/device/{}", self.base_url, removed_device);
-        let url = Url::parse(&url_str).map_err(|_| ApiClientError::CouldNotParseUrl(url_str))?;
+        let url = Url::parse(&url_str)
+            .inspect_err(|e| debug!("{e}"))
+            .map_err(|_| ApiClientError::CouldNotParseUrl(url_str))?;
 
         let request = self
             .http_client
             .request(Method::DELETE, url)
             .basic_auth(format!("{}.{}", account_id, device_id), Some(password))
             .build()
+            .inspect_err(|e| debug!("{e}"))
             .map_err(|_| ApiClientError::CouldNotBuildRequest)?;
 
         let _ = self.make_request(request).await?;
@@ -276,13 +304,16 @@ impl ApiClient for HttpClient {
         username: &str,
     ) -> Result<AccountId, ApiClientError> {
         let url_str = format!("{}/api/v1/account/{}", self.base_url, username);
-        let url = Url::parse(&url_str).map_err(|_| ApiClientError::CouldNotParseUrl(url_str))?;
+        let url = Url::parse(&url_str)
+            .inspect_err(|e| debug!("{e}"))
+            .map_err(|_| ApiClientError::CouldNotParseUrl(url_str))?;
 
         let request = self
             .http_client
             .request(Method::GET, url)
             .basic_auth(format!("{}.{}", account_id, device_id), Some(password))
             .build()
+            .inspect_err(|e| debug!("{e}"))
             .map_err(|_| ApiClientError::CouldNotBuildRequest)?;
 
         let response = self.make_request(request).await?;
@@ -290,6 +321,7 @@ impl ApiClient for HttpClient {
         let account_id = response
             .json::<AccountId>()
             .await
+            .inspect_err(|e| debug!("{e}"))
             .map_err(|_| ApiClientError::CouldNotParseResponse)?;
 
         Ok(account_id)

@@ -13,6 +13,7 @@ use axum::http::request::Parts;
 use axum_extra::headers::authorization::Basic;
 use axum_extra::headers::Authorization;
 use axum_extra::TypedHeader;
+use log::debug;
 use sam_common::address::AccountId;
 
 #[derive(Clone)]
@@ -42,16 +43,19 @@ impl<T: StateType> FromRequestParts<ServerState<T>> for AuthenticatedUser {
             let TypedHeader(basic) =
                 TypedHeader::<Authorization<Basic>>::from_request_parts(parts, &state)
                     .await
+                    .inspect_err(|e| debug!("{e}"))
                     .map_err(|_| AuthorizationError::AuthBasicParseError)?;
             (basic.username().to_string(), basic.password().to_string())
         };
         let (account_id, device_id) = userinfo
             .split_once(".")
             .ok_or(AuthorizationError::AuthBasicParseError)?;
-        let account_id =
-            AccountId::from_str(account_id).map_err(|_| AuthorizationError::AuthBasicParseError)?;
+        let account_id = AccountId::from_str(account_id)
+            .inspect_err(|e| debug!("{e}"))
+            .map_err(|_| AuthorizationError::AuthBasicParseError)?;
         let device_id = device_id
             .parse()
+            .inspect_err(|e| debug!("{e}"))
             .map_err(|_| AuthorizationError::AuthBasicParseError)?;
 
         let account = { state.accounts.get_account(account_id).await? };
