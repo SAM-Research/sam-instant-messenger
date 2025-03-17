@@ -427,6 +427,11 @@ impl<T: StoreType, U: ApiClient, V: SamProtocolClient> Client<T, U, V> {
                 }
             };
 
+            self.store
+                .contact_store
+                .add_device(envelope.source_account_id(), envelope.source_device_id())
+                .await?;
+
             let _ = self
                 .store
                 .message_store
