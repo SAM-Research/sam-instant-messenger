@@ -101,9 +101,7 @@ impl<T: StoreType, U: ApiClient, V: SamProtocolClient> Client<T, U, V> {
             },
         };
         let password = generate_password(password_length, &mut csprng);
-        let response = api_client
-            .link_device(device_name, &password, request)
-            .await?;
+        let response = api_client.link_device(&password, request).await?;
 
         store.account_store.set_username(response.username).await?;
         store

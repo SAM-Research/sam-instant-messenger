@@ -13,7 +13,6 @@ use crate::utils::server::TestServer;
 
 #[tokio::test]
 pub async fn alice_can_upload_keys() {
-    let _ = env_logger::try_init();
     let address = "127.0.0.1:9390".to_owned();
     let mut server = TestServer::start(&address, None).await;
 

@@ -169,11 +169,13 @@ impl WebSocketReceiver<ServerEnvelope> for SamProtocolReceiver {
             };
 
             let res = match self.validate_and_enqueue(msg).await {
+                // Some(id) is when the server has sent a message to the client that needs to be acknowledged
                 Ok(Some(id)) => self.send_ack(id).await,
                 Err(x) => {
                     error!("Failed to handle server message '{x}', disconnecting...");
                     break;
                 }
+                // Ok(None) is when the server sends acks/status messages
                 Ok(None) => continue,
             };
 

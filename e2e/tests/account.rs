@@ -37,7 +37,6 @@ pub async fn register_alice(
 
 #[tokio::test]
 pub async fn one_client_can_register() {
-    let _ = env_logger::try_init();
     let address = "127.0.0.1:9370".to_owned();
     let mut server = TestServer::start(&address, None).await;
 
@@ -53,7 +52,6 @@ pub async fn one_client_can_register() {
 
 #[tokio::test]
 pub async fn can_delete_account() {
-    let _ = env_logger::try_init();
     let address = "127.0.0.1:9371".to_owned();
     let mut server = TestServer::start(&address, None).await;
 
@@ -69,7 +67,6 @@ pub async fn can_delete_account() {
 
 #[tokio::test]
 pub async fn cannot_create_client_without_valid_account() {
-    let _ = env_logger::try_init();
     let address = "127.0.0.1:9372".to_owned();
     let mut server = TestServer::start(&address, None).await;
 
@@ -120,7 +117,6 @@ pub async fn cannot_create_client_without_valid_account() {
 
 #[tokio::test]
 pub async fn can_delete_a_device() {
-    let _ = env_logger::try_init();
     let address = "127.0.0.1:9373".to_owned();
     let mut server = TestServer::start(&address, None).await;
 
@@ -141,7 +137,6 @@ pub async fn can_delete_a_device() {
 
 #[tokio::test]
 pub async fn alice_can_find_bobs_account_id() {
-    let _ = env_logger::try_init();
     let address = "127.0.0.1:9374".to_owned();
     let mut server = TestServer::start(&address, None).await;
 
@@ -172,7 +167,6 @@ pub async fn alice_can_find_bobs_account_id() {
 
 #[tokio::test]
 pub async fn one_client_can_register_with_tls() {
-    let _ = env_logger::try_init();
     let _ = rustls::crypto::ring::default_provider().install_default();
     let address = "127.0.0.1:9375".to_owned();
     let server_config = make_rustls_server_config("./cert/server.crt", "./cert/server.key");
@@ -204,7 +198,6 @@ pub async fn one_client_can_register_with_tls() {
 
 #[tokio::test]
 pub async fn two_clients_cannot_have_the_same_username() {
-    let _ = env_logger::try_init();
     let address = "127.0.0.1:9376".to_owned();
     let mut server = TestServer::start(&address, None).await;
 

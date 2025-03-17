@@ -136,7 +136,6 @@ pub trait ApiClient {
     /// * `Err(ApiClientError)` if the operation fails.
     async fn link_device(
         &self,
-        username: &str,
         password: &str,
         request: LinkDeviceRequest,
     ) -> Result<LinkDeviceResponse, ApiClientError>;

@@ -68,7 +68,6 @@ async fn pre_key_can_be_removed(#[case] mut pre_key_store: impl PreKeyStore) {
 async fn pre_keys_ids_are_generated_properly(
     #[case] mut generator: impl PreKeyStore + PreKeyGenerator,
 ) {
-    let _ = env_logger::try_init();
     let mut rng = StdRng::seed_from_u64(128);
     let expected: Vec<u32> = (1u32..=10u32).collect();
 

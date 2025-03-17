@@ -65,7 +65,6 @@ async fn signed_pre_key_can_be_saved_and_retrieved(
 #[case(sqlite().await)]
 #[tokio::test]
 async fn signed_pre_keys_ids_are_generated_properly(#[case] mut store: Store<impl StoreType>) {
-    let _ = env_logger::try_init();
     let mut rng = StdRng::seed_from_u64(128);
     let expected: Vec<u32> = (1u32..=10u32).collect();
 

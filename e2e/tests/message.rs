@@ -357,7 +357,6 @@ async fn test_alice_send_to_bob_and_self() {
 #[tokio::test]
 async fn test_alice_send_to_bob_with_tls() {
     timeout(Duration::from_secs(TIMEOUT_SECS), async {
-        let _ = env_logger::try_init();
         let _ = rustls::crypto::ring::default_provider().install_default();
         let address = "127.0.0.1:9187";
         let server_config = make_rustls_server_config("./cert/server.crt", "./cert/server.key");
