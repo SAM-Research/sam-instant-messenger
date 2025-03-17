@@ -7,6 +7,7 @@ use log::error;
 pub enum AccountManagerError {
     AccountDoesNotExist,
     AccountAlreadyExists,
+    UsernameAlreadyExists,
 }
 
 impl IntoResponse for AccountManagerError {
@@ -18,6 +19,9 @@ impl IntoResponse for AccountManagerError {
             }
             AccountManagerError::AccountAlreadyExists => {
                 (StatusCode::CONFLICT, "Account already exists".to_string())
+            }
+            AccountManagerError::UsernameAlreadyExists => {
+                (StatusCode::CONFLICT, "Username already exists".to_string())
             }
         }
         .into_response()

@@ -55,6 +55,14 @@ impl AccountManager for InMemoryAccountManager {
     async fn add_account(&mut self, account: &Account) -> Result<(), ServerError> {
         if self.accounts.lock().await.contains_key(&account.id()) {
             return Err(AccountManagerError::AccountAlreadyExists)?;
+        } else if self
+            .accounts
+            .lock()
+            .await
+            .values()
+            .any(|acc| acc.username() == account.username())
+        {
+            return Err(AccountManagerError::UsernameAlreadyExists)?;
         }
         self.accounts
             .lock()
