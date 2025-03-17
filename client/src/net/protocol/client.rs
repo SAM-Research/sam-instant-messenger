@@ -18,8 +18,9 @@ use tokio_tungstenite::tungstenite::{
 
 use super::{
     error::ProtocolError,
-    traits::{MessageStatus, SamProtocolClient},
+    traits::MessageStatus,
     websocket::{WebSocket, WebSocketClient, WebSocketError, WebSocketReceiver},
+    SamProtocolClient,
 };
 
 enum ServerStatus {

@@ -1,5 +1,4 @@
 use base64::{prelude::BASE64_STANDARD, Engine};
-use client::ProtocolClient;
 use error::ProtocolError;
 use log::debug;
 use rustls::ClientConfig;
@@ -7,13 +6,15 @@ use sam_common::{AccountId, DeviceId};
 use std::sync::Arc;
 use tokio_tungstenite::tungstenite::http;
 use tokio_tungstenite::Connector;
-use traits::ProtocolConfig;
 use websocket::WebSocketClientConfig;
 
 pub mod client;
 pub mod error;
 pub mod traits;
 mod websocket;
+
+pub use client::ProtocolClient;
+pub use traits::{DeviceList, MessageStatus, ProtocolConfig, SamProtocolClient};
 
 pub struct WebSocketProtocolClientConfig {
     base_url: String,

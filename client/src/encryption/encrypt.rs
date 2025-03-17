@@ -17,7 +17,10 @@ use crate::{
     ClientError,
 };
 
-use super::envelope::DecryptedEnvelope;
+use super::{
+    envelope::DecryptedEnvelope,
+    padding::{pad_message, unpad_message},
+};
 
 /// Encrypt a message an put it into a [ClientEnvelope].
 ///
@@ -39,7 +42,7 @@ pub async fn encrypt(
     recipients: Vec<AccountId>,
     store: &mut Store<impl StoreType>,
 ) -> Result<ClientEnvelope, ClientError> {
-    let bytes = message.into();
+    let bytes = pad_message(&message.into());
 
     let mut recipient_addrs = HashMap::new();
 
@@ -116,17 +119,20 @@ pub async fn decrypt(
         .inspect_err(|e| debug!("{e}"))
         .map_err(|_| ClientError::InvalidAccountId("Could not parse bytes".to_owned()))?;
 
-    let bytes = message_decrypt(
-        &message,
-        &ProtocolAddress::new(source.to_string(), envelope.source_device_id.into()),
-        &mut store.session_store,
-        &mut store.identity_key_store,
-        &mut store.pre_key_store,
-        &store.signed_pre_key_store,
-        &mut store.kyber_pre_key_store,
-        &mut OsRng,
+    let bytes = unpad_message(
+        &message_decrypt(
+            &message,
+            &ProtocolAddress::new(source.to_string(), envelope.source_device_id.into()),
+            &mut store.session_store,
+            &mut store.identity_key_store,
+            &mut store.pre_key_store,
+            &store.signed_pre_key_store,
+            &mut store.kyber_pre_key_store,
+            &mut OsRng,
+        )
+        .await?,
     )
-    .await?;
+    .ok_or(ClientError::FailedToUnpadMessage)?;
 
     Ok(DecryptedEnvelope::builder()
         .source_account_id(source)

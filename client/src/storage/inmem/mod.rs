@@ -1,14 +1,13 @@
-use crate::ClientError;
-
 use super::{Store, StoreConfig, StoreType};
-use account::InMemoryAccountStore;
+use crate::ClientError;
+pub use account::InMemoryAccountStore;
 use async_trait::async_trait;
-use contact::InMemoryContactStore;
+pub use contact::InMemoryContactStore;
 use libsignal_protocol::{
     IdentityKeyPair, InMemIdentityKeyStore, InMemKyberPreKeyStore, InMemPreKeyStore,
     InMemSenderKeyStore, InMemSessionStore, InMemSignedPreKeyStore,
 };
-use message::InMemoryMessageStore;
+pub use message::InMemoryMessageStore;
 
 pub mod account;
 pub mod contact;
