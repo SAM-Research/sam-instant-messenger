@@ -1,14 +1,16 @@
-use crate::storage::ProvidesKeyId;
+use crate::storage::{ProvidesKeyId, Store, StoreType};
 use crate::{signal_time_now, ClientError};
 use async_trait::async_trait;
 use libsignal_core::curve::{KeyPair, PrivateKey};
 use libsignal_protocol::kem::{self, KeyType};
 use libsignal_protocol::{
-    GenericSignedPreKey, IdentityKey, KyberPreKeyId, KyberPreKeyRecord, KyberPreKeyStore,
-    PreKeyBundle, PreKeyId, PreKeyRecord, PreKeyStore, PublicKey, SignedPreKeyId,
+    GenericSignedPreKey, IdentityKey, IdentityKeyPair, KyberPreKeyId, KyberPreKeyRecord,
+    KyberPreKeyStore, PreKeyBundle, PreKeyId, PreKeyRecord, PreKeyStore, PublicKey, SignedPreKeyId,
     SignedPreKeyRecord, SignedPreKeyStore,
 };
+use rand::rngs::OsRng;
 use rand::{CryptoRng, Rng};
+use sam_common::api::keys::RegistrationPreKeys;
 use sam_common::api::{EcPreKey, PqPreKey};
 
 #[async_trait(?Send)]
@@ -134,6 +136,37 @@ pub(crate) fn into_libsignal_bundle(
         kem::PublicKey::deserialize(&bundle.pq_pre_key.public_key)?,
         bundle.pq_pre_key.signature.to_vec(),
     ))
+}
+
+pub async fn create_registration_pre_keys<S: StoreType>(
+    store: &mut Store<S>,
+    prekey_count: usize,
+    id_key_pair: IdentityKeyPair,
+    mut csprng: OsRng,
+) -> Result<RegistrationPreKeys, ClientError> {
+    Ok(RegistrationPreKeys {
+        pre_keys: Some(
+            generate_ec_pre_keys(&mut store.pre_key_store, prekey_count, &mut csprng).await?,
+        ),
+        signed_pre_key: store
+            .signed_pre_key_store
+            .generate_key(&mut csprng, id_key_pair.private_key())
+            .await?
+            .into(),
+        pq_pre_keys: Some(
+            generate_pq_pre_keys(
+                id_key_pair.private_key(),
+                &mut store.kyber_pre_key_store,
+                prekey_count,
+            )
+            .await?,
+        ),
+        pq_last_resort_pre_key: store
+            .kyber_pre_key_store
+            .generate_key(id_key_pair.private_key())
+            .await?
+            .into(),
+    })
 }
 
 #[cfg(test)]

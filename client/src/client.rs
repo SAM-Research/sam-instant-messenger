@@ -6,8 +6,8 @@ use rand::rngs::OsRng;
 use sam_common::{
     address::RegistrationId,
     api::{
-        device::DeviceActivationInfo, keys::RegistrationPreKeys, LinkDeviceRequest,
-        LinkDeviceToken, PqPreKey, PublishPreKeys, RegistrationRequest, SignedEcPreKey,
+        device::DeviceActivationInfo, LinkDeviceRequest, LinkDeviceToken, PqPreKey, PublishPreKeys,
+        RegistrationRequest, SignedEcPreKey,
     },
     sam_message::ServerEnvelope,
     AccountId, DeviceId,
@@ -16,6 +16,7 @@ use std::time::SystemTime;
 use tokio::sync::broadcast::Receiver;
 use tokio::sync::mpsc::Receiver as MpscReceiver;
 
+use crate::storage::key_generation::create_registration_pre_keys;
 use crate::{
     encryption::{
         encrypt::{decrypt, encrypt},
@@ -67,30 +68,9 @@ impl<T: StoreType, U: ApiClient, V: SamProtocolClient> Client<T, U, V> {
             .create_store(id_key_pair, registration_id)
             .await?;
 
-        let key_bundle = RegistrationPreKeys {
-            pre_keys: Some(
-                generate_ec_pre_keys(&mut store.pre_key_store, upload_prekey_count, &mut csprng)
-                    .await?,
-            ),
-            signed_pre_key: store
-                .signed_pre_key_store
-                .generate_key(&mut csprng, id_key_pair.private_key())
-                .await?
-                .into(),
-            pq_pre_keys: Some(
-                generate_pq_pre_keys(
-                    id_key_pair.private_key(),
-                    &mut store.kyber_pre_key_store,
-                    upload_prekey_count,
-                )
-                .await?,
-            ),
-            pq_last_resort_pre_key: store
-                .kyber_pre_key_store
-                .generate_key(id_key_pair.private_key())
-                .await?
-                .into(),
-        };
+        let key_bundle =
+            create_registration_pre_keys(&mut store, upload_prekey_count, id_key_pair, csprng)
+                .await?;
 
         let request = LinkDeviceRequest {
             token,
@@ -149,30 +129,9 @@ impl<T: StoreType, U: ApiClient, V: SamProtocolClient> Client<T, U, V> {
             .await?;
 
         let password = generate_password(password_length, &mut csprng);
-        let key_bundle = RegistrationPreKeys {
-            pre_keys: Some(
-                generate_ec_pre_keys(&mut store.pre_key_store, upload_prekey_count, &mut csprng)
-                    .await?,
-            ),
-            signed_pre_key: store
-                .signed_pre_key_store
-                .generate_key(&mut csprng, id_key_pair.private_key())
-                .await?
-                .into(),
-            pq_pre_keys: Some(
-                generate_pq_pre_keys(
-                    id_key_pair.private_key(),
-                    &mut store.kyber_pre_key_store,
-                    upload_prekey_count,
-                )
-                .await?,
-            ),
-            pq_last_resort_pre_key: store
-                .kyber_pre_key_store
-                .generate_key(id_key_pair.private_key())
-                .await?
-                .into(),
-        };
+        let key_bundle =
+            create_registration_pre_keys(&mut store, upload_prekey_count, id_key_pair, csprng)
+                .await?;
 
         let registration_request = RegistrationRequest {
             identity_key: id_key_pair.identity_key().to_owned(),
