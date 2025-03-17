@@ -6,6 +6,7 @@ use std::fs::File;
 use std::io::BufReader;
 use std::sync::Arc;
 
+#[allow(unused)]
 pub fn make_rustls_client_config(cert_path: &str) -> Result<ClientConfig, ProtocolError> {
     let ca_file = File::open(cert_path)
         .map_err(|e| e.to_string())
@@ -28,6 +29,7 @@ pub fn make_rustls_client_config(cert_path: &str) -> Result<ClientConfig, Protoc
     Ok(config)
 }
 
+#[allow(unused)]
 pub fn make_rustls_server_config(cert_path: &str, key_path: &str) -> Arc<ServerConfig> {
     let cert_file = File::open(cert_path).expect("Failed to open cert file");
     let mut cert_reader = BufReader::new(cert_file);

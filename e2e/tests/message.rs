@@ -9,10 +9,7 @@ use sam_client::{
         protocol::{client::ProtocolClient, WebSocketProtocolClientConfig},
         HttpClient,
     },
-    storage::{
-        inmem::{InMemoryStoreConfig, InMemoryStoreType},
-        sqlite::{SqliteStoreConfig, SqliteStoreType},
-    },
+    storage::sqlite::{SqliteStoreConfig, SqliteStoreType},
     Client,
 };
 use sam_common::api::LinkDeviceToken;
