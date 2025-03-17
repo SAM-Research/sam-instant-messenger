@@ -9,8 +9,6 @@ use libsignal_protocol::{
     InMemSenderKeyStore, InMemSessionStore, InMemSignedPreKeyStore,
 };
 use message::InMemoryMessageStore;
-use rand::rngs::OsRng;
-use sam_common::address::RegistrationId;
 
 pub mod account;
 pub mod contact;
@@ -38,6 +36,7 @@ impl StoreType for InMemoryStoreType {
     type SessionStore = InMemSessionStore;
 
     type SenderKeyStore = InMemSenderKeyStore;
+
     type MessageStore = InMemoryMessageStore;
 }
 
@@ -65,14 +64,5 @@ impl StoreConfig for InMemoryStoreConfig {
             .contact_store(InMemoryContactStore::default())
             .message_store(InMemoryMessageStore::new(10))
             .build())
-    }
-
-    async fn load_store(self) -> Result<InMemoryStore, ClientError> {
-        let mut csprng = OsRng;
-        self.create_store(
-            IdentityKeyPair::generate(&mut csprng),
-            RegistrationId::generate(&mut csprng),
-        )
-        .await
     }
 }
