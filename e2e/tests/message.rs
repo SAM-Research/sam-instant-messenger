@@ -9,7 +9,10 @@ use sam_client::{
         protocol::{client::ProtocolClient, WebSocketProtocolClientConfig},
         HttpClient,
     },
-    storage::inmem::{InMemoryStoreConfig, InMemoryStoreType},
+    storage::{
+        inmem::{InMemoryStoreConfig, InMemoryStoreType},
+        sqlite::{SqliteStoreConfig, SqliteStoreType},
+    },
     Client,
 };
 use sam_common::api::LinkDeviceToken;
@@ -24,11 +27,11 @@ async fn client(
     address: &str,
     username: &str,
     device_name: &str,
-) -> Client<InMemoryStoreType, HttpClient, ProtocolClient> {
+) -> Client<SqliteStoreType, HttpClient, ProtocolClient> {
     Client::from_registration()
         .username(username)
         .device_name(device_name)
-        .store_config(InMemoryStoreConfig::default())
+        .store_config(SqliteStoreConfig::in_memory().await)
         .api_client_config(HttpClientConfig::new(address.to_string()))
         .protocol_config(WebSocketProtocolClientConfig::new(address.to_string()))
         .upload_prekey_count(5)
@@ -41,13 +44,13 @@ async fn tls_client(
     address: &str,
     username: &str,
     device_name: &str,
-) -> Client<InMemoryStoreType, HttpClient, ProtocolClient> {
+) -> Client<SqliteStoreType, HttpClient, ProtocolClient> {
     let client_config =
         make_rustls_client_config("./cert/rootCA.crt").expect("Should make client config");
     Client::from_registration()
         .username(username)
         .device_name(device_name)
-        .store_config(InMemoryStoreConfig::default())
+        .store_config(SqliteStoreConfig::in_memory().await)
         .api_client_config(HttpClientConfig::new_with_tls(
             address.to_string(),
             client_config.clone(),
@@ -67,9 +70,9 @@ async fn client_device(
     device_name: &str,
     id_pair: IdentityKeyPair,
     token: LinkDeviceToken,
-) -> Client<InMemoryStoreType, HttpClient, ProtocolClient> {
+) -> Client<SqliteStoreType, HttpClient, ProtocolClient> {
     Client::from_provisioning()
-        .store_config(InMemoryStoreConfig::default())
+        .store_config(SqliteStoreConfig::in_memory().await)
         .api_client_config(HttpClientConfig::new(address.to_string()))
         .protocol_config(WebSocketProtocolClientConfig::new(address.to_string()))
         .device_name(device_name)

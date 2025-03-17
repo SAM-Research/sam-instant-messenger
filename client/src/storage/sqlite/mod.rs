@@ -102,19 +102,4 @@ impl StoreConfig for SqliteStoreConfig {
             )
             .build())
     }
-
-    async fn load_store(self) -> Result<SqliteStore, ClientError> {
-        let database = self.database;
-        Ok(SqliteStore::builder()
-            .contact_store(SqliteContactStore::new(database.clone()))
-            .account_store(SqliteAccountStore::new(database.clone()))
-            .pre_key_store(SqlitePreKeyStore::new(database.clone()))
-            .signed_pre_key_store(SqliteSignedPreKeyStore::new(database.clone()))
-            .kyber_pre_key_store(SqliteKyberPreKeyStore::new(database.clone()))
-            .sender_key_store(SqliteSenderKeyStore::new(database.clone()))
-            .session_store(SqliteSessionStore::new(database.clone()))
-            .message_store(SqliteMessageStore::new(database.clone(), 10))
-            .identity_key_store(SqliteIdentityKeyStore::load(database.clone()).await?)
-            .build())
-    }
 }

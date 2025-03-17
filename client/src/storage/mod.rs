@@ -25,8 +25,6 @@ pub trait StoreConfig {
         key_pair: IdentityKeyPair,
         registration_id: ID,
     ) -> Result<Store<Self::StoreType>, ClientError>;
-
-    async fn load_store(self) -> Result<Store<Self::StoreType>, ClientError>;
 }
 
 #[async_trait(?Send)]
