@@ -60,7 +60,6 @@ async fn saved_kyber_pre_key_can_be_retrieved(
 #[case(sqlite().await)]
 #[tokio::test]
 async fn kyber_pre_keys_ids_are_generated_properly(#[case] mut store: Store<impl StoreType>) {
-    let _ = env_logger::try_init();
     let expected: Vec<u32> = (1u32..=10u32).collect();
 
     let mut ids: Vec<u32> = Vec::new();
