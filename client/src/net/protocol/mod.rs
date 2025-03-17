@@ -1,6 +1,7 @@
 use base64::{prelude::BASE64_STANDARD, Engine};
 use client::ProtocolClient;
 use error::ProtocolError;
+use log::debug;
 use rustls::ClientConfig;
 use sam_common::{AccountId, DeviceId};
 use std::sync::Arc;
@@ -60,6 +61,7 @@ impl ProtocolConfig for WebSocketProtocolClientConfig {
             .headers(vec![(
                 http::header::AUTHORIZATION,
                 http::HeaderValue::from_str(&basic)
+                    .inspect_err(|e| debug!("{e}"))
                     .map_err(|_| ProtocolError::InvalidCredentials)?,
             )])
             .build()
