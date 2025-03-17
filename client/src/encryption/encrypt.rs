@@ -5,6 +5,7 @@ use libsignal_protocol::{
     message_decrypt, message_encrypt, CiphertextMessage, PlaintextContent, PreKeySignalMessage,
     SenderKeyMessage, SignalMessage,
 };
+use log::debug;
 use rand::rngs::OsRng;
 use sam_common::{
     sam_message::{ClientEnvelope, SamMessage, SamMessageType, ServerEnvelope},
@@ -112,6 +113,7 @@ pub async fn decrypt(
     };
 
     let source = AccountId::try_from(envelope.source_account_id)
+        .inspect_err(|e| debug!("{e}"))
         .map_err(|_| ClientError::InvalidAccountId("Could not parse bytes".to_owned()))?;
 
     let bytes = message_decrypt(

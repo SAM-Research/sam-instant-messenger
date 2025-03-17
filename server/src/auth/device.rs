@@ -7,6 +7,7 @@ use base64::{
     Engine,
 };
 use hkdf::hmac::{Hmac, Mac};
+use log::debug;
 use sam_common::{address::AccountId, api::device::LinkDeviceToken, time_now_millis};
 use sha2::{Digest, Sha256};
 
@@ -31,6 +32,7 @@ pub fn verify_token(
     let expected_signature = create_signature(secret, claims);
     let signature = BASE64_URL_SAFE
         .decode(b64_signature)
+        .inspect_err(|e| debug!("{e}"))
         .map_err(|_| AuthorizationError::DeviceSignatureDecodeError)?;
 
     if signature != expected_signature {

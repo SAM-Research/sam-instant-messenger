@@ -3,7 +3,7 @@ use futures_util::{
     stream::{SplitSink, SplitStream},
     SinkExt, StreamExt,
 };
-use log::error;
+use log::{debug, error};
 use std::sync::{
     atomic::{AtomicBool, Ordering},
     Arc,
@@ -74,6 +74,7 @@ impl WebSocketClient {
             .url
             .clone()
             .into_client_request()
+            .inspect_err(|e| debug!("{e}"))
             .map_err(|_| WebSocketError::UrlError)?;
         let headers = req.headers_mut();
         for (name, value) in &self.config.headers {
@@ -124,6 +125,7 @@ impl WebSocketClient {
             Some(sender) => sender
                 .send(message)
                 .await
+                .inspect_err(|e| debug!("{e}"))
                 .map_err(|_| WebSocketError::Disconnected),
             None => Err(WebSocketError::Disconnected)?,
         };

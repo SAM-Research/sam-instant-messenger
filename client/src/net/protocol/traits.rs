@@ -1,5 +1,6 @@
 use super::error::ProtocolError;
 use async_trait::async_trait;
+use log::debug;
 use sam_common::{
     sam_message::{ClientEnvelope, DeviceList as ProtoDeviceList, ServerEnvelope},
     AccountId, DeviceId,
@@ -17,6 +18,7 @@ impl TryFrom<ProtoDeviceList> for DeviceList {
     fn try_from(value: ProtoDeviceList) -> Result<Self, Self::Error> {
         Ok(Self {
             account_id: AccountId::try_from(value.account_id)
+                .inspect_err(|e| debug!("{e}"))
                 .map_err(|_| ProtocolError::MalformedServerMessage)?,
             devices: value.device_ids.iter().map(|id| (*id).into()).collect(),
         })

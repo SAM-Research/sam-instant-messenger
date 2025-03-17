@@ -3,17 +3,22 @@ mod utils;
 use std::time::Duration;
 
 use libsignal_protocol::IdentityKeyPair;
+use rstest::rstest;
 use sam_client::{
+    encryption::envelope::DecryptedEnvelope,
     net::{
         http_client::HttpClientConfig,
-        protocol::{client::ProtocolClient, WebSocketProtocolClientConfig},
-        HttpClient,
+        protocol::{
+            client::ProtocolClient, traits::SamProtocolClient, WebSocketProtocolClientConfig,
+        },
+        ApiClient, HttpClient,
     },
     storage::sqlite::{SqliteStoreConfig, SqliteStoreType},
+    storage::StoreType,
     Client,
 };
-use sam_common::api::LinkDeviceToken;
-use tokio::time::timeout;
+use sam_common::{api::LinkDeviceToken, AccountId};
+use tokio::{sync::broadcast::Receiver, time::timeout};
 
 use crate::utils::server::TestServer;
 use crate::utils::tls::{make_rustls_client_config, make_rustls_server_config};
@@ -84,42 +89,6 @@ async fn client_device(
 /*
    PORTS USED: 9180-9189
 */
-
-#[tokio::test]
-async fn test_alice_send_to_bob() {
-    timeout(Duration::from_secs(TIMEOUT_SECS), async {
-        let address = "127.0.0.1:9180";
-        let mut server = TestServer::start(address, None).await;
-        server
-            .started_rx()
-            .await
-            .expect("Should be able to start server");
-
-        let mut alice = client(address, "alice", "alice device").await;
-        let mut bob = client(address, "bob", "bob device").await;
-
-        let bob_id = bob.account_id().await.expect("Bob can get his id");
-
-        let mut bob_recv = bob.subscribe();
-
-        alice
-            .send_message(bob_id, "Hello bob!")
-            .await
-            .expect("Alice can send message");
-
-        bob.process_messages_blocking()
-            .await
-            .expect("Bob can process messages");
-
-        let res = bob_recv.recv().await.expect("receiver works");
-
-        let msg = String::from_utf8_lossy(res.content_bytes());
-
-        assert!(msg == "Hello bob!")
-    })
-    .await
-    .expect("Test took to long to complete")
-}
 
 #[tokio::test]
 async fn test_alice_send_to_bob_offline() {
@@ -299,6 +268,72 @@ async fn test_alice_send_to_bob_with_tls() {
         let msg = String::from_utf8_lossy(res.content_bytes());
 
         assert!(msg == "Hello bob!")
+    })
+    .await
+    .expect("Test took to long to complete")
+}
+
+enum Message<'a> {
+    Alice(&'a str),
+    Bob(&'a str),
+}
+
+async fn send(
+    sender: &mut Client<impl StoreType, impl ApiClient, impl SamProtocolClient>,
+    receiver: &mut Client<impl StoreType, impl ApiClient, impl SamProtocolClient>,
+    id: AccountId,
+    subscriber: &mut Receiver<DecryptedEnvelope>,
+    msg: &str,
+) {
+    sender
+        .send_message(id, msg)
+        .await
+        .expect("Sender client can send message");
+    receiver
+        .process_messages_blocking()
+        .await
+        .expect("Receiver client can process messages");
+    let envelope = subscriber
+        .recv()
+        .await
+        .expect("Subscriber can receive message");
+    let decrypted = String::from_utf8_lossy(envelope.content_bytes());
+    assert!(decrypted == msg);
+}
+
+#[rstest]
+#[case(vec![Message::Alice("a"), Message::Bob("b"), Message::Alice("aa"), Message::Alice("aaa"), Message::Bob("bb")], "9086")]
+#[case(vec![Message::Alice("a"), Message::Alice("aa"), Message::Alice("aaa"), Message::Bob("b"), Message::Bob("bb")], "9087")]
+#[case(vec![Message::Bob("b"), Message::Alice("a")], "9088")]
+#[tokio::test]
+async fn test_ongoing_communication<'a>(#[case] sequence: Vec<Message<'a>>, #[case] port: &str) {
+    timeout(Duration::from_secs(TIMEOUT_SECS), async {
+        let address = format!("127.0.0.1:{port}");
+        let mut server = TestServer::start(&address, None).await;
+        server
+            .started_rx()
+            .await
+            .expect("Should be able to start server");
+
+        let mut alice = client(&address, "alice", "alice device").await;
+        let mut bob = client(&address, "bob", "bob device").await;
+
+        let alice_id = alice.account_id().await.expect("Alice can get id");
+        let bob_id = bob.account_id().await.expect("Bob can get id");
+
+        let mut alice_recv = alice.subscribe();
+        let mut bob_recv = bob.subscribe();
+
+        for message in sequence {
+            match message {
+                Message::Alice(msg) => {
+                    send(&mut alice, &mut bob, bob_id, &mut bob_recv, msg).await;
+                }
+                Message::Bob(msg) => {
+                    send(&mut bob, &mut alice, alice_id, &mut alice_recv, msg).await;
+                }
+            }
+        }
     })
     .await
     .expect("Test took to long to complete")
