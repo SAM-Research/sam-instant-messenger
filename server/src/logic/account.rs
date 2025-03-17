@@ -98,7 +98,7 @@ pub async fn get_account_id_by_username<T: StateType>(
     state: &mut ServerState<T>,
     username: String,
 ) -> Result<AccountId, ServerError> {
-    state.accounts.get_account_from_username(username).await
+    state.accounts.get_account_id_from_username(username).await
 }
 
 #[cfg(test)]

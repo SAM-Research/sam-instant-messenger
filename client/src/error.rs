@@ -7,7 +7,7 @@ use crate::net::{protocol::error::ProtocolError, ApiClientError};
 
 #[derive(Debug, Display, Error, From)]
 pub enum ClientError {
-    #[display("Failed to parse an invalid ServiceId: {_0}")]
+    #[display("Failed to parse an invalid AccountId: {_0}")]
     #[error(ignore)]
     InvalidAccountId(String),
     SignalProtocol(SignalProtocolError),
