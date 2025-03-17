@@ -1,4 +1,5 @@
 use async_trait::async_trait;
+use log::debug;
 use tokio::sync::broadcast::{self, Receiver, Sender};
 
 use crate::{
@@ -26,6 +27,7 @@ impl MessageStore for InMemoryMessageStore {
         self.messages.push(envelope.clone());
         self.sender
             .send(envelope)
+            .inspect_err(|e| debug!("{e}"))
             .map_err(|_| ClientError::SendError)
             .map(|_| ())
     }

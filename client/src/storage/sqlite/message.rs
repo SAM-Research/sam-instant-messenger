@@ -1,4 +1,5 @@
 use async_trait::async_trait;
+use log::debug;
 use sqlx::{Pool, Sqlite};
 use tokio::sync::broadcast::{self, Receiver, Sender};
 
@@ -44,6 +45,7 @@ impl MessageStore for SqliteMessageStore {
             Ok(()) => self
                 .sender
                 .send(envelope)
+                .inspect_err(|e| debug!("{e}"))
                 .map_err(|_| ClientError::SendError)
                 .map(|_| ()),
             Err(e) => Err(e),

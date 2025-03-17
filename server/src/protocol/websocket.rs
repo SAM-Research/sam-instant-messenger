@@ -73,7 +73,9 @@ async fn websocket_message_receiver<T: StateType>(
                     "Received websocket message from user '{}'",
                     auth_user.account().username()
                 );
-                ClientMessage::decode(b).map_err(|_| WebSocketError::WebSocketDecodeError)
+                ClientMessage::decode(b)
+                    .inspect_err(|e| debug!("{e}"))
+                    .map_err(|_| WebSocketError::WebSocketDecodeError)
             }
             Message::Close(_) => Err(WebSocketError::WebSocketDisconnected),
             _ => continue,
@@ -106,6 +108,7 @@ async fn websocket_message_sender<T: StateType>(
                 sender
                     .send(Message::Binary(msg.encode_to_vec().into()))
                     .await
+                    .inspect_err(|e| debug!("{e}"))
                     .map_err(|_| WebSocketSessionError::from(WebSocketError::WebSocketSendError))
             }
             Err(WebSocketSessionError::WebSocket(WebSocketError::WebSocketDisconnected)) => Err(
@@ -118,6 +121,7 @@ async fn websocket_message_sender<T: StateType>(
                         reason: "Internal Server Error".into(),
                     })))
                     .await
+                    .inspect_err(|e| debug!("{e}"))
                     .map_err(|_| WebSocketError::WebSocketSendError);
                 match res {
                     Ok(_) => Err(err),

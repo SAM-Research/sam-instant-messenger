@@ -3,6 +3,7 @@ use std::{
     sync::Arc,
 };
 
+use log::debug;
 use sam_common::{
     address::{AccountId, DeviceAddress, DeviceId},
     sam_message::ServerEnvelope,
@@ -68,6 +69,7 @@ impl MessageManager for InMemoryMessageManager {
             sender
                 .send(envelope_id)
                 .await
+                .inspect_err(|e| debug!("{e}"))
                 .map_err(|_| MessageManagerError::MessageSubscriberSendError)?;
         }
         Ok(())
@@ -163,6 +165,7 @@ impl MessageManager for InMemoryMessageManager {
                             sender
                                 .send(id)
                                 .await
+                                .inspect_err(|e| debug!("{e}"))
                                 .map_err(|_| MessageManagerError::MessageSubscriberSendError)?;
                         }
                         Ok(())
