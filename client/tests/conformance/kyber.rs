@@ -1,24 +1,19 @@
+use super::{in_mem, sqlite};
 use libsignal_protocol::{
-    kem::KeyType, GenericSignedPreKey as _, IdentityKeyPair, KyberPreKeyRecord, KyberPreKeyStore,
+    kem::KeyType, GenericSignedPreKey as _, IdentityKeyPair, IdentityKeyStore as _,
+    KyberPreKeyRecord, KyberPreKeyStore,
 };
 use rand::rngs::OsRng;
+use rstest::rstest;
+use sam_client::storage::{key_generation::KyberKeyGenerator as _, Store, StoreType};
 
-use super::{in_mem, sqlite};
-
-macro_rules! test_kyber_key_store {
-    ( [ $( ($struct:ty, $factory:expr) ),* ]) => {
-        $(
-            paste::paste! {
-                #[tokio::test]
-                async fn [< $struct _saved_kyber_pre_key_can_be_retrieved >]() {
-                    saved_kyber_pre_key_can_be_retrieved($factory().await.kyber_pre_key_store).await;
-                }
-            }
-        )*
-    };
-}
-
-async fn saved_kyber_pre_key_can_be_retrieved(mut kyber_pre_key_store: impl KyberPreKeyStore) {
+#[rstest]
+#[case(in_mem().await.kyber_pre_key_store)]
+#[case(sqlite().await.kyber_pre_key_store)]
+#[tokio::test]
+async fn saved_kyber_pre_key_can_be_retrieved(
+    #[case] mut kyber_pre_key_store: impl KyberPreKeyStore,
+) {
     let id = 1.into();
     let mut csprng = OsRng;
     let identity_key = IdentityKeyPair::generate(&mut csprng);
@@ -60,7 +55,33 @@ async fn saved_kyber_pre_key_can_be_retrieved(mut kyber_pre_key_store: impl Kybe
     );
 }
 
-test_kyber_key_store!([
-    (sqlite_kyber_key_store, sqlite),
-    (in_memory_kyber_key_store, in_mem)
-]);
+#[rstest]
+#[case(in_mem().await)]
+#[case(sqlite().await)]
+#[tokio::test]
+async fn kyber_pre_keys_ids_are_generated_properly(#[case] mut store: Store<impl StoreType>) {
+    let _ = env_logger::try_init();
+    let expected: Vec<u32> = (1u32..=10u32).collect();
+
+    let mut ids: Vec<u32> = Vec::new();
+    let id_key_pair = store
+        .identity_key_store
+        .get_identity_key_pair()
+        .await
+        .expect("Can get id key pair");
+
+    for _ in 1u32..=10u32 {
+        ids.push(
+            store
+                .kyber_pre_key_store
+                .generate_key(id_key_pair.private_key())
+                .await
+                .expect("Can generate keys")
+                .id()
+                .expect("Can get id of key")
+                .into(),
+        );
+    }
+
+    assert_eq!(expected, ids)
+}

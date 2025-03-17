@@ -1,25 +1,20 @@
 use super::{in_mem, sqlite};
+use libsignal_protocol::IdentityKeyStore as _;
 use libsignal_protocol::{
     GenericSignedPreKey as _, IdentityKeyPair, KeyPair, SignedPreKeyRecord, SignedPreKeyStore,
 };
 use rand::rngs::OsRng;
-use sam_client::signal_time_now;
+use rand::{rngs::StdRng, SeedableRng as _};
+use rstest::rstest;
+use sam_client::storage::{key_generation::SignedPreKeyGenerator as _, StoreType};
+use sam_client::{signal_time_now, storage::Store};
 
-macro_rules! test_signed_pre_key_store {
-    ( [ $( ($struct:ty, $factory:expr) ),* ]) => {
-        $(
-            paste::paste! {
-                #[tokio::test]
-                async fn [< $struct _signed_pre_key_can_be_saved_and_retrieved >]() {
-                    signed_pre_key_can_be_saved_and_retrieved($factory().await.signed_pre_key_store).await;
-                }
-            }
-        )*
-    };
-}
-
+#[rstest]
+#[case(in_mem().await.signed_pre_key_store)]
+#[case(sqlite().await.signed_pre_key_store)]
+#[tokio::test]
 async fn signed_pre_key_can_be_saved_and_retrieved(
-    mut signed_pre_key_store: impl SignedPreKeyStore,
+    #[case] mut signed_pre_key_store: impl SignedPreKeyStore,
 ) {
     let mut csprng = OsRng;
     let identity_key = IdentityKeyPair::generate(&mut csprng);
@@ -65,7 +60,34 @@ async fn signed_pre_key_can_be_saved_and_retrieved(
     );
 }
 
-test_signed_pre_key_store!([
-    (sqlite_signed_pre_key_store, sqlite),
-    (in_memory_signed_pre_key_store, in_mem)
-]);
+#[rstest]
+#[case(in_mem().await)]
+#[case(sqlite().await)]
+#[tokio::test]
+async fn signed_pre_keys_ids_are_generated_properly(#[case] mut store: Store<impl StoreType>) {
+    let _ = env_logger::try_init();
+    let mut rng = StdRng::seed_from_u64(128);
+    let expected: Vec<u32> = (1u32..=10u32).collect();
+
+    let mut ids: Vec<u32> = Vec::new();
+    let id_key_pair = store
+        .identity_key_store
+        .get_identity_key_pair()
+        .await
+        .expect("Can get id key pair");
+
+    for _ in 1u32..=10u32 {
+        ids.push(
+            store
+                .signed_pre_key_store
+                .generate_key(&mut rng, id_key_pair.private_key())
+                .await
+                .expect("Can generate keys")
+                .id()
+                .expect("Can get id of key")
+                .into(),
+        );
+    }
+
+    assert_eq!(expected, ids)
+}

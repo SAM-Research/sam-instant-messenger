@@ -1,0 +1,20 @@
+{
+  "db_name": "SQLite",
+  "query": "\n            SELECT\n                MAX(signed_pre_key_id) AS pkid\n            FROM\n                DeviceSignedPreKeyStore\n            ",
+  "describe": {
+    "columns": [
+      {
+        "name": "pkid",
+        "ordinal": 0,
+        "type_info": "Integer"
+      }
+    ],
+    "parameters": {
+      "Right": 0
+    },
+    "nullable": [
+      true
+    ]
+  },
+  "hash": "33e61f82d819478b62bb8ba87f82123161d6db08390c8f833ae0a00c148e267e"
+}
