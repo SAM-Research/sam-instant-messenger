@@ -13,7 +13,7 @@ use sam_common::{
 };
 
 use crate::{
-    storage::{ContactStore, Store, StoreType},
+    storage::{AccountStore, ContactStore, Store, StoreType},
     ClientError,
 };
 
@@ -45,12 +45,15 @@ pub async fn encrypt(
     let bytes = pad_message(&message.into());
 
     let mut recipient_addrs = HashMap::new();
+    let my_id = store.account_store.get_account_id().await?;
+    let my_device_id = store.account_store.get_device_id().await?;
 
     for recipient in recipients {
-        recipient_addrs.insert(
-            recipient,
-            store.contact_store.get_all_devices(recipient).await?,
-        );
+        let mut devices = store.contact_store.get_all_devices(recipient).await?;
+        if recipient == my_id {
+            devices.retain(|id| *id != my_device_id);
+        }
+        recipient_addrs.insert(recipient, devices);
     }
 
     let addr_len = recipient_addrs.values().map(|v| v.len()).sum();
@@ -162,7 +165,7 @@ mod test {
             key_generation::{
                 into_libsignal_bundle, KyberKeyGenerator, PreKeyGenerator, SignedPreKeyGenerator,
             },
-            ContactStore, Store, StoreConfig, StoreType,
+            AccountStore, ContactStore, Store, StoreConfig, StoreType,
         },
     };
 
@@ -248,7 +251,16 @@ mod test {
         let my_struct = MyStruct {
             string: "Hello, World!".to_owned(),
         };
-
+        alice_store
+            .account_store
+            .set_account_id(alice)
+            .await
+            .expect("Can add self account id");
+        alice_store
+            .account_store
+            .set_device_id(1.into())
+            .await
+            .expect("can add self device id");
         alice_store
             .contact_store
             .add_device(bob, 1.into())

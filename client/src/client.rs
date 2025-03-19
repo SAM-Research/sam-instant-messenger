@@ -93,6 +93,10 @@ impl<T: StoreType, U: ApiClient, V: SamProtocolClient> Client<T, U, V> {
             .set_device_id(response.device_id)
             .await?;
         store.account_store.set_password(password.clone()).await?;
+        store
+            .contact_store
+            .add_device(response.account_id, response.device_id)
+            .await?;
 
         let mut protocol_client = protocol_config
             .create(response.account_id, response.device_id, password.clone())
@@ -159,6 +163,10 @@ impl<T: StoreType, U: ApiClient, V: SamProtocolClient> Client<T, U, V> {
         store.account_store.set_account_id(account_id).await?;
         store.account_store.set_device_id(1.into()).await?;
         store.account_store.set_password(password).await?;
+        store
+            .contact_store
+            .add_device(response.account_id, 1.into())
+            .await?;
 
         let queue = protocol_client.connect().await?;
 

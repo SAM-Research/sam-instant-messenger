@@ -11,7 +11,7 @@ use websocket::WebSocketClientConfig;
 pub mod client;
 pub mod error;
 pub mod traits;
-mod websocket;
+pub mod websocket;
 
 pub use client::ProtocolClient;
 pub use traits::{DeviceList, MessageStatus, ProtocolConfig, SamProtocolClient};
