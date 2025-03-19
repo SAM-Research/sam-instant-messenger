@@ -2,34 +2,32 @@
 name = "sam-client"
 version = "0.1.0"
 edition = "2021"
+description = "Create clients that can communicate through a SAM server."
+repository.workspace = true
+license.workspace = true
+authors.workspace = true
 
 [dependencies]
-derive_more = { version = "2.0.1", features = ["display", "error", "from"] }
-libsignal-protocol = { git = "https://github.com/signalapp/libsignal.git", version = "0.1.0" }
-libsignal-core = { git = "https://github.com/signalapp/libsignal.git", version = "0.1.0" }
 sam-common = { path = "../common" }
-async-trait = "0.1.86"
-uuid = { version = "1.13.1", features = [
-    "v4",
-    "fast-rng",
-    "macro-diagnostics",
-] }
-base64 = "0.22.1"
-bon = "3.3.2"
-sqlx = { version = "0.8.3", features = ["sqlite", "runtime-tokio"] }
-tokio = { version = "1.43.0", features = ["macros", "rt-multi-thread"] }
-rand = "0.8.5"
-paste = "1.0.15"
-tokio-tungstenite = { version = "0.26.2", features = [
-    "rustls-tls-native-roots",
-] }
-futures-util = { version = "0.3.30", features = ["sink"] }
-prost = "0.13.4"
-env_logger = "0.11.6"
-log = "0.4.25"
-reqwest = { version = "0.12.12", features = ["json", "rustls-tls"] }
-rustls = "0.23.23"
-rustls-pemfile = "2.2.0"
+
+libsignal-protocol = { workspace = true }
+libsignal-core = { workspace = true }
+derive_more = { workspace = true, features = ["display", "error", "from"] }
+async-trait = { workspace = true }
+uuid = { workspace = true, features = ["v4", "fast-rng", "macro-diagnostics"] }
+base64 = { workspace = true }
+bon = { workspace = true }
+sqlx = { workspace = true, features = ["sqlite", "runtime-tokio"] }
+tokio = { workspace = true, features = ["macros", "rt-multi-thread"] }
+rand = { workspace = true }
+tokio-tungstenite = { workspace = true, features = ["rustls-tls-native-roots"] }
+futures-util = { workspace = true, features = ["sink"] }
+prost = { workspace = true }
+env_logger = { workspace = true }
+log = { workspace = true }
+reqwest = { workspace = true, features = ["json", "rustls-tls"] }
+rustls = { workspace = true }
+rustls-pemfile = { workspace = true }
 
 [dev-dependencies]
-rstest = "0.24.0"
+rstest = { workspace = true }

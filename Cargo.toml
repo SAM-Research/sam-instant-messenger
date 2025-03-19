@@ -1,9 +1,50 @@
+[workspace.package]
+authors = ["SAM Research"]
+license = "MIT"
+repository = "https://github.com/SAM-Research/sam-instant-messenger"
+
 [workspace]
 resolver = "2"
 
-members = [
-  "server",
-  "common",  
-  "client",
-  "e2e"
-]
+members = ["server", "common", "client", "e2e"]
+
+[workspace.dependencies]
+sam-server = { path = "server" }
+sam-client = { path = "client" }
+sam-common = { path = "common" }
+
+libsignal-protocol = { git = "https://github.com/signalapp/libsignal.git", version = "0.1.0" }
+libsignal-core = { git = "https://github.com/signalapp/libsignal.git", version = "0.1.0" }
+derive_more = { version = "2.0.1" }
+tokio = { version = "1.40.0" }
+futures-util = { version = "0.3.30" }
+async-trait = "0.1.83"
+prost = "0.13.3"
+axum = { version = "0.8.1" }
+axum-extra = { version = "0.10.0" }
+axum-server = { version = "0.7" }
+env_logger = "0.11.6"
+log = "0.4.25"
+bon = "3.3.2"
+hkdf = "0.12.4"
+sha2 = "0.10"
+rand = "0.8.5"
+base64 = "0.21.7"
+argon2 = "0.5.3"
+rustls = { version = "0.23.15" }
+rustls-pemfile = "2.2.0"
+uuid = { version = "1.13.1" }
+sqlx = { version = "0.8.3" }
+tokio-tungstenite = { version = "0.26.2" }
+reqwest = { version = "0.12.12" }
+serde = { version = "1.0.210" }
+serde_with = { version = "3.11.0" }
+
+# Dev dependencies
+rstest = "0.24.0"
+axum-test = "17.2.0"
+maplit = "1.0.2"
+serde_json = "1.0.139"
+
+# Build dependencies
+prost-build = "0.13.4"

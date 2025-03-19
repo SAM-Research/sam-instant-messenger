@@ -2,27 +2,31 @@
 name = "sam-common"
 version = "0.1.0"
 edition = "2021"
+description = "Common dependencies of SAM client and server."
+repository.workspace = true
+license.workspace = true
+authors.workspace = true
 
 [dependencies]
-derive_more = { version = "2.0.1", features = [
-    "display",
-    "error",
-    "from",
-    "into",
+base64 = { workspace = true }
+derive_more = { workspace = true, features = [
+  "display",
+  "error",
+  "from",
+  "into",
 ] }
-prost = "0.13.4"
-libsignal-protocol = { git = "https://github.com/signalapp/libsignal.git", version = "0.1.0" }
-tokio = { version = "1.40.0", features = ["full"] }
-futures-util = { version = "0.3.30", features = ["sink"] }
-async-trait = "0.1.83"
-base64 = "0.22.1"
-serde = { version = "1.0.210", features = ["derive"] }
-serde_with = { version = "3.11.0", features = ["base64"] }
-uuid = { version = "1.11.0", features = ["serde", "v4"] }
-bon = "3.3.2"
-rand = "0.8.5"
-axum = "0.8.1"
-log = "0.4.25"
+prost = { workspace = true }
+libsignal-protocol = { workspace = true }
+tokio = { workspace = true, features = ["full"] }
+futures-util = { workspace = true, features = ["sink"] }
+async-trait = { workspace = true }
+serde = { workspace = true, features = ["derive"] }
+serde_with = { workspace = true, features = ["base64"] }
+uuid = { workspace = true, features = ["serde", "v4"] }
+bon = { workspace = true }
+rand = { workspace = true }
+axum = { workspace = true }
+log = { workspace = true }
 
 [build-dependencies]
-prost-build = "0.13.4"
+prost-build = { workspace = true }
