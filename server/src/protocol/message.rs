@@ -87,9 +87,7 @@ async fn handle_client_envelope<T: StateType>(
             .build());
     }
 
-    if !dest_acc_ids.contains_key(&sender_account_id) {
-        dest_acc_ids.insert(sender_account_id, Vec::new());
-    }
+    dest_acc_ids.entry(sender_account_id).or_insert_with(Vec::new);
 
     for (recipient, devices) in dest_acc_ids {
         let mut all_devices = state.devices.get_devices(recipient).await?;
