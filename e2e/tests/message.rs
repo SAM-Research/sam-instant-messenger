@@ -333,8 +333,12 @@ async fn test_alice_send_to_bob_and_self() {
         )
         .await;
 
+        let bob_expected = "Hello bob!";
+        let res = alice.send_message(bob_id, bob_expected).await;
+        assert!(matches!(res, Err(ClientError::MissingDevices)));
+
         alice
-            .send_message(bob_id, "Hello bob!")
+            .send_message(bob_id, bob_expected)
             .await
             .expect("Alice can send message");
 
@@ -348,7 +352,7 @@ async fn test_alice_send_to_bob_and_self() {
         let res = alice_recv.recv().await.expect("receiver works");
         let bob_msg = String::from_utf8_lossy(res.content_bytes());
 
-        assert!(bob_msg == "Hello bob!")
+        assert!(bob_msg == bob_expected)
     })
     .await
     .expect("Test took to long to complete")

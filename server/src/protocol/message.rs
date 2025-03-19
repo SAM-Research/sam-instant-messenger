@@ -71,7 +71,7 @@ async fn handle_client_envelope<T: StateType>(
     message_id: MessageId,
     envelope: ClientEnvelope,
 ) -> Result<ServerMessage, ServerError> {
-    let dest_acc_ids = envelope
+    let mut dest_acc_ids = envelope
         .recipients()
         .ok_or(ServerError::EnvelopeMalformed)?;
 
@@ -85,6 +85,10 @@ async fn handle_client_envelope<T: StateType>(
             .id(message_id.into())
             .r#type(ServerMessageType::EmptyMessage.into())
             .build());
+    }
+
+    if !dest_acc_ids.contains_key(&sender_account_id) {
+        dest_acc_ids.insert(sender_account_id, Vec::new());
     }
 
     for (recipient, devices) in dest_acc_ids {
