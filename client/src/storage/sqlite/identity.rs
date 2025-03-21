@@ -61,7 +61,7 @@ impl SqliteIdentityKeyStore {
         .map_err(|err| ClientError::Database(format!("{err}")))
     }
 
-    pub async fn create(
+    pub async fn new(
         database: Pool<Sqlite>,
         key_pair: IdentityKeyPair,
         registration_id: u32,
