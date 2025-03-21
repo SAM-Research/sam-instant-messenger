@@ -20,6 +20,7 @@ use sam_client::{
     Client, ClientError,
 };
 use sam_common::{api::LinkDeviceToken, AccountId};
+use tempfile::NamedTempFile;
 use tokio::{sync::broadcast::Receiver, time::timeout};
 
 use crate::utils::server::TestServer;
@@ -89,7 +90,7 @@ async fn client_device(
 }
 
 /*
-   PORTS USED: 9180-9189
+   PORTS USED: 9180-9190
 */
 
 #[tokio::test]
@@ -457,6 +458,64 @@ async fn test_ongoing_communication<'a>(#[case] sequence: Vec<Message<'a>>, #[ca
                 }
             }
         }
+    })
+    .await
+    .expect("Test took to long to complete")
+}
+
+#[tokio::test]
+async fn sqlite_stores_alice_send_to_bob() {
+    timeout(Duration::from_secs(TIMEOUT_SECS), async {
+        let address = "127.0.0.1:9190";
+        let mut server = TestServer::start(address, None).await;
+        server
+            .started_rx()
+            .await
+            .expect("Should be able to start server");
+
+        let temp = NamedTempFile::new().expect("Can create tempfile");
+        let path = format!("sqlite://{}?mode=rwc", temp.path().to_string_lossy());
+
+        let mut alice = Client::from_registration()
+            .username("Alice")
+            .device_name("Alice's Device")
+            .store_config(SqliteStoreConfig::new(path.clone()))
+            .protocol_config(WebSocketProtocolClientConfig::new(address.to_owned()))
+            .api_client_config(HttpClientConfig::new(address.to_owned()))
+            .call()
+            .await
+            .expect("can register alice");
+
+        alice.disconnect().await.expect("can disconnect alice");
+        drop(alice);
+
+        let store = SqliteStoreConfig::new(path)
+            .load()
+            .await
+            .expect("can create a store");
+
+        let mut alice = Client::from_store()
+            .store(store)
+            .protocol_config(WebSocketProtocolClientConfig::new(address.to_owned()))
+            .api_client_config(HttpClientConfig::new(address.to_owned()))
+            .call()
+            .await
+            .unwrap();
+
+        let bob = Client::from_registration()
+            .username("Bob")
+            .device_name("Bob's Device")
+            .store_config(SqliteStoreConfig::new("sqlite::memory:".to_owned()))
+            .protocol_config(WebSocketProtocolClientConfig::new(address.to_owned()))
+            .api_client_config(HttpClientConfig::new(address.to_owned()))
+            .call()
+            .await
+            .unwrap();
+
+        alice
+            .send_message(bob.account_id().await.unwrap(), "Hello")
+            .await
+            .unwrap();
     })
     .await
     .expect("Test took to long to complete")

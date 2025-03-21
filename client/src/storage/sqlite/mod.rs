@@ -9,7 +9,7 @@ pub use pre_key::SqlitePreKeyStore;
 pub use sender_key::SqliteSenderKeyStore;
 pub use session::SqliteSessionStore;
 pub use signed_pre_key::SqliteSignedPreKeyStore;
-use sqlx::{sqlite::SqlitePoolOptions, Pool, Sqlite};
+use sqlx::sqlite::SqlitePoolOptions;
 
 use super::{Store, StoreConfig, StoreType};
 use crate::ClientError;
@@ -50,42 +50,75 @@ impl StoreType for SqliteStoreType {
 pub type SqliteStore = Store<SqliteStoreType>;
 #[derive(Debug)]
 pub struct SqliteStoreConfig {
-    database: Pool<Sqlite>,
-}
-
-pub async fn connect_to_in_memory() -> Pool<Sqlite> {
-    let db_url = "sqlite::memory:".to_owned();
-    let pool = SqlitePoolOptions::new()
-        .connect(&db_url)
-        .await
-        .expect("Could not connect to database");
-    sqlx::migrate!("database/migrations")
-        .run(&pool)
-        .await
-        .expect("should be able to run migrations");
-
-    pool
+    connection_string: String,
 }
 
 impl SqliteStoreConfig {
-    pub fn new(database: Pool<Sqlite>) -> Self {
-        Self { database }
+    pub fn new(connection_string: String) -> Self {
+        Self { connection_string }
     }
+
     pub async fn in_memory() -> Self {
-        let database = connect_to_in_memory().await;
-        Self { database }
+        Self {
+            connection_string: "sqlite::memory:".to_owned(),
+        }
+    }
+
+    /// Load an existing database.
+    pub async fn load(self) -> Result<SqliteStore, ClientError> {
+        let database = SqlitePoolOptions::new()
+            .connect(&self.connection_string)
+            .await
+            .map_err(|err| {
+                ClientError::Database(format!(
+                    "Could not connect to the database at '{}': {}",
+                    self.connection_string, err
+                ))
+            })?;
+
+        Ok(SqliteStore::builder()
+            .contact_store(SqliteContactStore::new(database.clone()))
+            .account_store(SqliteAccountStore::new(database.clone()))
+            .pre_key_store(SqlitePreKeyStore::new(database.clone()))
+            .signed_pre_key_store(SqliteSignedPreKeyStore::new(database.clone()))
+            .kyber_pre_key_store(SqliteKyberPreKeyStore::new(database.clone()))
+            .sender_key_store(SqliteSenderKeyStore::new(database.clone()))
+            .session_store(SqliteSessionStore::new(database.clone()))
+            .message_store(SqliteMessageStore::new(database.clone(), 10))
+            .identity_key_store(SqliteIdentityKeyStore::load(database.clone()).await?)
+            .build())
     }
 }
 
 #[async_trait(?Send)]
 impl StoreConfig for SqliteStoreConfig {
     type StoreType = SqliteStoreType;
+
+    /// Create a new database and run migrations.
     async fn create_store<ID: Into<u32>>(
         self,
         key_pair: IdentityKeyPair,
         registration_id: ID,
     ) -> Result<SqliteStore, ClientError> {
-        let database = self.database;
+        let database = SqlitePoolOptions::new()
+            .connect(&self.connection_string)
+            .await
+            .map_err(|err| {
+                ClientError::Database(format!(
+                    "Could not connect to the database at '{}': {}",
+                    self.connection_string, err
+                ))
+            })?;
+        sqlx::migrate!("database/migrations")
+            .run(&database)
+            .await
+            .map_err(|err| {
+                ClientError::Database(format!(
+                    "Could not run migrations on database at '{}': {}",
+                    self.connection_string, err
+                ))
+            })?;
+
         Ok(SqliteStore::builder()
             .contact_store(SqliteContactStore::new(database.clone()))
             .account_store(SqliteAccountStore::new(database.clone()))
@@ -96,9 +129,57 @@ impl StoreConfig for SqliteStoreConfig {
             .session_store(SqliteSessionStore::new(database.clone()))
             .message_store(SqliteMessageStore::new(database.clone(), 10))
             .identity_key_store(
-                SqliteIdentityKeyStore::create(database.clone(), key_pair, registration_id.into())
+                SqliteIdentityKeyStore::new(database.clone(), key_pair, registration_id.into())
                     .await?,
             )
             .build())
+    }
+}
+
+#[cfg(test)]
+mod test {
+    use libsignal_protocol::IdentityKeyPair;
+    use rand::rngs::OsRng;
+    use sam_common::address::RegistrationId;
+    use tempfile::NamedTempFile;
+
+    use crate::storage::{SqliteStoreConfig, StoreConfig};
+
+    #[tokio::test]
+    async fn sqlite_database_file_can_be_created() {
+        let mut csprng = OsRng;
+        let temp = NamedTempFile::new().expect("Can create tempfile");
+        let path = format!("sqlite://{}?mode=rwc", temp.path().to_string_lossy());
+        let store = SqliteStoreConfig::new(path);
+        let key_pair = IdentityKeyPair::generate(&mut csprng);
+        let registration_id = RegistrationId::generate(&mut csprng);
+        assert!(store.create_store(key_pair, registration_id).await.is_ok());
+    }
+
+    #[tokio::test]
+    async fn sqlite_in_memory_database_can_be_created() {
+        let mut csprng = OsRng;
+        let store = SqliteStoreConfig::new("sqlite::memory:".to_owned());
+        let key_pair = IdentityKeyPair::generate(&mut csprng);
+        let registration_id = RegistrationId::generate(&mut csprng);
+        assert!(store.create_store(key_pair, registration_id).await.is_ok());
+    }
+
+    #[tokio::test]
+    async fn sqlite_store_can_be_loaded() {
+        let mut csprng = OsRng;
+        let temp = NamedTempFile::new().expect("Can create tempfile");
+        let path = format!("sqlite://{}?mode=rwc", temp.path().to_string_lossy());
+        let config = SqliteStoreConfig::new(path.clone());
+        let key_pair = IdentityKeyPair::generate(&mut csprng);
+        let registration_id = RegistrationId::generate(&mut csprng);
+        let store = config
+            .create_store(key_pair, registration_id)
+            .await
+            .expect("Can create a sqlite store");
+
+        drop(store);
+
+        assert!(SqliteStoreConfig::new(path).load().await.is_ok());
     }
 }
