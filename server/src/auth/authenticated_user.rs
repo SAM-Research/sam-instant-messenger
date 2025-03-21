@@ -15,6 +15,7 @@ use axum_extra::headers::Authorization;
 use axum_extra::TypedHeader;
 use log::debug;
 use sam_common::address::AccountId;
+use sam_common::DeviceId;
 
 #[derive(Clone)]
 pub struct AuthenticatedUser {
@@ -32,6 +33,20 @@ impl AuthenticatedUser {
     }
 }
 
+pub fn get_credentials(userinfo: String) -> Result<(AccountId, DeviceId), ServerError> {
+    let (account_id, device_id) = userinfo
+        .split_once(".")
+        .ok_or(AuthorizationError::AuthBasicParseError)?;
+    let account_id = AccountId::from_str(account_id)
+        .inspect_err(|e| debug!("{e}"))
+        .map_err(|_| AuthorizationError::AuthBasicParseError)?;
+    let device_id = device_id
+        .parse()
+        .inspect_err(|e| debug!("{e}"))
+        .map_err(|_| AuthorizationError::AuthBasicParseError)?;
+    Ok((account_id, device_id))
+}
+
 impl<T: StateType> FromRequestParts<ServerState<T>> for AuthenticatedUser {
     type Rejection = ServerError;
 
@@ -47,16 +62,7 @@ impl<T: StateType> FromRequestParts<ServerState<T>> for AuthenticatedUser {
                     .map_err(|_| AuthorizationError::AuthBasicParseError)?;
             (basic.username().to_string(), basic.password().to_string())
         };
-        let (account_id, device_id) = userinfo
-            .split_once(".")
-            .ok_or(AuthorizationError::AuthBasicParseError)?;
-        let account_id = AccountId::from_str(account_id)
-            .inspect_err(|e| debug!("{e}"))
-            .map_err(|_| AuthorizationError::AuthBasicParseError)?;
-        let device_id = device_id
-            .parse()
-            .inspect_err(|e| debug!("{e}"))
-            .map_err(|_| AuthorizationError::AuthBasicParseError)?;
+        let (account_id, device_id) = get_credentials(userinfo)?;
 
         let account = { state.accounts.get_account(account_id).await? };
         let device = { state.devices.get_device(account_id, device_id).await? };
