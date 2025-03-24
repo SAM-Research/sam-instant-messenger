@@ -1,4 +1,4 @@
-use derive_more::{Display, Error};
+use derive_more::{Display, Error, From};
 
 #[derive(Debug, Display, Error)]
 pub enum ApiClientError {
@@ -9,4 +9,11 @@ pub enum ApiClientError {
     ErrorResponse(u16, String),
     CouldNotParseResponse,
     FailedToBuildApiClient,
+}
+
+#[derive(Debug, Display, Error, From)]
+pub enum TLSError {
+    LoadError(std::io::Error),
+    RustlsError(rustls::Error),
+    PrivateKeyWasNone,
 }

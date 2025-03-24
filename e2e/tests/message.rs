@@ -1,6 +1,6 @@
 mod utils;
 
-use std::time::Duration;
+use std::{sync::Arc, time::Duration};
 
 use libsignal_protocol::IdentityKeyPair;
 use rstest::rstest;
@@ -11,6 +11,7 @@ use sam_client::{
         protocol::{
             client::ProtocolClient, traits::SamProtocolClient, WebSocketProtocolClientConfig,
         },
+        tls::{create_tls_config, MutualTLSConfig},
         ApiClient, HttpClient,
     },
     storage::{
@@ -20,11 +21,11 @@ use sam_client::{
     Client, ClientError,
 };
 use sam_common::{api::LinkDeviceToken, AccountId};
+use sam_server::tls::create_tls_config as create_server_tls_config;
 use tempfile::NamedTempFile;
 use tokio::{sync::broadcast::Receiver, time::timeout};
 
 use crate::utils::server::TestServer;
-use crate::utils::tls::{make_rustls_client_config, make_rustls_server_config};
 
 const TIMEOUT_SECS: u64 = 120;
 
@@ -49,9 +50,10 @@ async fn tls_client(
     address: &str,
     username: &str,
     device_name: &str,
+    mutual_config: Option<MutualTLSConfig>,
 ) -> Client<SqliteStoreType, HttpClient, ProtocolClient> {
     let client_config =
-        make_rustls_client_config("./cert/rootCA.crt").expect("Should make client config");
+        create_tls_config("./cert/rootCA.crt", mutual_config).expect("Can create client config");
     Client::from_registration()
         .username(username)
         .device_name(device_name)
@@ -359,20 +361,29 @@ async fn test_alice_send_to_bob_and_self() {
     .expect("Test took to long to complete")
 }
 
+#[rstest]
+#[case(Some("./cert/rootCA.crt"), Some(MutualTLSConfig::new("./cert/client.key".to_string(), "./cert/client.crt".to_string())), "9187")]
+#[case(None, None, "9188")]
 #[tokio::test]
-async fn test_alice_send_to_bob_with_tls() {
+async fn test_alice_send_to_bob_with_tls(
+    #[case] ca_cert: Option<&str>,
+    #[case] mutual_config: Option<MutualTLSConfig>,
+    #[case] port: &str,
+) {
     timeout(Duration::from_secs(TIMEOUT_SECS), async {
         let _ = rustls::crypto::ring::default_provider().install_default();
-        let address = "127.0.0.1:9187";
-        let server_config = make_rustls_server_config("./cert/server.crt", "./cert/server.key");
-        let mut server = TestServer::start(address, Some(server_config)).await;
+        let address = format!("127.0.0.1:{port}");
+        let server_config =
+            create_server_tls_config("./cert/server.crt", "./cert/server.key", ca_cert)
+                .expect("Can create server config");
+        let mut server = TestServer::start(&address, Some(Arc::new(server_config))).await;
         server
             .started_rx()
             .await
             .expect("Should be able to start server");
 
-        let mut alice = tls_client(address, "alice", "alice device").await;
-        let mut bob = tls_client(address, "bob", "bob device").await;
+        let mut alice = tls_client(&address, "alice", "alice device", mutual_config.clone()).await;
+        let mut bob = tls_client(&address, "bob", "bob device", mutual_config).await;
 
         let bob_id = bob.account_id().await.expect("Bob can get his id");
 

@@ -17,35 +17,43 @@ Omit the `RUST_LOG=info` if you don't want any logging
 
 In order to run the end-to-end tests, you need to generate certificates.
 
-1. Go into `e2e/cert`
+1. Go into `scripts`
 2. Generate certificates by running the following
 
 ```zsh
-./generate_cert.sh
+./generate_cert.sh ../e2e/cert
 ```
 
 # Changing the database queries for SqliteStore.
+
 If you need to edit the database queries for SqliteStore, you must first instal sqlx-cli:
+
 ```
 cargo install sqlx-cli
 ```
 
 Then, create a .env file pointing to a Sqlite database file:
+
 ```
 ~/path/to/project/client/database/dev.db
 ```
 
 Then, to create the file if it does not exist yet, type the following:
+
 ```
 sqlx db create
 ```
+
 and then:
+
 ```
 sqlx migrate run
 ```
 
 Once this is done, you can edit the queries. When you are done, remember to run:
+
 ```
 cargo sqlx prepare --workspace
 ```
+
 from the project root.

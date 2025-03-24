@@ -6,6 +6,7 @@ pub mod protocol;
 pub mod routes;
 pub mod server;
 pub mod state;
+pub mod tls;
 
 #[cfg(test)]
 mod test_utils;
@@ -13,3 +14,4 @@ mod test_utils;
 pub use error::ServerError;
 pub use server::{start_server, ServerConfig};
 pub use state::{state_type::StateType, ServerState};
+pub use tls::create_tls_config;

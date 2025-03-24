@@ -8,6 +8,7 @@ use axum::response::IntoResponse;
 use derive_more::derive::{Display, Error};
 use derive_more::From;
 use log::error;
+use rustls::server::VerifierBuilderError;
 use sam_common::LibError;
 
 pub type Result<T> = std::result::Result<T, ServerError>;
@@ -23,6 +24,14 @@ pub enum ServerError {
     Authorization(AuthorizationError),
     Router(RouterError),
     EnvelopeMalformed,
+}
+
+#[derive(Debug, Display, Error, From)]
+pub enum TLSError {
+    LoadError(std::io::Error),
+    VerifierError(VerifierBuilderError),
+    RustlsError(rustls::Error),
+    PrivateKeyWasNone,
 }
 
 impl IntoResponse for ServerError {

@@ -1,9 +1,7 @@
 use clap::{Arg, Command};
 use log::info;
-use rustls_pemfile::{certs, private_key};
-use sam_server::{start_server, state::ServerState, ServerConfig};
-use std::fs::File;
-use std::io::BufReader;
+
+use sam_server::{create_tls_config, start_server, state::ServerState, ServerConfig};
 use std::sync::Arc;
 
 #[tokio::main]
@@ -13,18 +11,27 @@ pub async fn main() {
         .arg(
             Arg::new("cert")
                 .short('c')
-                .long("certificate")
+                .long("tls-certificate")
                 .required(false)
-                .help(".crt file")
+                .help(".crt file (Server)")
                 .requires("key"),
         )
         .arg(
             Arg::new("key")
                 .short('k')
-                .long("key")
+                .long("tls-key")
                 .required(false)
-                .help(".key file")
+                .help(".key file (Server)")
                 .requires("cert"),
+        )
+        .arg(
+            Arg::new("client_auth")
+                .short('a')
+                .long("authenticate-client")
+                .required(false)
+                .help(".crt file (Certificate Authority)")
+                .requires("cert")
+                .requires("key"),
         )
         .arg(
             Arg::new("ip")
@@ -44,31 +51,20 @@ pub async fn main() {
         )
         .get_matches();
 
-    let tls = if let (Some(cert), Some(key)) = (
+    let tls = if let (Some(cert), Some(key), ca_cert) = (
         matches.get_one::<String>("cert"),
         matches.get_one::<String>("key"),
+        matches.get_one::<String>("client_auth"),
     ) {
-        info!("Using TLS");
+        info!("Using {}TLS", (if ca_cert.is_some() { "m" } else { "" }));
         info!("Cerificate: '{}'", cert);
         info!("Key: '{}'", key);
         let _ = rustls::crypto::ring::default_provider().install_default();
-        let cert_file = File::open(cert).expect("Failed to open cert file");
-        let mut cert_reader = BufReader::new(cert_file);
-        let cert_chain = certs(&mut cert_reader)
-            .map(|cert| cert.expect("Certificate should be there"))
-            .collect::<Vec<_>>();
 
-        let key_file = File::open(key).expect("Failed to open key file");
-        let mut key_reader = BufReader::new(key_file);
-        let key = private_key(&mut key_reader)
-            .expect("Should find key")
-            .expect("Key should be there");
-
-        let server_config = rustls::ServerConfig::builder()
-            .with_no_client_auth()
-            .with_single_cert(cert_chain, key)
-            .expect("Failed to create rustls::ServerConfig");
-        Some(Arc::new(server_config))
+        Some(Arc::new(
+            create_tls_config(cert, key, ca_cert.map(|x| x.as_str()))
+                .expect("Can build TLS Config"),
+        ))
     } else {
         None
     };

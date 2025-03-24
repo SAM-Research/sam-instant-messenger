@@ -1,12 +1,14 @@
+use std::sync::Arc;
+
 use crate::utils::server::TestServer;
 
-use crate::utils::tls::{make_rustls_client_config, make_rustls_server_config};
 use libsignal_protocol::IdentityKeyPair;
 use rand::rngs::OsRng;
 use sam_client::{
     net::{
         http_client::HttpClientConfig,
         protocol::{client::ProtocolClient, WebSocketProtocolClientConfig},
+        tls::create_tls_config,
         HttpClient,
     },
     storage::{
@@ -16,6 +18,7 @@ use sam_client::{
     Client, ClientError,
 };
 use sam_common::{address::RegistrationId, AccountId};
+use sam_server::create_tls_config as create_server_tls_config;
 
 mod utils;
 
@@ -169,9 +172,11 @@ pub async fn alice_can_find_bobs_account_id() {
 pub async fn one_client_can_register_with_tls() {
     let _ = rustls::crypto::ring::default_provider().install_default();
     let address = "127.0.0.1:9375".to_owned();
-    let server_config = make_rustls_server_config("./cert/server.crt", "./cert/server.key");
-    let client_config = make_rustls_client_config("./cert/rootCA.crt").expect("Can make config");
-    let mut server = TestServer::start(&address, Some(server_config)).await;
+    let server_config = create_server_tls_config("./cert/server.crt", "./cert/server.key", None)
+        .expect("Can create server config");
+    let client_config =
+        create_tls_config("./cert/rootCA.crt", None).expect("Can create client config");
+    let mut server = TestServer::start(&address, Some(Arc::new(server_config))).await;
 
     server
         .started_rx()

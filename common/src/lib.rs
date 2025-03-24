@@ -3,6 +3,7 @@ pub mod api;
 pub mod error;
 pub mod protocol;
 pub mod time;
+pub mod tls;
 
 pub use address::{AccountId, DeviceId};
 
