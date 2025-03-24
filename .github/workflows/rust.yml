@@ -2,9 +2,9 @@ name: Rust
 
 on:
   push:
-    branches: [ "main" ]
+    branches: ["main"]
   pull_request:
-    branches: [ "**" ]
+    branches: ["**"]
 
 env:
   CARGO_TERM_COLOR: always
@@ -174,7 +174,7 @@ jobs:
           fi
 
       - name: Generate Certificates
-        run: cd ./e2e/cert && ./generate_cert.sh
+        run: cd ./scripts && ./generate_cert.sh ../e2e/cert
 
       - name: Test & Coverage
         run: cargo llvm-cov --workspace --lcov --output-path lcov.info

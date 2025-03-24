@@ -1,6 +1,6 @@
 mod utils;
 
-use std::time::Duration;
+use std::{sync::Arc, time::Duration};
 
 use libsignal_protocol::IdentityKeyPair;
 use rstest::rstest;
@@ -11,6 +11,7 @@ use sam_client::{
         protocol::{
             client::ProtocolClient, traits::SamProtocolClient, WebSocketProtocolClientConfig,
         },
+        tls::create_tls_config,
         ApiClient, HttpClient,
     },
     storage::{
@@ -20,11 +21,11 @@ use sam_client::{
     Client, ClientError,
 };
 use sam_common::{api::LinkDeviceToken, AccountId};
+use sam_server::tls::create_tls_config as create_server_tls_config;
 use tempfile::NamedTempFile;
 use tokio::{sync::broadcast::Receiver, time::timeout};
 
 use crate::utils::server::TestServer;
-use crate::utils::tls::{make_rustls_client_config, make_rustls_server_config};
 
 const TIMEOUT_SECS: u64 = 120;
 
@@ -51,7 +52,7 @@ async fn tls_client(
     device_name: &str,
 ) -> Client<SqliteStoreType, HttpClient, ProtocolClient> {
     let client_config =
-        make_rustls_client_config("./cert/rootCA.crt").expect("Should make client config");
+        create_tls_config("./cert/rootCA.crt", None).expect("Can create client config");
     Client::from_registration()
         .username(username)
         .device_name(device_name)
@@ -364,8 +365,10 @@ async fn test_alice_send_to_bob_with_tls() {
     timeout(Duration::from_secs(TIMEOUT_SECS), async {
         let _ = rustls::crypto::ring::default_provider().install_default();
         let address = "127.0.0.1:9187";
-        let server_config = make_rustls_server_config("./cert/server.crt", "./cert/server.key");
-        let mut server = TestServer::start(address, Some(server_config)).await;
+        let server_config =
+            create_server_tls_config("./cert/server.crt", "./cert/server.key", None)
+                .expect("Can create server config");
+        let mut server = TestServer::start(address, Some(Arc::new(server_config))).await;
         server
             .started_rx()
             .await
