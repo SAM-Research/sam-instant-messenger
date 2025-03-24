@@ -3,6 +3,7 @@ use sam_common::tls::{load_certs, load_private_key};
 
 use super::error::TLSError;
 
+#[derive(Clone)]
 pub struct MutualTLSConfig {
     key_path: String,
     cert_path: String,

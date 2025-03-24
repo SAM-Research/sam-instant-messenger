@@ -13,7 +13,7 @@ pub async fn main() {
                 .short('c')
                 .long("tls-certificate")
                 .required(false)
-                .help(".crt file")
+                .help(".crt file (Server)")
                 .requires("key"),
         )
         .arg(
@@ -21,7 +21,7 @@ pub async fn main() {
                 .short('k')
                 .long("tls-key")
                 .required(false)
-                .help(".key file")
+                .help(".key file (Server)")
                 .requires("cert"),
         )
         .arg(
@@ -29,7 +29,7 @@ pub async fn main() {
                 .short('a')
                 .long("authenticate-client")
                 .required(false)
-                .help(".crt file, useful for proxy")
+                .help(".crt file (Certificate Authority)")
                 .requires("cert")
                 .requires("key"),
         )
