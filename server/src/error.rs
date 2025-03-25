@@ -27,7 +27,7 @@ pub enum ServerError {
 }
 
 #[derive(Debug, Display, Error, From)]
-pub enum TLSError {
+pub enum TlsError {
     LoadError(std::io::Error),
     VerifierError(VerifierBuilderError),
     RustlsError(rustls::Error),
@@ -35,15 +35,15 @@ pub enum TLSError {
 }
 
 #[derive(Debug, Display, Error, From)]
-pub enum TLSConfigError {
+pub enum TlsConfigError {
     LoadError(std::io::Error),
     DecodeError(serde_json::Error),
 }
 
 #[derive(Debug, Display, Error, From)]
 pub enum CLIError {
-    TLSConfigError(TLSConfigError),
-    TLSError(TLSError),
+    TLSConfigError(TlsConfigError),
+    TLSError(TlsError),
     AddressParseError,
     FailedToStartServer,
     #[error(ignore)]

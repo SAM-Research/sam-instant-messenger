@@ -1,15 +1,15 @@
 use rustls::{ClientConfig, RootCertStore};
 use sam_common::tls::{load_certs, load_private_key};
 
-use super::error::TLSError;
+use super::error::TlsError;
 
 #[derive(Clone)]
-pub struct MutualTLSConfig {
+pub struct MutualTlsConfig {
     key_path: String,
     cert_path: String,
 }
 
-impl MutualTLSConfig {
+impl MutualTlsConfig {
     pub fn new(key_path: String, cert_path: String) -> Self {
         Self {
             key_path,
@@ -20,15 +20,15 @@ impl MutualTLSConfig {
 
 pub fn create_tls_config(
     ca_cert_path: &str,
-    mutual_config: Option<MutualTLSConfig>,
-) -> Result<ClientConfig, TLSError> {
+    mutual_config: Option<MutualTlsConfig>,
+) -> Result<ClientConfig, TlsError> {
     let certs = load_certs(ca_cert_path)?;
     let mut root_store = RootCertStore::empty();
     root_store.add_parsable_certificates(certs);
 
     Ok(if let Some(config) = mutual_config {
         let cert_chain = load_certs(&config.cert_path)?;
-        let key_der = load_private_key(&config.key_path)?.ok_or(TLSError::PrivateKeyWasNone)?;
+        let key_der = load_private_key(&config.key_path)?.ok_or(TlsError::PrivateKeyWasNone)?;
         ClientConfig::builder()
             .with_root_certificates(root_store)
             .with_client_auth_cert(cert_chain, key_der)?

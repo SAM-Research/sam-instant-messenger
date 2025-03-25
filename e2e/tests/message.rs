@@ -11,7 +11,7 @@ use sam_client::{
         protocol::{
             client::ProtocolClient, traits::SamProtocolClient, WebSocketProtocolClientConfig,
         },
-        tls::{create_tls_config, MutualTLSConfig},
+        tls::{create_tls_config, MutualTlsConfig},
         ApiClient, HttpClient,
     },
     storage::{
@@ -50,7 +50,7 @@ async fn tls_client(
     address: &str,
     username: &str,
     device_name: &str,
-    mutual_config: Option<MutualTLSConfig>,
+    mutual_config: Option<MutualTlsConfig>,
 ) -> Client<SqliteStoreType, HttpClient, ProtocolClient> {
     let client_config =
         create_tls_config("./cert/rootCA.crt", mutual_config).expect("Can create client config");
@@ -362,12 +362,12 @@ async fn test_alice_send_to_bob_and_self() {
 }
 
 #[rstest]
-#[case(Some("./cert/rootCA.crt"), Some(MutualTLSConfig::new("./cert/client.key".to_string(), "./cert/client.crt".to_string())), "9187")]
+#[case(Some("./cert/rootCA.crt"), Some(MutualTlsConfig::new("./cert/client.key".to_string(), "./cert/client.crt".to_string())), "9187")]
 #[case(None, None, "9188")]
 #[tokio::test]
 async fn test_alice_send_to_bob_with_tls(
     #[case] ca_cert: Option<&str>,
-    #[case] mutual_config: Option<MutualTLSConfig>,
+    #[case] mutual_config: Option<MutualTlsConfig>,
     #[case] port: &str,
 ) {
     timeout(Duration::from_secs(TIMEOUT_SECS), async {

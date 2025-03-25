@@ -1,6 +1,6 @@
 use std::sync::Arc;
 
-use crate::error::TLSError;
+use crate::error::TlsError;
 use rustls::server::WebPkiClientVerifier;
 use rustls::RootCertStore;
 use sam_common::tls::{load_certs, load_private_key};
@@ -9,9 +9,9 @@ pub fn create_tls_config(
     server_cert_path: &str,
     server_key_path: &str,
     ca_cert_path: Option<&str>,
-) -> Result<rustls::ServerConfig, TLSError> {
+) -> Result<rustls::ServerConfig, TlsError> {
     let certs = load_certs(server_cert_path)?;
-    let keys = load_private_key(server_key_path)?.ok_or(TLSError::PrivateKeyWasNone)?;
+    let keys = load_private_key(server_key_path)?.ok_or(TlsError::PrivateKeyWasNone)?;
     Ok(if let Some(ca_path) = ca_cert_path {
         let ca_cert = load_certs(ca_path)?;
         let mut root_ca = RootCertStore::empty();

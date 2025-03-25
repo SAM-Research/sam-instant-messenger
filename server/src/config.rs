@@ -4,7 +4,7 @@ use serde::{Deserialize, Serialize};
 
 use crate::{
     create_tls_config,
-    error::{TLSConfigError, TLSError},
+    error::{TlsConfigError, TlsError},
     ServerState, StateType,
 };
 
@@ -23,7 +23,7 @@ pub struct TlsConfig {
 }
 
 impl TlsConfig {
-    pub fn load(path: String) -> Result<Self, TLSConfigError> {
+    pub fn load(path: String) -> Result<Self, TlsConfigError> {
         let file = std::fs::File::open(path)?;
         let reader = BufReader::new(file);
         Ok(serde_json::from_reader(reader)?)
@@ -39,7 +39,7 @@ impl TlsConfig {
 }
 
 impl TryInto<rustls::ServerConfig> for TlsConfig {
-    type Error = TLSError;
+    type Error = TlsError;
 
     fn try_into(self) -> Result<rustls::ServerConfig, Self::Error> {
         create_tls_config(

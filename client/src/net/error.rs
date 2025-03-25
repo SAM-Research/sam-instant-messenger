@@ -12,7 +12,7 @@ pub enum ApiClientError {
 }
 
 #[derive(Debug, Display, Error, From)]
-pub enum TLSError {
+pub enum TlsError {
     LoadError(std::io::Error),
     RustlsError(rustls::Error),
     PrivateKeyWasNone,
