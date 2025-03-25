@@ -1,6 +1,6 @@
 mod utils;
 
-use std::{sync::Arc, time::Duration};
+use std::time::Duration;
 
 use libsignal_protocol::IdentityKeyPair;
 use rstest::rstest;
@@ -376,7 +376,7 @@ async fn test_alice_send_to_bob_with_tls(
         let server_config =
             create_server_tls_config("./cert/server.crt", "./cert/server.key", ca_cert)
                 .expect("Can create server config");
-        let mut server = TestServer::start(&address, Some(Arc::new(server_config))).await;
+        let mut server = TestServer::start(&address, Some(server_config)).await;
         server
             .started_rx()
             .await

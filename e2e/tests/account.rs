@@ -1,5 +1,3 @@
-use std::sync::Arc;
-
 use crate::utils::server::TestServer;
 
 use libsignal_protocol::IdentityKeyPair;
@@ -176,7 +174,7 @@ pub async fn one_client_can_register_with_tls() {
         .expect("Can create server config");
     let client_config =
         create_tls_config("./cert/rootCA.crt", None).expect("Can create client config");
-    let mut server = TestServer::start(&address, Some(Arc::new(server_config))).await;
+    let mut server = TestServer::start(&address, Some(server_config)).await;
 
     server
         .started_rx()

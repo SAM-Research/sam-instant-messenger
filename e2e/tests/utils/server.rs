@@ -5,7 +5,7 @@ use sam_server::{
     },
     start_server, ServerConfig, ServerState,
 };
-use std::sync::Arc;
+
 use tokio::{
     sync::oneshot::{self, Receiver},
     task::JoinHandle,
@@ -23,7 +23,7 @@ impl Drop for TestServer {
 }
 
 impl TestServer {
-    pub async fn start(address: &str, tls_config: Option<Arc<rustls::ServerConfig>>) -> Self {
+    pub async fn start(address: &str, tls_config: Option<rustls::ServerConfig>) -> Self {
         let config = ServerConfig {
             state: in_memory_server_state(),
             addr: address.parse().expect("Unable to parse socket address"),

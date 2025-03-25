@@ -34,6 +34,22 @@ pub enum TLSError {
     PrivateKeyWasNone,
 }
 
+#[derive(Debug, Display, Error, From)]
+pub enum TLSConfigError {
+    LoadError(std::io::Error),
+    DecodeError(serde_json::Error),
+}
+
+#[derive(Debug, Display, Error, From)]
+pub enum CLIError {
+    TLSConfigError(TLSConfigError),
+    TLSError(TLSError),
+    AddressParseError,
+    FailedToStartServer,
+    #[error(ignore)]
+    ArgumentError(String),
+}
+
 impl IntoResponse for ServerError {
     fn into_response(self) -> axum::response::Response {
         error!("ServerError occured: {}", self);
