@@ -19,10 +19,10 @@ impl MutualTLSConfig {
 }
 
 pub fn create_tls_config(
-    servre_cert_path: &str,
+    ca_cert_path: &str,
     mutual_config: Option<MutualTLSConfig>,
 ) -> Result<ClientConfig, TLSError> {
-    let certs = load_certs(servre_cert_path)?;
+    let certs = load_certs(ca_cert_path)?;
     let mut root_store = RootCertStore::empty();
     root_store.add_parsable_certificates(certs);
 
