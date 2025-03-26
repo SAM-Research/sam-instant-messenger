@@ -21,7 +21,7 @@ use sam_client::{
     Client, ClientError,
 };
 use sam_common::{api::LinkDeviceToken, AccountId};
-use sam_server::tls::create_tls_config as create_server_tls_config;
+use sam_server::config::TlsConfig;
 use tempfile::NamedTempFile;
 use tokio::{sync::broadcast::Receiver, time::timeout};
 
@@ -362,20 +362,24 @@ async fn test_alice_send_to_bob_and_self() {
 }
 
 #[rstest]
-#[case(Some("./cert/rootCA.crt"), Some(MutualTlsConfig::new("./cert/client.key".to_string(), "./cert/client.crt".to_string())), "9187")]
+#[case(Some("./cert/rootCA.crt".to_string()), Some(MutualTlsConfig::new("./cert/client.key".to_string(), "./cert/client.crt".to_string())), "9187")]
 #[case(None, None, "9188")]
 #[tokio::test]
 async fn test_alice_send_to_bob_with_tls(
-    #[case] ca_cert: Option<&str>,
+    #[case] ca_cert: Option<String>,
     #[case] mutual_config: Option<MutualTlsConfig>,
     #[case] port: &str,
 ) {
     timeout(Duration::from_secs(TIMEOUT_SECS), async {
         let _ = rustls::crypto::ring::default_provider().install_default();
         let address = format!("127.0.0.1:{port}");
-        let server_config =
-            create_server_tls_config("./cert/server.crt", "./cert/server.key", ca_cert)
-                .expect("Can create server config");
+        let server_config = TlsConfig {
+            ca_cert_path: ca_cert,
+            cert_path: "./cert/server.crt".to_string(),
+            key_path: "./cert/server.key".to_string(),
+        }
+        .try_into()
+        .expect("Can create server config");
         let mut server = TestServer::start(&address, Some(server_config)).await;
         server
             .started_rx()

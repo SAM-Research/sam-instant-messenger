@@ -1,3 +1,5 @@
+use std::io::BufReader;
+
 use clap::{Arg, Command};
 use log::{debug, error, info};
 
@@ -61,17 +63,19 @@ async fn cli() -> Result<(), CLIError> {
         .get_matches();
 
     let tls_config = if let Some(config_path) = matches.get_one::<String>("config") {
-        Some(TlsConfig::load(config_path.clone())?)
+        let file = std::fs::File::open(config_path)?;
+        let reader = BufReader::new(file);
+        Some(TlsConfig::load(reader)?)
     } else if let (Some(cert), Some(key), ca_cert) = (
         matches.get_one::<String>("cert"),
         matches.get_one::<String>("key"),
         matches.get_one::<String>("client_auth"),
     ) {
-        Some(TlsConfig::new(
-            ca_cert.map(|s| s.to_string()),
-            cert.to_string(),
-            key.to_string(),
-        ))
+        Some(TlsConfig {
+            ca_cert_path: ca_cert.map(|s| s.to_string()),
+            cert_path: cert.to_string(),
+            key_path: key.to_string(),
+        })
     } else {
         None
     };
@@ -110,10 +114,7 @@ async fn cli() -> Result<(), CLIError> {
             .map_err(|_| CLIError::AddressParseError)?,
         tls_config: tls,
     };
-    start_server(config)
-        .await
-        .inspect_err(|e| debug!("{e}"))
-        .map_err(|_| CLIError::FailedToStartServer)
+    Ok(start_server(config).await?)
 }
 
 #[tokio::main]

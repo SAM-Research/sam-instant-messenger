@@ -35,17 +35,11 @@ pub enum TlsError {
 }
 
 #[derive(Debug, Display, Error, From)]
-pub enum TlsConfigError {
-    LoadError(std::io::Error),
-    DecodeError(serde_json::Error),
-}
-
-#[derive(Debug, Display, Error, From)]
 pub enum CLIError {
-    TLSConfigError(TlsConfigError),
     TLSError(TlsError),
     AddressParseError,
-    FailedToStartServer,
+    SerdeError(serde_json::Error),
+    IoError(std::io::Error),
     #[error(ignore)]
     ArgumentError(String),
 }
