@@ -4,10 +4,10 @@ use clap::{Arg, Command};
 use log::{debug, error, info};
 
 use sam_server::{
-    config::TlsConfig, error::CLIError, start_server, state::ServerState, ServerConfig,
+    config::TlsConfig, error::CliError, start_server, state::ServerState, ServerConfig,
 };
 
-async fn cli() -> Result<(), CLIError> {
+async fn cli() -> Result<(), CliError> {
     let matches = Command::new("sam_server")
         .arg(
             Arg::new("cert")
@@ -97,10 +97,10 @@ async fn cli() -> Result<(), CLIError> {
 
     let ip = matches
         .get_one::<String>("ip")
-        .ok_or(CLIError::ArgumentError("IP has default".to_string()))?;
+        .ok_or(CliError::ArgumentError("IP has default".to_string()))?;
     let port = matches
         .get_one::<String>("port")
-        .ok_or(CLIError::ArgumentError("Port has default".to_string()))?;
+        .ok_or(CliError::ArgumentError("Port has default".to_string()))?;
 
     let addr = format!("{}:{}", ip, port);
 
@@ -111,7 +111,7 @@ async fn cli() -> Result<(), CLIError> {
         addr: addr
             .parse()
             .inspect_err(|e| debug!("{e}"))
-            .map_err(|_| CLIError::AddressParseError)?,
+            .map_err(|_| CliError::AddressParseError)?,
         tls_config: tls,
     };
     Ok(start_server(config).await?)

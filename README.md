@@ -15,11 +15,11 @@ Omit the `RUST_LOG=info` if you don't want any logging
 
 ## TLS Configuration
 
-You can configure the server with tls by providing CLI arguments with the certificates and keys or as a JSON. mTLS is only configurable through JSON.
+You can configure the server with tls by providing CLI arguments with the certificates and keys or as a JSON.
 
 Example configuration:
 
-```json
+```jsonc
 {
   "caCertPath": "rootCA.crt", // optional, enables mTLS
   "certPath": "server.crt",

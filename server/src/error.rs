@@ -35,7 +35,7 @@ pub enum TlsError {
 }
 
 #[derive(Debug, Display, Error, From)]
-pub enum CLIError {
+pub enum CliError {
     TLSError(TlsError),
     AddressParseError,
     SerdeError(serde_json::Error),
