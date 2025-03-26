@@ -29,10 +29,11 @@ env_logger = { workspace = true }
 log = { workspace = true }
 rustls = { workspace = true, features = ["ring"] }
 rustls-pemfile = { workspace = true }
+serde = { workspace = true, features = ["derive"] }
+serde_json = { workspace = true }
 
 [dev-dependencies]
 axum-test = { workspace = true }
 tokio-tungstenite = { workspace = true }
 maplit = { workspace = true }
-serde_json = { workspace = true }
 rstest = { workspace = true }

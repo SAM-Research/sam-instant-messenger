@@ -27,11 +27,21 @@ pub enum ServerError {
 }
 
 #[derive(Debug, Display, Error, From)]
-pub enum TLSError {
+pub enum TlsError {
     LoadError(std::io::Error),
     VerifierError(VerifierBuilderError),
     RustlsError(rustls::Error),
     PrivateKeyWasNone,
+}
+
+#[derive(Debug, Display, Error, From)]
+pub enum CliError {
+    TLSError(TlsError),
+    AddressParseError,
+    SerdeError(serde_json::Error),
+    IoError(std::io::Error),
+    #[error(ignore)]
+    ArgumentError(String),
 }
 
 impl IntoResponse for ServerError {

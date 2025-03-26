@@ -13,6 +13,26 @@ RUST_LOG=info cargo run --bin sam-server
 
 Omit the `RUST_LOG=info` if you don't want any logging
 
+## TLS Configuration
+
+You can configure the server with tls by providing CLI arguments with the certificates and keys or as a JSON.
+
+Example configuration:
+
+```jsonc
+{
+  "caCertPath": "rootCA.crt", // optional, enables mTLS
+  "certPath": "server.crt",
+  "keyPath": "server.key"
+}
+```
+
+provide the config in cli arguments with:
+
+```sh
+cargo run  --bin sam-server -- --tls-config ./config.json
+```
+
 # End-To-End tests
 
 In order to run the end-to-end tests, you need to generate certificates.
