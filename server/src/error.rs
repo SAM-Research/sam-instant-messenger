@@ -23,6 +23,7 @@ pub enum ServerError {
     Authorization(AuthorizationError),
     Router(RouterError),
     EnvelopeMalformed,
+    Database,
 }
 
 impl IntoResponse for ServerError {
@@ -39,6 +40,9 @@ impl IntoResponse for ServerError {
             ServerError::DeviceManager(error) => error.into_response(),
             ServerError::Authorization(error) => error.into_response(),
             ServerError::Router(error) => error.into_response(),
+            ServerError::Database => {
+                (StatusCode::INTERNAL_SERVER_ERROR, "".to_string()).into_response()
+            }
         }
     }
 }
