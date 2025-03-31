@@ -6,9 +6,7 @@ use crate::{
     state::{state_type::StateType, ServerState},
     ServerError,
 };
-use axum::body::Body;
-use axum::extract::FromRequest;
-use axum::http::Request;
+use axum::extract::rejection::JsonRejection;
 use axum::{
     extract::{Path, State},
     routing::{get, put},
@@ -20,37 +18,25 @@ use sam_common::{
     DeviceId,
 };
 
-impl<T: StateType> FromRequest<ServerState<T>> for Option<Json<Vec<DeviceId>>> {
-    type Rejection = ServerError;
-
-    async fn from_request(
-        parts: Request<Body>,
-        state: &ServerState<T>,
-    ) -> Result<Self, Self::Rejection> {
-        match Json::<Vec<DeviceId>>::from_request(parts, state).await {
-            Ok(json) => Ok(Some(json)),
-            Err(_) => Ok(None),
-        }
-    }
-}
-
 /// Returns key bundles for users devices
 async fn key_bundles_for_some_devices_endpoint<T: StateType>(
+    State(mut state): State<ServerState<T>>,
     Path(account_id): Path<AccountId>,
     auth_user: AuthenticatedUser,
-    State(mut state): State<ServerState<T>>,
-    json: Option<Json<Vec<DeviceId>>>,
+    json: Result<Json<Vec<DeviceId>>, JsonRejection>,
 ) -> Result<Json<PreKeyBundles>, ServerError> {
     match json {
-        None => get_keybundles_for_all_devices(
-            &mut state,
-            account_id,
-            auth_user.account().id(),
-            auth_user.device().id(),
-        )
-        .await
-        .map(Json),
-        Some(Json(device_ids)) => {
+        Err(JsonRejection::MissingJsonContentType(_)) => {
+            get_keybundles_for_all_devices(
+                &mut state,
+                account_id,
+                auth_user.account().id(),
+                auth_user.device().id(),
+            )
+            .await
+        }
+        Err(err) => Err(RouterError::JsonRejection(err).into()),
+        Ok(Json(device_ids)) => {
             if device_ids.is_empty() {
                 return Err(RouterError::NoDeviceIdsInRequest)?;
             };
@@ -62,9 +48,9 @@ async fn key_bundles_for_some_devices_endpoint<T: StateType>(
                 auth_user.device().id(),
             )
             .await
-            .map(Json)
         }
     }
+    .map(Json)
 }
 
 /// Handle publish of new key bundles
