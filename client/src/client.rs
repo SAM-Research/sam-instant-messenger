@@ -106,7 +106,7 @@ impl<T: ClientType> Client<T> {
             api_client,
             protocol_client,
             envelope_queue: queue,
-            rng: rng,
+            rng,
         })
     }
 
@@ -155,7 +155,7 @@ impl<T: ClientType> Client<T> {
             protocol_client,
             api_client,
             envelope_queue: queue,
-            rng: rng,
+            rng,
         })
     }
 
@@ -179,7 +179,7 @@ impl<T: ClientType> Client<T> {
             protocol_client,
             api_client: api_client_config.create().await?,
             envelope_queue: queue,
-            rng: rng,
+            rng,
         })
     }
 
