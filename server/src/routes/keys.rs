@@ -31,7 +31,7 @@ async fn key_bundles_for_some_devices_endpoint<T: StateType>(
     let content_type = headers.get(CONTENT_TYPE);
     match json {
         Err(JsonRejection::MissingJsonContentType(err)) => {
-            if let Some(_) = content_type {
+            if content_type.is_some() {
                 return Err(
                     RouterError::JsonRejection(JsonRejection::MissingJsonContentType(err)).into(),
                 );
