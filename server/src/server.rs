@@ -1,19 +1,14 @@
 use crate::routes::router;
 use crate::state::state_type::StateType;
-use crate::state::ServerState;
+use crate::ServerConfig;
 use axum::extract::Request;
 use axum::middleware::{from_fn, Next};
 use axum::response::IntoResponse;
 use axum_server::tls_rustls::RustlsConfig;
 use log::info;
+
 use std::net::SocketAddr;
 use std::sync::Arc;
-
-pub struct ServerConfig<T: StateType> {
-    pub state: ServerState<T>,
-    pub addr: SocketAddr,
-    pub tls_config: Option<Arc<rustls::ServerConfig>>,
-}
 
 async fn log_request(req: Request, next: Next) -> impl IntoResponse {
     let method = req.method().clone();
@@ -30,13 +25,16 @@ pub async fn start_server<T: StateType>(config: ServerConfig<T>) -> Result<(), s
         .layer(from_fn(log_request))
         .with_state(state.clone());
 
+    let is_tls = config.tls_config.is_some();
+
     info!(
         "Starting SAM Server on http{}://{}...",
-        if config.tls_config.is_some() { "s" } else { "" },
+        if is_tls { "s" } else { "" },
         config.addr
     );
+
     if let Some(tls_config) = config.tls_config {
-        let axum_tls_config = RustlsConfig::from_config(tls_config);
+        let axum_tls_config = RustlsConfig::from_config(Arc::new(tls_config));
         axum_server::bind_rustls(config.addr, axum_tls_config)
             .serve(app.into_make_service_with_connect_info::<SocketAddr>())
             .await?;

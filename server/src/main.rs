@@ -1,30 +1,38 @@
-use clap::{Arg, Command};
-use log::info;
-use rustls_pemfile::{certs, private_key};
-use sam_server::{start_server, state::ServerState, ServerConfig};
-use std::fs::File;
 use std::io::BufReader;
-use std::sync::Arc;
 
-#[tokio::main]
-pub async fn main() {
-    env_logger::init();
+use clap::{Arg, Command};
+use log::{debug, error, info};
+
+use sam_server::{
+    config::TlsConfig, error::CliError, start_server, state::ServerState, ServerConfig,
+};
+
+async fn cli() -> Result<(), CliError> {
     let matches = Command::new("sam_server")
         .arg(
             Arg::new("cert")
                 .short('c')
-                .long("certificate")
+                .long("tls-certificate")
                 .required(false)
-                .help(".crt file")
+                .help(".crt file (Server)")
                 .requires("key"),
         )
         .arg(
             Arg::new("key")
                 .short('k')
-                .long("key")
+                .long("tls-key")
                 .required(false)
-                .help(".key file")
+                .help(".key file (Server)")
                 .requires("cert"),
+        )
+        .arg(
+            Arg::new("client_auth")
+                .short('a')
+                .long("authenticate-client")
+                .required(false)
+                .help(".crt file (Certificate Authority)")
+                .requires("cert")
+                .requires("key"),
         )
         .arg(
             Arg::new("ip")
@@ -42,39 +50,57 @@ pub async fn main() {
                 .help("Port to run server on")
                 .default_value("8080"),
         )
+        .arg(
+            Arg::new("config")
+                .short('t')
+                .long("tls-config")
+                .required(false)
+                .help("JSON TLS Config path")
+                .conflicts_with("key")
+                .conflicts_with("cert")
+                .conflicts_with("client_auth"),
+        )
         .get_matches();
 
-    let tls = if let (Some(cert), Some(key)) = (
+    let tls_config = if let Some(config_path) = matches.get_one::<String>("config") {
+        let file = std::fs::File::open(config_path)?;
+        let reader = BufReader::new(file);
+        Some(TlsConfig::load(reader)?)
+    } else if let (Some(cert), Some(key), ca_cert) = (
         matches.get_one::<String>("cert"),
         matches.get_one::<String>("key"),
+        matches.get_one::<String>("client_auth"),
     ) {
-        info!("Using TLS");
-        info!("Cerificate: '{}'", cert);
-        info!("Key: '{}'", key);
-        let _ = rustls::crypto::ring::default_provider().install_default();
-        let cert_file = File::open(cert).expect("Failed to open cert file");
-        let mut cert_reader = BufReader::new(cert_file);
-        let cert_chain = certs(&mut cert_reader)
-            .map(|cert| cert.expect("Certificate should be there"))
-            .collect::<Vec<_>>();
-
-        let key_file = File::open(key).expect("Failed to open key file");
-        let mut key_reader = BufReader::new(key_file);
-        let key = private_key(&mut key_reader)
-            .expect("Should find key")
-            .expect("Key should be there");
-
-        let server_config = rustls::ServerConfig::builder()
-            .with_no_client_auth()
-            .with_single_cert(cert_chain, key)
-            .expect("Failed to create rustls::ServerConfig");
-        Some(Arc::new(server_config))
+        Some(TlsConfig {
+            ca_cert_path: ca_cert.map(|s| s.to_string()),
+            cert_path: cert.to_string(),
+            key_path: key.to_string(),
+        })
     } else {
         None
     };
 
-    let ip = matches.get_one::<String>("ip").expect("IP has default");
-    let port = matches.get_one::<String>("port").expect("Port has default");
+    let tls = if let Some(config) = tls_config {
+        let is_mutual = config.ca_cert_path.is_some();
+        info!("Using {}TLS", (if is_mutual { "m" } else { "" }));
+        info!("Cerificate: '{}'", config.cert_path);
+        info!("Key: '{}'", config.key_path);
+        if let Some(path) = &config.ca_cert_path {
+            info!("CA Cerificate: '{}'", path);
+        }
+
+        let _ = rustls::crypto::ring::default_provider().install_default();
+        Some(config.try_into()?)
+    } else {
+        None
+    };
+
+    let ip = matches
+        .get_one::<String>("ip")
+        .ok_or(CliError::ArgumentError("IP has default".to_string()))?;
+    let port = matches
+        .get_one::<String>("port")
+        .ok_or(CliError::ArgumentError("Port has default".to_string()))?;
 
     let addr = format!("{}:{}", ip, port);
 
@@ -82,8 +108,20 @@ pub async fn main() {
 
     let config = ServerConfig {
         state,
-        addr: addr.parse().expect("Unable to parse socket address"),
+        addr: addr
+            .parse()
+            .inspect_err(|e| debug!("{e}"))
+            .map_err(|_| CliError::AddressParseError)?,
         tls_config: tls,
     };
-    start_server(config).await.unwrap();
+    Ok(start_server(config).await?)
+}
+
+#[tokio::main]
+pub async fn main() {
+    env_logger::init();
+    match cli().await {
+        Ok(_) => info!("Goodbye!"),
+        Err(e) => error!("Fatal CLI Error: {}", e),
+    };
 }

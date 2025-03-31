@@ -27,6 +27,8 @@ bon = { workspace = true }
 rand = { workspace = true }
 axum = { workspace = true }
 log = { workspace = true }
+rustls = { workspace = true, features = ["ring"] }
+rustls-pemfile = { workspace = true }
 
 [build-dependencies]
 prost-build = { workspace = true }

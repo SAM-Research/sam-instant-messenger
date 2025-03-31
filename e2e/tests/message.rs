@@ -5,34 +5,26 @@ use std::time::Duration;
 use libsignal_protocol::IdentityKeyPair;
 use rstest::rstest;
 use sam_client::{
+    client::SqliteClientType,
     encryption::envelope::DecryptedEnvelope,
     net::{
         http_client::HttpClientConfig,
-        protocol::{
-            client::ProtocolClient, traits::SamProtocolClient, WebSocketProtocolClientConfig,
-        },
-        ApiClient, HttpClient,
+        protocol::WebSocketProtocolClientConfig,
+        tls::{create_tls_config, MutualTlsConfig},
     },
-    storage::{
-        sqlite::{SqliteStoreConfig, SqliteStoreType},
-        StoreType,
-    },
+    storage::sqlite::SqliteStoreConfig,
     Client, ClientError,
 };
 use sam_common::{api::LinkDeviceToken, AccountId};
+use sam_server::config::TlsConfig;
 use tempfile::NamedTempFile;
 use tokio::{sync::broadcast::Receiver, time::timeout};
 
 use crate::utils::server::TestServer;
-use crate::utils::tls::{make_rustls_client_config, make_rustls_server_config};
 
 const TIMEOUT_SECS: u64 = 120;
 
-async fn client(
-    address: &str,
-    username: &str,
-    device_name: &str,
-) -> Client<SqliteStoreType, HttpClient, ProtocolClient> {
+async fn client(address: &str, username: &str, device_name: &str) -> Client<SqliteClientType> {
     Client::from_registration()
         .username(username)
         .device_name(device_name)
@@ -49,9 +41,10 @@ async fn tls_client(
     address: &str,
     username: &str,
     device_name: &str,
-) -> Client<SqliteStoreType, HttpClient, ProtocolClient> {
+    mutual_config: Option<MutualTlsConfig>,
+) -> Client<SqliteClientType> {
     let client_config =
-        make_rustls_client_config("./cert/rootCA.crt").expect("Should make client config");
+        create_tls_config("./cert/rootCA.crt", mutual_config).expect("Can create client config");
     Client::from_registration()
         .username(username)
         .device_name(device_name)
@@ -75,7 +68,7 @@ async fn client_device(
     device_name: &str,
     id_pair: IdentityKeyPair,
     token: LinkDeviceToken,
-) -> Client<SqliteStoreType, HttpClient, ProtocolClient> {
+) -> Client<SqliteClientType> {
     Client::from_provisioning()
         .store_config(SqliteStoreConfig::in_memory().await)
         .api_client_config(HttpClientConfig::new(address.to_string()))
@@ -359,20 +352,33 @@ async fn test_alice_send_to_bob_and_self() {
     .expect("Test took to long to complete")
 }
 
+#[rstest]
+#[case(Some("./cert/rootCA.crt".to_string()), Some(MutualTlsConfig::new("./cert/client.key".to_string(), "./cert/client.crt".to_string())), "9187")]
+#[case(None, None, "9188")]
 #[tokio::test]
-async fn test_alice_send_to_bob_with_tls() {
+async fn test_alice_send_to_bob_with_tls(
+    #[case] ca_cert: Option<String>,
+    #[case] mutual_config: Option<MutualTlsConfig>,
+    #[case] port: &str,
+) {
     timeout(Duration::from_secs(TIMEOUT_SECS), async {
         let _ = rustls::crypto::ring::default_provider().install_default();
-        let address = "127.0.0.1:9187";
-        let server_config = make_rustls_server_config("./cert/server.crt", "./cert/server.key");
-        let mut server = TestServer::start(address, Some(server_config)).await;
+        let address = format!("127.0.0.1:{port}");
+        let server_config = TlsConfig {
+            ca_cert_path: ca_cert,
+            cert_path: "./cert/server.crt".to_string(),
+            key_path: "./cert/server.key".to_string(),
+        }
+        .try_into()
+        .expect("Can create server config");
+        let mut server = TestServer::start(&address, Some(server_config)).await;
         server
             .started_rx()
             .await
             .expect("Should be able to start server");
 
-        let mut alice = tls_client(address, "alice", "alice device").await;
-        let mut bob = tls_client(address, "bob", "bob device").await;
+        let mut alice = tls_client(&address, "alice", "alice device", mutual_config.clone()).await;
+        let mut bob = tls_client(&address, "bob", "bob device", mutual_config).await;
 
         let bob_id = bob.account_id().await.expect("Bob can get his id");
 
@@ -403,8 +409,8 @@ enum Message<'a> {
 }
 
 async fn send(
-    sender: &mut Client<impl StoreType, impl ApiClient, impl SamProtocolClient>,
-    receiver: &mut Client<impl StoreType, impl ApiClient, impl SamProtocolClient>,
+    sender: &mut Client<SqliteClientType>,
+    receiver: &mut Client<SqliteClientType>,
     id: AccountId,
     subscriber: &mut Receiver<DecryptedEnvelope>,
     msg: &str,
@@ -476,7 +482,7 @@ async fn sqlite_stores_alice_send_to_bob() {
         let temp = NamedTempFile::new().expect("Can create tempfile");
         let path = format!("sqlite://{}?mode=rwc", temp.path().to_string_lossy());
 
-        let mut alice = Client::from_registration()
+        let mut alice: Client<SqliteClientType> = Client::from_registration()
             .username("Alice")
             .device_name("Alice's Device")
             .store_config(SqliteStoreConfig::new(path.clone()))
@@ -494,7 +500,7 @@ async fn sqlite_stores_alice_send_to_bob() {
             .await
             .expect("can create a store");
 
-        let mut alice = Client::from_store()
+        let mut alice: Client<SqliteClientType> = Client::from_store()
             .store(store)
             .protocol_config(WebSocketProtocolClientConfig::new(address.to_owned()))
             .api_client_config(HttpClientConfig::new(address.to_owned()))
@@ -502,7 +508,7 @@ async fn sqlite_stores_alice_send_to_bob() {
             .await
             .unwrap();
 
-        let bob = Client::from_registration()
+        let bob: Client<SqliteClientType> = Client::from_registration()
             .username("Bob")
             .device_name("Bob's Device")
             .store_config(SqliteStoreConfig::new("sqlite::memory:".to_owned()))

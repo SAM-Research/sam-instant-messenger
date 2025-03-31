@@ -1,3 +1,4 @@
+use sam_client::client::SqliteClientType;
 use sam_client::net::http_client::HttpClientConfig;
 use sam_client::net::protocol::WebSocketProtocolClientConfig;
 use sam_client::storage::sqlite::SqliteStoreConfig;
@@ -21,7 +22,7 @@ pub async fn alice_can_upload_keys() {
         .await
         .expect("Should be able to start server");
 
-    let mut alice = Client::from_registration()
+    let mut alice: Client<SqliteClientType> = Client::from_registration()
         .username("Alice")
         .device_name("Alice's Device")
         .store_config(SqliteStoreConfig::in_memory().await)

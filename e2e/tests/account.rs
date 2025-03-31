@@ -1,30 +1,25 @@
 use crate::utils::server::TestServer;
 
-use crate::utils::tls::{make_rustls_client_config, make_rustls_server_config};
 use libsignal_protocol::IdentityKeyPair;
 use rand::rngs::OsRng;
 use sam_client::{
+    client::SqliteClientType,
     net::{
-        http_client::HttpClientConfig,
-        protocol::{client::ProtocolClient, WebSocketProtocolClientConfig},
-        HttpClient,
+        http_client::HttpClientConfig, protocol::WebSocketProtocolClientConfig,
+        tls::create_tls_config,
     },
-    storage::{
-        sqlite::{SqliteStoreConfig, SqliteStoreType},
-        AccountStore, StoreConfig,
-    },
+    storage::{sqlite::SqliteStoreConfig, AccountStore, StoreConfig},
     Client, ClientError,
 };
 use sam_common::{address::RegistrationId, AccountId};
+use sam_server::create_tls_config as create_server_tls_config;
 
 mod utils;
 
 /*
    Ports used: 937x
 */
-pub async fn register_alice(
-    address: String,
-) -> Result<Client<SqliteStoreType, HttpClient, ProtocolClient>, ClientError> {
+pub async fn register_alice(address: String) -> Result<Client<SqliteClientType>, ClientError> {
     Client::from_registration()
         .username("Alice")
         .device_name("Alice's Device")
@@ -105,7 +100,7 @@ pub async fn cannot_create_client_without_valid_account() {
     let api_client = HttpClientConfig::new(address.clone());
     let protocol_client = WebSocketProtocolClientConfig::new(address);
 
-    let client = Client::from_store()
+    let client: Result<Client<SqliteClientType>, _> = Client::from_store()
         .store(store)
         .api_client_config(api_client)
         .protocol_config(protocol_client)
@@ -149,7 +144,7 @@ pub async fn alice_can_find_bobs_account_id() {
         .await
         .expect("Can create account");
 
-    let bob = Client::from_registration()
+    let bob: Client<SqliteClientType> = Client::from_registration()
         .username("Bob")
         .device_name("Bob's Device")
         .store_config(SqliteStoreConfig::in_memory().await)
@@ -169,8 +164,10 @@ pub async fn alice_can_find_bobs_account_id() {
 pub async fn one_client_can_register_with_tls() {
     let _ = rustls::crypto::ring::default_provider().install_default();
     let address = "127.0.0.1:9375".to_owned();
-    let server_config = make_rustls_server_config("./cert/server.crt", "./cert/server.key");
-    let client_config = make_rustls_client_config("./cert/rootCA.crt").expect("Can make config");
+    let server_config = create_server_tls_config("./cert/server.crt", "./cert/server.key", None)
+        .expect("Can create server config");
+    let client_config =
+        create_tls_config("./cert/rootCA.crt", None).expect("Can create client config");
     let mut server = TestServer::start(&address, Some(server_config)).await;
 
     server
@@ -178,7 +175,7 @@ pub async fn one_client_can_register_with_tls() {
         .await
         .expect("Should be able to start server");
 
-    let client = Client::from_registration()
+    let client: Result<Client<SqliteClientType>, _> = Client::from_registration()
         .username("Alice")
         .device_name("Alice's Device")
         .store_config(SqliteStoreConfig::in_memory().await)
@@ -206,7 +203,7 @@ pub async fn two_clients_cannot_have_the_same_username() {
         .await
         .expect("Should be able to start server");
 
-    let _alice = Client::from_registration()
+    let _alice: Client<SqliteClientType> = Client::from_registration()
         .username("Alice")
         .device_name("Alice's Device")
         .store_config(SqliteStoreConfig::in_memory().await)
@@ -216,7 +213,7 @@ pub async fn two_clients_cannot_have_the_same_username() {
         .await
         .expect("Can make Alice");
 
-    let alice_2 = Client::from_registration()
+    let alice_2: Result<Client<SqliteClientType>, _> = Client::from_registration()
         .username("Alice")
         .device_name("Alice's Device")
         .store_config(SqliteStoreConfig::in_memory().await)
