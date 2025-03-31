@@ -13,6 +13,12 @@ pub struct PostgresAccountManager {
     pool: Pool<Postgres>,
 }
 
+impl PostgresAccountManager {
+    pub fn new(pool: Pool<Postgres>) -> Self {
+        Self { pool }
+    }
+}
+
 #[async_trait::async_trait]
 impl AccountManager for PostgresAccountManager {
     async fn get_account(&self, id: AccountId) -> Result<Account, ServerError> {
@@ -108,5 +114,62 @@ impl AccountManager for PostgresAccountManager {
                 Err(ServerError::Database)
             }
         }
+    }
+}
+
+#[cfg(test)]
+mod test {
+    use libsignal_protocol::IdentityKeyPair;
+    use rand::rngs::OsRng;
+    use sam_common::AccountId;
+    use sqlx::{Pool, Postgres};
+
+    use crate::managers::{entities::Account, traits::account_manager::AccountManager};
+
+    use super::PostgresAccountManager;
+
+    fn connection_str() -> &'static str {
+        "postgres://test:test@127.0.0.1:5432/sam_test_db"
+    }
+
+    async fn accounts(connection: &str) -> PostgresAccountManager {
+        let pool = Pool::<Postgres>::connect(connection)
+            .await
+            .expect("Can connect to postgres");
+
+        PostgresAccountManager::new(pool)
+    }
+
+    #[tokio::test]
+    async fn sqlite_account_manager() {
+        let mut manager = accounts(connection_str()).await;
+        let account = Account::builder()
+            .id(AccountId::generate())
+            .identity(
+                IdentityKeyPair::generate(&mut OsRng)
+                    .identity_key()
+                    .to_owned(),
+            )
+            .username("Alice".to_string())
+            .build();
+        assert!(manager.add_account(&account).await.is_ok());
+
+        assert_eq!(
+            account,
+            manager
+                .get_account(account.id())
+                .await
+                .expect("Can get account that was just inserted")
+        );
+
+        assert_eq!(
+            account.id(),
+            manager
+                .get_account_id_from_username(account.username().to_owned())
+                .await
+                .expect("Can get id of account that was just inserted")
+        );
+
+        assert!(manager.remove_account(account.id()).await.is_ok());
     }
 }
