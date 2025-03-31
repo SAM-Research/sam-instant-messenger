@@ -245,7 +245,7 @@ pub async fn fetch_prekeys<T: StoreType, R: Rng + CryptoRng>(
         .inspect_err(|e| debug!("{e}"))
         .map_err(|_| ClientError::FailedToProcessPrekeyBundle)?;
     }
-    todo!()
+    Ok(())
 }
 
 pub async fn publish_prekeys<T: StoreType, R: Rng + CryptoRng>(
@@ -266,7 +266,7 @@ pub async fn publish_prekeys<T: StoreType, R: Rng + CryptoRng>(
     )
     .await?;
 
-    api_client
+    Ok(api_client
         .publish_pre_keys(
             store.account_store.get_account_id().await?,
             store.account_store.get_device_id().await?,
@@ -290,9 +290,7 @@ pub async fn publish_prekeys<T: StoreType, R: Rng + CryptoRng>(
                 ),
             },
         )
-        .await?;
-
-    todo!()
+        .await?)
 }
 
 #[bon]
