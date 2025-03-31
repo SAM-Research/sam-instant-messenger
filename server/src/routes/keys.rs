@@ -6,9 +6,9 @@ use crate::{
     state::{state_type::StateType, ServerState},
     ServerError,
 };
-use axum::body::Body;
-use axum::extract::FromRequest;
-use axum::http::Request;
+use axum::extract::rejection::JsonRejection;
+use axum::http::header::CONTENT_TYPE;
+use axum::http::HeaderMap;
 use axum::{
     extract::{Path, State},
     routing::{get, put},
@@ -20,37 +20,32 @@ use sam_common::{
     DeviceId,
 };
 
-impl<T: StateType> FromRequest<ServerState<T>> for Option<Json<Vec<DeviceId>>> {
-    type Rejection = ServerError;
-
-    async fn from_request(
-        parts: Request<Body>,
-        state: &ServerState<T>,
-    ) -> Result<Self, Self::Rejection> {
-        match Json::<Vec<DeviceId>>::from_request(parts, state).await {
-            Ok(json) => Ok(Some(json)),
-            Err(_) => Ok(None),
-        }
-    }
-}
-
 /// Returns key bundles for users devices
 async fn key_bundles_for_some_devices_endpoint<T: StateType>(
-    Path(account_id): Path<AccountId>,
-    auth_user: AuthenticatedUser,
     State(mut state): State<ServerState<T>>,
-    json: Option<Json<Vec<DeviceId>>>,
+    Path(account_id): Path<AccountId>,
+    headers: HeaderMap,
+    auth_user: AuthenticatedUser,
+    json: Result<Json<Vec<DeviceId>>, JsonRejection>,
 ) -> Result<Json<PreKeyBundles>, ServerError> {
+    let content_type = headers.get(CONTENT_TYPE);
     match json {
-        None => get_keybundles_for_all_devices(
-            &mut state,
-            account_id,
-            auth_user.account().id(),
-            auth_user.device().id(),
-        )
-        .await
-        .map(Json),
-        Some(Json(device_ids)) => {
+        Err(JsonRejection::MissingJsonContentType(err)) => {
+            if content_type.is_some() {
+                return Err(
+                    RouterError::JsonRejection(JsonRejection::MissingJsonContentType(err)).into(),
+                );
+            }
+            get_keybundles_for_all_devices(
+                &mut state,
+                account_id,
+                auth_user.account().id(),
+                auth_user.device().id(),
+            )
+            .await
+        }
+        Err(err) => Err(RouterError::JsonRejection(err).into()),
+        Ok(Json(device_ids)) => {
             if device_ids.is_empty() {
                 return Err(RouterError::NoDeviceIdsInRequest)?;
             };
@@ -62,9 +57,9 @@ async fn key_bundles_for_some_devices_endpoint<T: StateType>(
                 auth_user.device().id(),
             )
             .await
-            .map(Json)
         }
     }
+    .map(Json)
 }
 
 /// Handle publish of new key bundles
@@ -105,6 +100,7 @@ mod test {
     use axum::http;
     use base64::{prelude::BASE64_STANDARD, Engine};
     use rand::rngs::OsRng;
+    use rstest::rstest;
     use sam_common::api::{keys::PreKeyBundles, PreKeyBundle};
     use sam_common::DeviceId;
 
@@ -183,6 +179,52 @@ mod test {
 
         res.assert_status_ok();
         res.assert_json(&expected);
+    }
+
+    #[rstest]
+    #[case("garbage/content", 415)]
+    #[case("application/json", 400)]
+    #[tokio::test]
+    async fn test_get_api_v1_keys_account_device_wrong_content_type(
+        #[case] content_type: &str,
+        #[case] expected_err: u16,
+    ) {
+        let mut state = ServerState::in_memory_test();
+        let (pair, account_id, device_id) =
+            create_user(&mut state, "alice", "phone", "bob", OsRng).await;
+        let (_, bob_id, _) = create_user(&mut state, "bob", "phone", "password", OsRng).await;
+
+        let keys = create_publish_pre_keys(
+            Some(vec![1]),
+            Some(3),
+            Some(vec![4]),
+            Some(33),
+            &pair,
+            OsRng,
+        );
+        add_keybundle(
+            &mut state,
+            pair.identity_key(),
+            account_id,
+            device_id,
+            keys.clone(),
+        )
+        .await
+        .expect("Can add keys");
+
+        let server = test_server(state, key_routes);
+        let basic = format!(
+            "Basic {}",
+            BASE64_STANDARD.encode(format!("{}.1:{}", bob_id, "password"))
+        );
+
+        let res = server
+            .get(&format!("/api/v1/keys/{account_id}"))
+            .add_header(http::header::AUTHORIZATION, basic)
+            .add_header(http::header::CONTENT_TYPE, content_type)
+            .await;
+
+        assert_eq!(res.status_code().as_u16(), expected_err);
     }
 
     #[tokio::test]

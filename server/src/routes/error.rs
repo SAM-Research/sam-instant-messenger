@@ -1,3 +1,4 @@
+use axum::extract::rejection::JsonRejection;
 use axum::http::StatusCode;
 use axum::response::{IntoResponse, Response};
 use derive_more::{Display, Error, From};
@@ -7,6 +8,7 @@ pub enum RouterError {
     DeviceProvisionUnAuth,
     DeviceUnAuth,
     NoDeviceIdsInRequest,
+    JsonRejection(JsonRejection),
 }
 
 impl IntoResponse for RouterError {
@@ -15,16 +17,19 @@ impl IntoResponse for RouterError {
             RouterError::DeviceProvisionUnAuth => (
                 StatusCode::FORBIDDEN,
                 "Only main device can request provision".to_string(),
-            ),
+            )
+                .into_response(),
             RouterError::DeviceUnAuth => (
                 StatusCode::FORBIDDEN,
                 "The main device cannot be unlinked.".to_string(),
-            ),
+            )
+                .into_response(),
             RouterError::NoDeviceIdsInRequest => (
                 StatusCode::BAD_REQUEST,
                 "No device ids were supplied in the request".to_string(),
-            ),
+            )
+                .into_response(),
+            RouterError::JsonRejection(rejection) => rejection.into_response(),
         }
-        .into_response()
     }
 }
