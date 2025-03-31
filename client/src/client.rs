@@ -48,23 +48,25 @@ pub struct Client<T: StoreType, U: ApiClient, V: SamProtocolClient> {
 
 pub async fn provision_device<T: StoreType, R: Rng + CryptoRng>(
     api_client: &impl ApiClient,
-    mut store: &mut Store<T>,
-    id_key_pair: IdentityKeyPair,
-    registration_id: RegistrationId,
+    store: &mut Store<T>,
     device_name: &str,
     token: LinkDeviceToken,
     upload_prekey_count: usize,
     password_length: usize,
     mut csprng: &mut R,
 ) -> Result<(), ClientError> {
+    let id_key_pair = store.identity_key_store.get_identity_key_pair().await?;
     let key_bundle =
-        create_registration_pre_keys(&mut store, upload_prekey_count, id_key_pair, &mut csprng)
-            .await?;
+        create_registration_pre_keys(store, upload_prekey_count, id_key_pair, &mut csprng).await?;
     let request = LinkDeviceRequest {
         token,
         device_activation: DeviceActivationInfo {
             name: device_name.to_owned(),
-            registration_id: registration_id,
+            registration_id: store
+                .identity_key_store
+                .get_local_registration_id()
+                .await?
+                .into(),
             key_bundle,
         },
     };
@@ -88,7 +90,7 @@ pub async fn provision_device<T: StoreType, R: Rng + CryptoRng>(
 
 pub async fn register_account<T: StoreType, R: Rng + CryptoRng>(
     api_client: &impl ApiClient,
-    mut store: &mut Store<T>,
+    store: &mut Store<T>,
     username: &str,
     device_name: &str,
     password_length: usize,
@@ -98,7 +100,7 @@ pub async fn register_account<T: StoreType, R: Rng + CryptoRng>(
     let password = generate_password(password_length, &mut csprng);
     let id_pair = store.identity_key_store.get_identity_key_pair().await?;
     let key_bundle =
-        create_registration_pre_keys(&mut store, upload_prekey_count, id_pair, &mut csprng).await?;
+        create_registration_pre_keys(store, upload_prekey_count, id_pair, &mut csprng).await?;
     let registration_request = RegistrationRequest {
         identity_key: id_pair.identity_key().to_owned(),
         device_activation: DeviceActivationInfo {
@@ -128,7 +130,7 @@ pub async fn register_account<T: StoreType, R: Rng + CryptoRng>(
 }
 
 pub async fn process_messages<T: StoreType>(
-    mut store: &mut Store<T>,
+    store: &mut Store<T>,
     envelope_queue: &mut MpscReceiver<ServerEnvelope>,
     block: bool,
 ) -> Result<(), ClientError> {
@@ -137,7 +139,7 @@ pub async fn process_messages<T: StoreType>(
     }
     while let Some(envelope) = envelope_queue.recv().await {
         // TODO: How should we handle failure to decrypt and/or store message?
-        let envelope = match decrypt(envelope, &mut store).await {
+        let envelope = match decrypt(envelope, store).await {
             Ok(denvelope) => denvelope,
             Err(e) => {
                 error!("Failed to decrypt message: {e}");
@@ -163,7 +165,7 @@ pub async fn process_messages<T: StoreType>(
 }
 
 pub async fn send_message<T: StoreType, R: Rng + CryptoRng>(
-    mut store: &mut Store<T>,
+    store: &mut Store<T>,
     api_client: &impl ApiClient,
     ws_client: &mut impl SamProtocolClient,
     recipient: AccountId,
@@ -178,7 +180,7 @@ pub async fn send_message<T: StoreType, R: Rng + CryptoRng>(
     if !store.contact_store.contains_contact(my_id).await? {
         fetch_prekeys(store, api_client, my_id, None, &mut csprng).await?;
     }
-    let envelope = encrypt(msg, vec![recipient, my_id], &mut store).await?;
+    let envelope = encrypt(msg, vec![recipient, my_id], store).await?;
     let status = ws_client.send_message(envelope).await?;
     match status {
         MessageStatus::ExtraDevices(device_lists) => {
@@ -318,8 +320,6 @@ impl<T: StoreType, U: ApiClient, V: SamProtocolClient> Client<T, U, V> {
         provision_device(
             &api_client,
             &mut store,
-            id_key_pair,
-            registration_id,
             device_name,
             token,
             upload_prekey_count,
