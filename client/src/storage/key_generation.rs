@@ -8,7 +8,7 @@ use libsignal_protocol::{
     KyberPreKeyStore, PreKeyBundle, PreKeyId, PreKeyRecord, PreKeyStore, PublicKey, SignedPreKeyId,
     SignedPreKeyRecord, SignedPreKeyStore,
 };
-use rand::rngs::OsRng;
+
 use rand::{CryptoRng, Rng};
 use sam_common::api::keys::RegistrationPreKeys;
 use sam_common::api::{EcPreKey, PqPreKey};
@@ -138,11 +138,11 @@ pub(crate) fn into_libsignal_bundle(
     ))
 }
 
-pub async fn create_registration_pre_keys<S: StoreType>(
+pub async fn create_registration_pre_keys<S: StoreType, R: Rng + CryptoRng>(
     store: &mut Store<S>,
     prekey_count: usize,
     id_key_pair: IdentityKeyPair,
-    mut csprng: OsRng,
+    mut csprng: &mut R,
 ) -> Result<RegistrationPreKeys, ClientError> {
     Ok(RegistrationPreKeys {
         pre_keys: Some(

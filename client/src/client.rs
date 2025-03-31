@@ -1,105 +1,102 @@
 use bon::bon;
-use libsignal_core::ProtocolAddress;
-use libsignal_protocol::{process_prekey_bundle, IdentityKeyPair, IdentityKeyStore};
-use log::{debug, error};
+use libsignal_protocol::{IdentityKeyPair, IdentityKeyStore};
 use rand::rngs::OsRng;
+use rand::{CryptoRng, Rng};
 use sam_common::{
-    address::RegistrationId,
-    api::{
-        device::DeviceActivationInfo, LinkDeviceRequest, LinkDeviceToken, PqPreKey, PublishPreKeys,
-        RegistrationRequest, SignedEcPreKey,
-    },
-    sam_message::ServerEnvelope,
-    AccountId, DeviceId,
+    address::RegistrationId, api::LinkDeviceToken, sam_message::ServerEnvelope, AccountId, DeviceId,
 };
-use std::time::SystemTime;
+
 use tokio::sync::broadcast::Receiver;
 use tokio::sync::mpsc::Receiver as MpscReceiver;
 
-use crate::storage::key_generation::create_registration_pre_keys;
+use crate::logic::provision_device;
+use crate::net::protocol::ProtocolClient;
+use crate::net::HttpClient;
+use crate::storage::{InMemoryStoreType, SqliteStoreType};
 use crate::{
-    encryption::{
-        encrypt::{decrypt, encrypt},
-        envelope::DecryptedEnvelope,
-        password::generate_password,
-    },
+    encryption::envelope::DecryptedEnvelope,
+    logic::{process_messages, publish_prekeys, register_account, send_message},
     net::{
         api_trait::ApiClientConfig,
-        protocol::traits::{MessageStatus, ProtocolConfig, SamProtocolClient},
+        protocol::traits::{ProtocolConfig, SamProtocolClient},
         ApiClient,
     },
-    storage::{
-        key_generation::{
-            generate_ec_pre_keys, generate_pq_pre_keys, into_libsignal_bundle,
-            KyberKeyGenerator as _, SignedPreKeyGenerator as _,
-        },
-        traits::message::MessageStore,
-        AccountStore, ContactStore, Store, StoreConfig, StoreType,
-    },
+    storage::{traits::message::MessageStore, AccountStore, Store, StoreConfig, StoreType},
     ClientError,
 };
+pub trait ClientType {
+    type Store: StoreType;
+    type ApiClient: ApiClient;
+    type ProtocolClient: SamProtocolClient;
+    type Rng: Rng + CryptoRng + Default;
+}
 
-pub struct Client<T: StoreType, U: ApiClient, V: SamProtocolClient> {
-    store: Store<T>,
-    api_client: U,
-    protocol_client: V,
+pub struct DefaultClientType<T: StoreType, U: ApiClient, V: SamProtocolClient> {
+    _store: std::marker::PhantomData<T>,
+    _api: std::marker::PhantomData<U>,
+    _protocol: std::marker::PhantomData<V>,
+}
+
+impl<T: StoreType, U: ApiClient, V: SamProtocolClient> ClientType for DefaultClientType<T, U, V> {
+    type Store = T;
+
+    type ApiClient = U;
+
+    type ProtocolClient = V;
+
+    type Rng = OsRng;
+}
+
+pub type InMemoryClientType = DefaultClientType<InMemoryStoreType, HttpClient, ProtocolClient>;
+pub type SqliteClientType = DefaultClientType<SqliteStoreType, HttpClient, ProtocolClient>;
+
+pub struct Client<T: ClientType> {
+    store: Store<T::Store>,
+    api_client: T::ApiClient,
+    protocol_client: T::ProtocolClient,
     envelope_queue: MpscReceiver<ServerEnvelope>,
+    rng: T::Rng,
 }
 
 #[bon]
-impl<T: StoreType, U: ApiClient, V: SamProtocolClient> Client<T, U, V> {
+impl<T: ClientType> Client<T> {
     /// Creates a new client for the account described in the token
     #[builder]
     pub async fn from_provisioning(
-        store_config: impl StoreConfig<StoreType = T>,
-        protocol_config: impl ProtocolConfig<ProtocolClient = V>,
-        api_client_config: impl ApiClientConfig<ApiClient = U>,
+        store_config: impl StoreConfig<StoreType = T::Store>,
+        protocol_config: impl ProtocolConfig<ProtocolClient = T::ProtocolClient>,
+        api_client_config: impl ApiClientConfig<ApiClient = T::ApiClient>,
         device_name: &str,
         id_key_pair: IdentityKeyPair,
         token: LinkDeviceToken,
         #[builder(default = 100)] upload_prekey_count: usize,
         #[builder(default = 16)] password_length: usize,
+        #[builder(default = <T::Rng as Default>::default())] mut rng: T::Rng,
     ) -> Result<Self, ClientError> {
-        let mut csprng = OsRng;
         let api_client = api_client_config.create().await?;
-        let registration_id = RegistrationId::generate(&mut csprng);
+        let registration_id = RegistrationId::generate(&mut rng);
 
         let mut store = store_config
             .create_store(id_key_pair, registration_id)
             .await?;
 
-        let key_bundle =
-            create_registration_pre_keys(&mut store, upload_prekey_count, id_key_pair, csprng)
-                .await?;
-
-        let request = LinkDeviceRequest {
+        provision_device(
+            &api_client,
+            &mut store,
+            device_name,
             token,
-            device_activation: DeviceActivationInfo {
-                name: device_name.to_owned(),
-                registration_id: RegistrationId::generate(&mut csprng),
-                key_bundle,
-            },
-        };
-        let password = generate_password(password_length, &mut csprng);
-        let response = api_client.link_device(&password, request).await?;
-
-        store.account_store.set_username(response.username).await?;
-        store
-            .account_store
-            .set_account_id(response.account_id)
-            .await?;
-        store
-            .account_store
-            .set_device_id(response.device_id)
-            .await?;
-        store.account_store.set_password(password.clone()).await?;
-        store
-            .contact_store
-            .add_device(response.account_id, response.device_id)
-            .await?;
+            upload_prekey_count,
+            password_length,
+            &mut rng,
+        )
+        .await?;
 
         let mut protocol_client = protocol_config
-            .create(response.account_id, response.device_id, password.clone())
+            .create(
+                store.account_store.get_account_id().await?,
+                store.account_store.get_device_id().await?,
+                store.account_store.get_password().await?,
+            )
             .await?;
 
         let queue = protocol_client.connect().await?;
@@ -109,65 +106,48 @@ impl<T: StoreType, U: ApiClient, V: SamProtocolClient> Client<T, U, V> {
             api_client,
             protocol_client,
             envelope_queue: queue,
+            rng,
         })
     }
 
     /// Register a new account.
     #[builder]
     pub async fn from_registration(
-        store_config: impl StoreConfig<StoreType = T>,
-        protocol_config: impl ProtocolConfig<ProtocolClient = V>,
-        api_client_config: impl ApiClientConfig<ApiClient = U>,
+        store_config: impl StoreConfig<StoreType = T::Store>,
+        protocol_config: impl ProtocolConfig<ProtocolClient = T::ProtocolClient>,
+        api_client_config: impl ApiClientConfig<ApiClient = T::ApiClient>,
         username: &str,
         device_name: &str,
+
         #[builder(default = 100)] upload_prekey_count: usize,
         #[builder(default = 16)] password_length: usize,
+        #[builder(default = <T::Rng as Default>::default())] mut rng: T::Rng,
     ) -> Result<Self, ClientError> {
-        let mut csprng = OsRng;
-        let registration_id = RegistrationId::generate(&mut csprng);
-        let id_key_pair = IdentityKeyPair::generate(&mut csprng);
+        let registration_id = RegistrationId::generate(&mut rng);
+        let id_key_pair = IdentityKeyPair::generate(&mut rng);
         let mut store = store_config
             .create_store(id_key_pair, registration_id)
             .await?;
-
-        let password = generate_password(password_length, &mut csprng);
-        let key_bundle =
-            create_registration_pre_keys(&mut store, upload_prekey_count, id_key_pair, csprng)
-                .await?;
-
-        let registration_request = RegistrationRequest {
-            identity_key: id_key_pair.identity_key().to_owned(),
-            device_activation: DeviceActivationInfo {
-                name: device_name.to_owned(),
-                registration_id,
-                key_bundle,
-            },
-        };
-
         let api_client = api_client_config.create().await?;
 
-        let response = api_client
-            .register_account(username, &password, registration_request)
-            .await?;
-
-        let account_id = response.account_id;
+        register_account(
+            &api_client,
+            &mut store,
+            username,
+            device_name,
+            password_length,
+            upload_prekey_count,
+            &mut rng,
+        )
+        .await?;
 
         let mut protocol_client = protocol_config
-            .create(account_id, 1.into(), password.clone())
+            .create(
+                store.account_store.get_account_id().await?,
+                store.account_store.get_device_id().await?,
+                store.account_store.get_password().await?,
+            )
             .await?;
-
-        store
-            .account_store
-            .set_username(username.to_owned())
-            .await?;
-        store.account_store.set_account_id(account_id).await?;
-        store.account_store.set_device_id(1.into()).await?;
-        store.account_store.set_password(password).await?;
-        store
-            .contact_store
-            .add_device(response.account_id, 1.into())
-            .await?;
-
         let queue = protocol_client.connect().await?;
 
         Ok(Self {
@@ -175,15 +155,17 @@ impl<T: StoreType, U: ApiClient, V: SamProtocolClient> Client<T, U, V> {
             protocol_client,
             api_client,
             envelope_queue: queue,
+            rng,
         })
     }
 
     /// Instantiate a client from a valid store.
     #[builder]
     pub async fn from_store(
-        store: Store<T>,
-        protocol_config: impl ProtocolConfig<ProtocolClient = V>,
-        api_client_config: impl ApiClientConfig<ApiClient = U>,
+        store: Store<T::Store>,
+        protocol_config: impl ProtocolConfig<ProtocolClient = T::ProtocolClient>,
+        api_client_config: impl ApiClientConfig<ApiClient = T::ApiClient>,
+        #[builder(default = <T::Rng as Default>::default())] rng: T::Rng,
     ) -> Result<Self, ClientError> {
         let account_id = store.account_store.get_account_id().await?;
         let device_id = store.account_store.get_device_id().await?;
@@ -197,6 +179,7 @@ impl<T: StoreType, U: ApiClient, V: SamProtocolClient> Client<T, U, V> {
             protocol_client,
             api_client: api_client_config.create().await?,
             envelope_queue: queue,
+            rng,
         })
     }
 
@@ -309,17 +292,6 @@ impl<T: StoreType, U: ApiClient, V: SamProtocolClient> Client<T, U, V> {
         Ok(account_id)
     }
 
-    async fn remove_device_for(
-        &mut self,
-        account_id: AccountId,
-        device_id: DeviceId,
-    ) -> Result<(), ClientError> {
-        self.store
-            .contact_store
-            .remove_device(account_id, device_id)
-            .await
-    }
-
     /// Disconnect from the server.
     pub async fn disconnect(&mut self) -> Result<(), ClientError> {
         self.protocol_client
@@ -345,36 +317,15 @@ impl<T: StoreType, U: ApiClient, V: SamProtocolClient> Client<T, U, V> {
         recipient: AccountId,
         msg: impl Into<Vec<u8>>,
     ) -> Result<(), ClientError> {
-        if !self.store.contact_store.contains_contact(recipient).await? {
-            self.fetch_prekeys(recipient, None).await?;
-        }
-
-        let my_id = self.account_id().await?;
-        if !self.store.contact_store.contains_contact(my_id).await? {
-            self.fetch_prekeys(my_id, None).await?;
-        }
-
-        let envelope = encrypt(msg, vec![recipient, my_id], &mut self.store).await?;
-        let status = self.protocol_client.send_message(envelope).await?;
-
-        match status {
-            MessageStatus::ExtraDevices(device_lists) => {
-                for list in device_lists {
-                    for device in list.devices {
-                        self.remove_device_for(list.account_id, device).await?;
-                    }
-                }
-                Ok(())
-            }
-            MessageStatus::MissingDevices(device_lists) => {
-                for list in device_lists {
-                    self.fetch_prekeys(list.account_id, Some(list.devices))
-                        .await?;
-                }
-                Err(ClientError::MissingDevices)
-            }
-            MessageStatus::Ok => Ok(()),
-        }
+        send_message(
+            &mut self.store,
+            &self.api_client,
+            &mut self.protocol_client,
+            recipient,
+            msg,
+            &mut self.rng,
+        )
+        .await
     }
 
     /// Returns a broadcast receiver for incoming messages that have been decrypted.
@@ -382,46 +333,14 @@ impl<T: StoreType, U: ApiClient, V: SamProtocolClient> Client<T, U, V> {
         self.store.message_store.subscribe()
     }
 
-    async fn _process_messages(&mut self, block: bool) -> Result<(), ClientError> {
-        if !block && self.envelope_queue.is_empty() {
-            return Ok(());
-        }
-        while let Some(envelope) = self.envelope_queue.recv().await {
-            // TODO: How should we handle failure to decrypt and/or store message?
-            let envelope = match decrypt(envelope, &mut self.store).await {
-                Ok(denvelope) => denvelope,
-                Err(e) => {
-                    error!("Failed to decrypt message: {e}");
-                    break;
-                }
-            };
-
-            self.store
-                .contact_store
-                .add_device(envelope.source_account_id(), envelope.source_device_id())
-                .await?;
-
-            let _ = self
-                .store
-                .message_store
-                .store_message(envelope)
-                .await
-                .inspect_err(|e| error!("Failed to store message {e}"));
-            if self.envelope_queue.is_empty() {
-                break;
-            }
-        }
-        Ok(())
-    }
-
     /// Recieve and decrypt messages. Block until at least one message is received.
     pub async fn process_messages_blocking(&mut self) -> Result<(), ClientError> {
-        self._process_messages(true).await
+        process_messages(&mut self.store, &mut self.envelope_queue, true).await
     }
 
     /// Recieve and decrypt messages.
     pub async fn process_messages(&mut self) -> Result<(), ClientError> {
-        self._process_messages(false).await
+        process_messages(&mut self.store, &mut self.envelope_queue, false).await
     }
 
     /// Publish new prekeys.
@@ -432,103 +351,15 @@ impl<T: StoreType, U: ApiClient, V: SamProtocolClient> Client<T, U, V> {
         #[builder(default = false)] new_signed_prekey: bool,
         #[builder(default = false)] new_last_resort: bool,
     ) -> Result<(), ClientError> {
-        let mut csprng = OsRng;
-        let id_key_pair = self
-            .store
-            .identity_key_store
-            .get_identity_key_pair()
-            .await?;
-        let onetime_ec_prekeys =
-            generate_ec_pre_keys(&mut self.store.pre_key_store, onetime_prekeys, &mut csprng)
-                .await?;
-        let onetime_pq_prekeys = generate_pq_pre_keys(
-            id_key_pair.private_key(),
-            &mut self.store.kyber_pre_key_store,
+        publish_prekeys(
+            &mut self.store,
+            &self.api_client,
             onetime_prekeys,
+            new_signed_prekey,
+            new_last_resort,
+            &mut self.rng,
         )
-        .await?;
-
-        let signed_pre_key: Option<SignedEcPreKey> = match new_signed_prekey {
-            true => Some(
-                self.store
-                    .signed_pre_key_store
-                    .generate_key(&mut csprng, id_key_pair.private_key())
-                    .await?
-                    .into(),
-            ),
-            false => None,
-        };
-
-        let last_resort_key: Option<PqPreKey> = match new_last_resort {
-            true => Some(
-                self.store
-                    .kyber_pre_key_store
-                    .generate_key(id_key_pair.private_key())
-                    .await?
-                    .into(),
-            ),
-            false => None,
-        };
-
-        let pre_key_bundle = PublishPreKeys {
-            pre_keys: Some(onetime_ec_prekeys),
-            signed_pre_key,
-            pq_pre_keys: Some(onetime_pq_prekeys),
-            pq_last_resort_pre_key: last_resort_key,
-        };
-
-        self.api_client
-            .publish_pre_keys(
-                self.account_id().await?,
-                self.device_id().await?,
-                self.store.account_store.get_password().await?.as_str(),
-                pre_key_bundle,
-            )
-            .await?;
-
-        Ok(())
-    }
-
-    /// Fetch key bundles for account_id
-    async fn fetch_prekeys(
-        &mut self,
-        account_id: AccountId,
-        devices: Option<Vec<DeviceId>>,
-    ) -> Result<(), ClientError> {
-        let prekey_bundles = self
-            .api_client
-            .get_pre_key_bundles(
-                self.account_id().await?,
-                self.device_id().await?,
-                self.store.account_store.get_password().await?.as_str(),
-                account_id,
-                devices,
-            )
-            .await?;
-
-        let time = SystemTime::now();
-
-        for bundle in prekey_bundles.bundles {
-            let device_id = bundle.device_id;
-            self.store
-                .contact_store
-                .add_device(account_id, device_id.into())
-                .await?;
-            let libsignal_bundle = into_libsignal_bundle(bundle, prekey_bundles.identity_key)?;
-            process_prekey_bundle(
-                &ProtocolAddress::new(account_id.to_string(), device_id.into()),
-                &mut self.store.session_store,
-                &mut self.store.identity_key_store,
-                &libsignal_bundle,
-                time,
-                &mut OsRng,
-            )
-            .await
-            .inspect_err(|e| debug!("{e}"))
-            .map_err(|_| ClientError::FailedToProcessPrekeyBundle)?;
-        }
-
-        Ok(())
+        .await
     }
 
     /// Create a provisioning token for linking a new device to your account.
