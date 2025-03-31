@@ -1,4 +1,5 @@
 use crate::utils::server::TestServer;
+use sam_client::client::SqliteClientType;
 use sam_client::net::http_client::HttpClientConfig;
 use sam_client::net::protocol::WebSocketProtocolClientConfig;
 use sam_client::storage::sqlite::SqliteStoreConfig;
@@ -27,7 +28,7 @@ async fn can_link_device() {
     let protocol_config = WebSocketProtocolClientConfig::new(address.to_owned());
     let api_client_config = HttpClientConfig::new(address.to_owned());
 
-    let mut alice = Client::from_registration()
+    let mut alice: Client<SqliteClientType> = Client::from_registration()
         .store_config(store_config)
         .protocol_config(protocol_config)
         .api_client_config(api_client_config)
@@ -50,7 +51,7 @@ async fn can_link_device() {
         .await
         .expect("Can get id key pair");
 
-    assert!(Client::from_provisioning()
+    assert!(Client::<SqliteClientType>::from_provisioning()
         .protocol_config(protocol_config)
         .api_client_config(api_client_config)
         .store_config(store_config)
@@ -79,7 +80,7 @@ async fn can_delete_device() {
     let protocol_config = WebSocketProtocolClientConfig::new(address.to_owned());
     let api_client_config = HttpClientConfig::new(address.to_owned());
 
-    let mut alice = Client::from_registration()
+    let mut alice: Client<SqliteClientType> = Client::from_registration()
         .store_config(store_config)
         .protocol_config(protocol_config)
         .api_client_config(api_client_config)
@@ -102,7 +103,7 @@ async fn can_delete_device() {
         .await
         .expect("Can get id key pair");
 
-    let other_client = Client::from_provisioning()
+    let other_client: Client<SqliteClientType> = Client::from_provisioning()
         .protocol_config(protocol_config)
         .api_client_config(api_client_config)
         .store_config(store_config)
@@ -136,7 +137,7 @@ async fn can_delete_account() {
     let protocol_config = WebSocketProtocolClientConfig::new(address.to_owned());
     let api_client_config = HttpClientConfig::new(address.to_owned());
 
-    let alice = Client::from_registration()
+    let alice: Client<SqliteClientType> = Client::from_registration()
         .store_config(store_config)
         .protocol_config(protocol_config)
         .api_client_config(api_client_config)

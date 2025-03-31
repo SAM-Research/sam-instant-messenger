@@ -1,317 +1,80 @@
 use bon::bon;
-use libsignal_core::ProtocolAddress;
-use libsignal_protocol::{process_prekey_bundle, IdentityKeyPair, IdentityKeyStore};
-use log::{debug, error};
-use rand::{rngs::OsRng, CryptoRng, Rng};
+use libsignal_protocol::{IdentityKeyPair, IdentityKeyStore};
+use rand::rngs::OsRng;
+use rand::{CryptoRng, Rng};
 use sam_common::{
-    address::RegistrationId,
-    api::{
-        device::DeviceActivationInfo, LinkDeviceRequest, LinkDeviceToken, PublishPreKeys,
-        RegistrationRequest,
-    },
-    sam_message::ServerEnvelope,
-    AccountId, DeviceId,
+    address::RegistrationId, api::LinkDeviceToken, sam_message::ServerEnvelope, AccountId, DeviceId,
 };
-use std::time::SystemTime;
+
 use tokio::sync::broadcast::Receiver;
 use tokio::sync::mpsc::Receiver as MpscReceiver;
 
-use crate::storage::key_generation::create_registration_pre_keys;
+use crate::logic::provision_device;
+use crate::net::protocol::ProtocolClient;
+use crate::net::HttpClient;
+use crate::storage::{InMemoryStoreType, SqliteStoreType};
 use crate::{
-    encryption::{
-        encrypt::{decrypt, encrypt},
-        envelope::DecryptedEnvelope,
-        password::generate_password,
-    },
+    encryption::envelope::DecryptedEnvelope,
+    logic::{process_messages, publish_prekeys, register_account, send_message},
     net::{
         api_trait::ApiClientConfig,
-        protocol::traits::{MessageStatus, ProtocolConfig, SamProtocolClient},
+        protocol::traits::{ProtocolConfig, SamProtocolClient},
         ApiClient,
     },
-    storage::{
-        key_generation::{
-            generate_ec_pre_keys, generate_pq_pre_keys, into_libsignal_bundle,
-            KyberKeyGenerator as _, SignedPreKeyGenerator as _,
-        },
-        traits::message::MessageStore,
-        AccountStore, ContactStore, Store, StoreConfig, StoreType,
-    },
+    storage::{traits::message::MessageStore, AccountStore, Store, StoreConfig, StoreType},
     ClientError,
 };
+pub trait ClientType {
+    type Store: StoreType;
+    type ApiClient: ApiClient;
+    type ProtocolClient: SamProtocolClient;
+    type Rng: Rng + CryptoRng + Default;
+}
 
-pub struct Client<T: StoreType, U: ApiClient, V: SamProtocolClient> {
-    store: Store<T>,
-    api_client: U,
-    protocol_client: V,
+pub struct DefaultClientType<T: StoreType, U: ApiClient, V: SamProtocolClient> {
+    _store: std::marker::PhantomData<T>,
+    _api: std::marker::PhantomData<U>,
+    _protocol: std::marker::PhantomData<V>,
+}
+
+impl<T: StoreType, U: ApiClient, V: SamProtocolClient> ClientType for DefaultClientType<T, U, V> {
+    type Store = T;
+
+    type ApiClient = U;
+
+    type ProtocolClient = V;
+
+    type Rng = OsRng;
+}
+
+pub type InMemoryClientType = DefaultClientType<InMemoryStoreType, HttpClient, ProtocolClient>;
+pub type SqliteClientType = DefaultClientType<SqliteStoreType, HttpClient, ProtocolClient>;
+
+pub struct Client<T: ClientType> {
+    store: Store<T::Store>,
+    api_client: T::ApiClient,
+    protocol_client: T::ProtocolClient,
     envelope_queue: MpscReceiver<ServerEnvelope>,
-}
-
-pub async fn provision_device<T: StoreType, R: Rng + CryptoRng>(
-    api_client: &impl ApiClient,
-    store: &mut Store<T>,
-    device_name: &str,
-    token: LinkDeviceToken,
-    upload_prekey_count: usize,
-    password_length: usize,
-    mut csprng: &mut R,
-) -> Result<(), ClientError> {
-    let id_key_pair = store.identity_key_store.get_identity_key_pair().await?;
-    let key_bundle =
-        create_registration_pre_keys(store, upload_prekey_count, id_key_pair, &mut csprng).await?;
-    let request = LinkDeviceRequest {
-        token,
-        device_activation: DeviceActivationInfo {
-            name: device_name.to_owned(),
-            registration_id: store
-                .identity_key_store
-                .get_local_registration_id()
-                .await?
-                .into(),
-            key_bundle,
-        },
-    };
-    let password = generate_password(password_length, &mut csprng);
-    let response = api_client.link_device(&password, request).await?;
-    store.account_store.set_username(response.username).await?;
-    store
-        .account_store
-        .set_account_id(response.account_id)
-        .await?;
-    store
-        .account_store
-        .set_device_id(response.device_id)
-        .await?;
-    store.account_store.set_password(password.clone()).await?;
-    store
-        .contact_store
-        .add_device(response.account_id, response.device_id)
-        .await
-}
-
-pub async fn register_account<T: StoreType, R: Rng + CryptoRng>(
-    api_client: &impl ApiClient,
-    store: &mut Store<T>,
-    username: &str,
-    device_name: &str,
-    password_length: usize,
-    upload_prekey_count: usize,
-    mut csprng: &mut R,
-) -> Result<(), ClientError> {
-    let password = generate_password(password_length, &mut csprng);
-    let id_pair = store.identity_key_store.get_identity_key_pair().await?;
-    let key_bundle =
-        create_registration_pre_keys(store, upload_prekey_count, id_pair, &mut csprng).await?;
-    let registration_request = RegistrationRequest {
-        identity_key: id_pair.identity_key().to_owned(),
-        device_activation: DeviceActivationInfo {
-            name: device_name.to_owned(),
-            registration_id: store
-                .identity_key_store
-                .get_local_registration_id()
-                .await?
-                .into(),
-            key_bundle,
-        },
-    };
-
-    let account_id = api_client
-        .register_account(username, &password, registration_request)
-        .await?
-        .account_id;
-    store
-        .account_store
-        .set_username(username.to_owned())
-        .await?;
-    let device_id = 1.into();
-    store.account_store.set_account_id(account_id).await?;
-    store.account_store.set_device_id(device_id).await?;
-    store.account_store.set_password(password).await?;
-    store.contact_store.add_device(account_id, device_id).await
-}
-
-pub async fn process_messages<T: StoreType>(
-    store: &mut Store<T>,
-    envelope_queue: &mut MpscReceiver<ServerEnvelope>,
-    block: bool,
-) -> Result<(), ClientError> {
-    if !block && envelope_queue.is_empty() {
-        return Ok(());
-    }
-    while let Some(envelope) = envelope_queue.recv().await {
-        // TODO: How should we handle failure to decrypt and/or store message?
-        let envelope = match decrypt(envelope, store).await {
-            Ok(denvelope) => denvelope,
-            Err(e) => {
-                error!("Failed to decrypt message: {e}");
-                break;
-            }
-        };
-
-        store
-            .contact_store
-            .add_device(envelope.source_account_id(), envelope.source_device_id())
-            .await?;
-
-        let _ = store
-            .message_store
-            .store_message(envelope)
-            .await
-            .inspect_err(|e| error!("Failed to store message {e}"));
-        if envelope_queue.is_empty() {
-            break;
-        }
-    }
-    Ok(())
-}
-
-pub async fn send_message<T: StoreType, R: Rng + CryptoRng>(
-    store: &mut Store<T>,
-    api_client: &impl ApiClient,
-    ws_client: &mut impl SamProtocolClient,
-    recipient: AccountId,
-    msg: impl Into<Vec<u8>>,
-    mut csprng: &mut R,
-) -> Result<(), ClientError> {
-    if !store.contact_store.contains_contact(recipient).await? {
-        fetch_prekeys(store, api_client, recipient, None, &mut csprng).await?;
-    }
-
-    let my_id = store.account_store.get_account_id().await?;
-    if !store.contact_store.contains_contact(my_id).await? {
-        fetch_prekeys(store, api_client, my_id, None, &mut csprng).await?;
-    }
-    let envelope = encrypt(msg, vec![recipient, my_id], store).await?;
-    let status = ws_client.send_message(envelope).await?;
-    match status {
-        MessageStatus::ExtraDevices(device_lists) => {
-            for list in device_lists {
-                for device in list.devices {
-                    store
-                        .contact_store
-                        .remove_device(list.account_id, device)
-                        .await?;
-                }
-            }
-            Ok(())
-        }
-        MessageStatus::MissingDevices(device_lists) => {
-            for list in device_lists {
-                fetch_prekeys(
-                    store,
-                    api_client,
-                    list.account_id,
-                    Some(list.devices),
-                    &mut csprng,
-                )
-                .await?;
-            }
-            Err(ClientError::MissingDevices)
-        }
-        MessageStatus::Ok => Ok(()),
-    }
-}
-
-pub async fn fetch_prekeys<T: StoreType, R: Rng + CryptoRng>(
-    store: &mut Store<T>,
-    api_client: &impl ApiClient,
-    account_id: AccountId,
-    devices: Option<Vec<DeviceId>>,
-    mut csprng: &mut R,
-) -> Result<(), ClientError> {
-    let prekey_bundles = api_client
-        .get_pre_key_bundles(
-            store.account_store.get_account_id().await?,
-            store.account_store.get_device_id().await?,
-            store.account_store.get_password().await?.as_str(),
-            account_id,
-            devices,
-        )
-        .await?;
-    let time = SystemTime::now();
-    for bundle in prekey_bundles.bundles {
-        let device_id = bundle.device_id;
-        store
-            .contact_store
-            .add_device(account_id, device_id.into())
-            .await?;
-        let libsignal_bundle = into_libsignal_bundle(bundle, prekey_bundles.identity_key)?;
-        process_prekey_bundle(
-            &ProtocolAddress::new(account_id.to_string(), device_id.into()),
-            &mut store.session_store,
-            &mut store.identity_key_store,
-            &libsignal_bundle,
-            time,
-            &mut csprng,
-        )
-        .await
-        .inspect_err(|e| debug!("{e}"))
-        .map_err(|_| ClientError::FailedToProcessPrekeyBundle)?;
-    }
-    Ok(())
-}
-
-pub async fn publish_prekeys<T: StoreType, R: Rng + CryptoRng>(
-    store: &mut Store<T>,
-    api_client: &impl ApiClient,
-    onetime_prekeys: usize,
-    new_signed_prekey: bool,
-    new_last_resort: bool,
-    mut csprng: &mut R,
-) -> Result<(), ClientError> {
-    let id_pair = store.identity_key_store.get_identity_key_pair().await?;
-    let onetime_ec_prekeys =
-        generate_ec_pre_keys(&mut store.pre_key_store, onetime_prekeys, &mut csprng).await?;
-    let onetime_pq_prekeys = generate_pq_pre_keys(
-        id_pair.private_key(),
-        &mut store.kyber_pre_key_store,
-        onetime_prekeys,
-    )
-    .await?;
-
-    Ok(api_client
-        .publish_pre_keys(
-            store.account_store.get_account_id().await?,
-            store.account_store.get_device_id().await?,
-            store.account_store.get_password().await?.as_str(),
-            PublishPreKeys {
-                pre_keys: Some(onetime_ec_prekeys),
-                signed_pre_key: new_signed_prekey.then_some(
-                    store
-                        .signed_pre_key_store
-                        .generate_key(&mut csprng, id_pair.private_key())
-                        .await?
-                        .into(),
-                ),
-                pq_pre_keys: Some(onetime_pq_prekeys),
-                pq_last_resort_pre_key: new_last_resort.then_some(
-                    store
-                        .kyber_pre_key_store
-                        .generate_key(id_pair.private_key())
-                        .await?
-                        .into(),
-                ),
-            },
-        )
-        .await?)
+    rng: T::Rng,
 }
 
 #[bon]
-impl<T: StoreType, U: ApiClient, V: SamProtocolClient> Client<T, U, V> {
+impl<T: ClientType> Client<T> {
     /// Creates a new client for the account described in the token
     #[builder]
     pub async fn from_provisioning(
-        store_config: impl StoreConfig<StoreType = T>,
-        protocol_config: impl ProtocolConfig<ProtocolClient = V>,
-        api_client_config: impl ApiClientConfig<ApiClient = U>,
+        store_config: impl StoreConfig<StoreType = T::Store>,
+        protocol_config: impl ProtocolConfig<ProtocolClient = T::ProtocolClient>,
+        api_client_config: impl ApiClientConfig<ApiClient = T::ApiClient>,
         device_name: &str,
         id_key_pair: IdentityKeyPair,
         token: LinkDeviceToken,
         #[builder(default = 100)] upload_prekey_count: usize,
         #[builder(default = 16)] password_length: usize,
+        #[builder(default = <T::Rng as Default>::default())] mut rng: T::Rng,
     ) -> Result<Self, ClientError> {
-        let mut csprng = OsRng;
         let api_client = api_client_config.create().await?;
-        let registration_id = RegistrationId::generate(&mut csprng);
+        let registration_id = RegistrationId::generate(&mut rng);
 
         let mut store = store_config
             .create_store(id_key_pair, registration_id)
@@ -324,7 +87,7 @@ impl<T: StoreType, U: ApiClient, V: SamProtocolClient> Client<T, U, V> {
             token,
             upload_prekey_count,
             password_length,
-            &mut csprng,
+            &mut rng,
         )
         .await?;
 
@@ -343,23 +106,25 @@ impl<T: StoreType, U: ApiClient, V: SamProtocolClient> Client<T, U, V> {
             api_client,
             protocol_client,
             envelope_queue: queue,
+            rng: rng,
         })
     }
 
     /// Register a new account.
     #[builder]
     pub async fn from_registration(
-        store_config: impl StoreConfig<StoreType = T>,
-        protocol_config: impl ProtocolConfig<ProtocolClient = V>,
-        api_client_config: impl ApiClientConfig<ApiClient = U>,
+        store_config: impl StoreConfig<StoreType = T::Store>,
+        protocol_config: impl ProtocolConfig<ProtocolClient = T::ProtocolClient>,
+        api_client_config: impl ApiClientConfig<ApiClient = T::ApiClient>,
         username: &str,
         device_name: &str,
+
         #[builder(default = 100)] upload_prekey_count: usize,
         #[builder(default = 16)] password_length: usize,
+        #[builder(default = <T::Rng as Default>::default())] mut rng: T::Rng,
     ) -> Result<Self, ClientError> {
-        let mut csprng = OsRng;
-        let registration_id = RegistrationId::generate(&mut csprng);
-        let id_key_pair = IdentityKeyPair::generate(&mut csprng);
+        let registration_id = RegistrationId::generate(&mut rng);
+        let id_key_pair = IdentityKeyPair::generate(&mut rng);
         let mut store = store_config
             .create_store(id_key_pair, registration_id)
             .await?;
@@ -372,7 +137,7 @@ impl<T: StoreType, U: ApiClient, V: SamProtocolClient> Client<T, U, V> {
             device_name,
             password_length,
             upload_prekey_count,
-            &mut csprng,
+            &mut rng,
         )
         .await?;
 
@@ -390,15 +155,17 @@ impl<T: StoreType, U: ApiClient, V: SamProtocolClient> Client<T, U, V> {
             protocol_client,
             api_client,
             envelope_queue: queue,
+            rng: rng,
         })
     }
 
     /// Instantiate a client from a valid store.
     #[builder]
     pub async fn from_store(
-        store: Store<T>,
-        protocol_config: impl ProtocolConfig<ProtocolClient = V>,
-        api_client_config: impl ApiClientConfig<ApiClient = U>,
+        store: Store<T::Store>,
+        protocol_config: impl ProtocolConfig<ProtocolClient = T::ProtocolClient>,
+        api_client_config: impl ApiClientConfig<ApiClient = T::ApiClient>,
+        #[builder(default = <T::Rng as Default>::default())] rng: T::Rng,
     ) -> Result<Self, ClientError> {
         let account_id = store.account_store.get_account_id().await?;
         let device_id = store.account_store.get_device_id().await?;
@@ -412,6 +179,7 @@ impl<T: StoreType, U: ApiClient, V: SamProtocolClient> Client<T, U, V> {
             protocol_client,
             api_client: api_client_config.create().await?,
             envelope_queue: queue,
+            rng: rng,
         })
     }
 
@@ -549,14 +317,13 @@ impl<T: StoreType, U: ApiClient, V: SamProtocolClient> Client<T, U, V> {
         recipient: AccountId,
         msg: impl Into<Vec<u8>>,
     ) -> Result<(), ClientError> {
-        let mut csprng = OsRng;
         send_message(
             &mut self.store,
             &self.api_client,
             &mut self.protocol_client,
             recipient,
             msg,
-            &mut csprng,
+            &mut self.rng,
         )
         .await
     }
@@ -584,14 +351,13 @@ impl<T: StoreType, U: ApiClient, V: SamProtocolClient> Client<T, U, V> {
         #[builder(default = false)] new_signed_prekey: bool,
         #[builder(default = false)] new_last_resort: bool,
     ) -> Result<(), ClientError> {
-        let mut csprng = OsRng;
         publish_prekeys(
             &mut self.store,
             &self.api_client,
             onetime_prekeys,
             new_signed_prekey,
             new_last_resort,
-            &mut csprng,
+            &mut self.rng,
         )
         .await
     }
