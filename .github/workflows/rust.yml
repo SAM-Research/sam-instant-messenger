@@ -175,7 +175,12 @@ jobs:
 
       - name: Generate Certificates
         run: cd ./e2e/cert && ./generate_cert.sh
-
+      
+      - name: Init docker-compose
+        uses: hoverkraft-tech/compose-action@v2.0.1
+        with:
+          compose-file: "./server/docker-compose.yml"
+      
       - name: Test & Coverage
         run: cargo llvm-cov --workspace --lcov --output-path lcov.info
 
