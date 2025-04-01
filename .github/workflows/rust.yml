@@ -179,7 +179,7 @@ jobs:
       - name: Init docker-compose
         uses: hoverkraft-tech/compose-action@v2.0.1
         with:
-          compose-file: "./server/docker-compose.yml"
+          compose-file: "./server/database/test-database.yml"
       
       - name: Test & Coverage
         run: cargo llvm-cov --workspace --lcov --output-path lcov.info
