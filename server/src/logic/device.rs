@@ -70,7 +70,7 @@ pub async fn unlink_device<T: StateType>(
     account_id: AccountId,
     device_id: DeviceId,
 ) -> Result<(), ServerError> {
-    state.devices.remove_device(account_id, device_id).await
+    Ok(state.devices.remove_device(account_id, device_id).await?)
 }
 
 pub async fn create_device<T: StateType>(

@@ -1,7 +1,7 @@
 use libsignal_protocol::IdentityKey;
 use sam_common::address::AccountId;
 
-#[derive(Clone, bon::Builder, Debug)]
+#[derive(Clone, bon::Builder, Debug, PartialEq, Eq)]
 pub struct Account {
     id: AccountId,
     username: String,

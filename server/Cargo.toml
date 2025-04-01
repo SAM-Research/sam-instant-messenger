@@ -29,6 +29,7 @@ env_logger = { workspace = true }
 log = { workspace = true }
 rustls = { workspace = true, features = ["ring"] }
 rustls-pemfile = { workspace = true }
+sqlx = { workspace = true, features = ["postgres", "uuid", "runtime-tokio"] }
 serde = { workspace = true, features = ["derive"] }
 serde_json = { workspace = true }
 

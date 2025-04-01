@@ -4,7 +4,7 @@ use sam_common::{
     api::keys::{EcPreKey, PqPreKey, SignedEcPreKey},
 };
 
-use crate::ServerError;
+use crate::managers::error::KeyManagerError;
 
 #[async_trait::async_trait]
 pub trait PreKeyManager: Send + Sync + Clone {
@@ -12,24 +12,24 @@ pub trait PreKeyManager: Send + Sync + Clone {
         &self,
         account_id: AccountId,
         device_id: DeviceId,
-    ) -> Result<Option<EcPreKey>, ServerError>;
+    ) -> Result<Option<EcPreKey>, KeyManagerError>;
     async fn get_pre_key_ids(
         &self,
         account_id: AccountId,
         device_id: DeviceId,
-    ) -> Result<Option<Vec<u32>>, ServerError>;
+    ) -> Result<Option<Vec<u32>>, KeyManagerError>;
     async fn add_pre_key(
         &mut self,
         account_id: AccountId,
         device_id: DeviceId,
         key: EcPreKey,
-    ) -> Result<(), ServerError>;
+    ) -> Result<(), KeyManagerError>;
     async fn remove_pre_key(
         &mut self,
         account_id: AccountId,
         device_id: DeviceId,
         id: u32,
-    ) -> Result<(), ServerError>;
+    ) -> Result<(), KeyManagerError>;
 }
 
 #[async_trait::async_trait]
@@ -38,19 +38,19 @@ pub trait SignedPreKeyManager {
         &self,
         account_id: AccountId,
         device_id: DeviceId,
-    ) -> Result<SignedEcPreKey, ServerError>;
+    ) -> Result<SignedEcPreKey, KeyManagerError>;
     async fn set_signed_pre_key(
         &mut self,
         account_id: AccountId,
         device_id: DeviceId,
         identity: &IdentityKey,
         key: SignedEcPreKey,
-    ) -> Result<(), ServerError>;
+    ) -> Result<(), KeyManagerError>;
     async fn remove_signed_pre_key(
         &mut self,
         account_id: AccountId,
         device_id: DeviceId,
-    ) -> Result<(), ServerError>;
+    ) -> Result<(), KeyManagerError>;
 }
 
 #[async_trait::async_trait]
@@ -59,25 +59,25 @@ pub trait PqPreKeyManager {
         &self,
         account_id: AccountId,
         device_id: DeviceId,
-    ) -> Result<Option<PqPreKey>, ServerError>;
+    ) -> Result<Option<PqPreKey>, KeyManagerError>;
     async fn get_pq_pre_key_ids(
         &self,
         account_id: AccountId,
         device_id: DeviceId,
-    ) -> Result<Option<Vec<u32>>, ServerError>;
+    ) -> Result<Option<Vec<u32>>, KeyManagerError>;
     async fn add_pq_pre_key(
         &mut self,
         account_id: AccountId,
         device_id: DeviceId,
         identity: &IdentityKey,
         key: PqPreKey,
-    ) -> Result<(), ServerError>;
+    ) -> Result<(), KeyManagerError>;
     async fn remove_pq_pre_key(
         &mut self,
         account_id: AccountId,
         device_id: DeviceId,
         id: u32,
-    ) -> Result<(), ServerError>;
+    ) -> Result<(), KeyManagerError>;
 }
 
 #[async_trait::async_trait]
@@ -86,17 +86,17 @@ pub trait LastResortKeyManager {
         &self,
         account_id: AccountId,
         device_id: DeviceId,
-    ) -> Result<PqPreKey, ServerError>;
+    ) -> Result<PqPreKey, KeyManagerError>;
     async fn set_last_resort_key(
         &mut self,
         account_id: AccountId,
         device_id: DeviceId,
         identity: &IdentityKey,
         key: PqPreKey,
-    ) -> Result<(), ServerError>;
+    ) -> Result<(), KeyManagerError>;
     async fn remove_last_resort_key(
         &mut self,
         account_id: AccountId,
         device_id: DeviceId,
-    ) -> Result<(), ServerError>;
+    ) -> Result<(), KeyManagerError>;
 }

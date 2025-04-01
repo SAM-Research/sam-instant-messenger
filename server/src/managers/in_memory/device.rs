@@ -7,10 +7,7 @@ use std::{
 use tokio::sync::Mutex;
 
 use crate::managers::error::DeviceManagerError;
-use crate::{
-    managers::{entities::device::Device, traits::device_manager::DeviceManager},
-    ServerError,
-};
+use crate::managers::{entities::device::Device, traits::device_manager::DeviceManager};
 
 #[derive(Clone)]
 pub struct InMemoryDeviceManager {
@@ -33,18 +30,24 @@ impl InMemoryDeviceManager {
 
 #[async_trait::async_trait]
 impl DeviceManager for InMemoryDeviceManager {
-    async fn get_device(&self, account_id: AccountId, id: DeviceId) -> Result<Device, ServerError> {
+    async fn get_device(
+        &self,
+        account_id: AccountId,
+        id: DeviceId,
+    ) -> Result<Device, DeviceManagerError> {
         let key = DeviceAddress::new(account_id, id);
-        Ok(self
-            .devices
+        self.devices
             .lock()
             .await
             .get(&key)
             .cloned()
-            .ok_or(DeviceManagerError::DeviceDoesNotExist)?)
+            .ok_or(DeviceManagerError::DeviceDoesNotExist)
     }
 
-    async fn get_devices(&self, account_id: AccountId) -> Result<Vec<DeviceId>, ServerError> {
+    async fn get_devices(
+        &self,
+        account_id: AccountId,
+    ) -> Result<Vec<DeviceId>, DeviceManagerError> {
         let mut devices = vec![];
         if let Some(keys) = self.account_devices.lock().await.get(&account_id) {
             for key in keys {
@@ -58,12 +61,12 @@ impl DeviceManager for InMemoryDeviceManager {
                 devices.push(id);
             }
         } else {
-            return Err(DeviceManagerError::AccountDoesNotExist)?;
+            return Err(DeviceManagerError::AccountDoesNotExist);
         }
         Ok(devices)
     }
 
-    async fn next_device_id(&self, account_id: AccountId) -> Result<DeviceId, ServerError> {
+    async fn next_device_id(&self, account_id: AccountId) -> Result<DeviceId, DeviceManagerError> {
         let mut devices = self.get_devices(account_id).await?;
         devices.sort();
         for (i, &num) in devices.iter().enumerate() {
@@ -74,11 +77,11 @@ impl DeviceManager for InMemoryDeviceManager {
         Ok((devices.len() as u32 + 1).into())
     }
 
-    async fn link_secret(&self) -> Result<String, ServerError> {
+    async fn link_secret(&self) -> Result<String, DeviceManagerError> {
         Ok(self.link_secret.clone())
     }
 
-    async fn provision_expire_seconds(&self) -> Result<u64, ServerError> {
+    async fn provision_expire_seconds(&self) -> Result<u64, DeviceManagerError> {
         Ok(self.provision_expire_seconds)
     }
 
@@ -86,11 +89,11 @@ impl DeviceManager for InMemoryDeviceManager {
         &mut self,
         account_id: AccountId,
         device: &Device,
-    ) -> Result<(), ServerError> {
+    ) -> Result<(), DeviceManagerError> {
         let key = DeviceAddress::new(account_id, device.id());
 
         if self.devices.lock().await.contains_key(&key) {
-            return Err(DeviceManagerError::DeviceAlreadyExists)?;
+            return Err(DeviceManagerError::DeviceAlreadyExists);
         }
 
         self.account_devices
@@ -111,7 +114,7 @@ impl DeviceManager for InMemoryDeviceManager {
         &mut self,
         account_id: AccountId,
         device_id: DeviceId,
-    ) -> Result<(), ServerError> {
+    ) -> Result<(), DeviceManagerError> {
         let key = DeviceAddress::new(account_id, device_id);
 
         if let Some(x) = self.account_devices.lock().await.get_mut(&account_id) {

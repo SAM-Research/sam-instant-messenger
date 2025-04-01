@@ -11,10 +11,7 @@ use sam_common::{
 use tokio::sync::{mpsc, Mutex};
 
 use crate::managers::error::MessageManagerError;
-use crate::{
-    managers::traits::message_manager::{EnvelopeId, MessageManager},
-    ServerError,
-};
+use crate::managers::traits::message_manager::{EnvelopeId, MessageManager};
 
 #[derive(Clone)]
 pub struct InMemoryMessageManager {
@@ -49,7 +46,7 @@ impl MessageManager for InMemoryMessageManager {
         device_id: DeviceId,
         envelope_id: EnvelopeId,
         message: ServerEnvelope,
-    ) -> Result<(), ServerError> {
+    ) -> Result<(), MessageManagerError> {
         let key = DeviceAddress::new(account_id, device_id);
 
         self.envelopes.lock().await.entry(key).or_default();
@@ -61,7 +58,7 @@ impl MessageManager for InMemoryMessageManager {
             .as_ref()
             .is_some_and(|map| map.contains_key(&envelope_id))
         {
-            return Err(MessageManagerError::EnvelopeAlreadyExists)?;
+            return Err(MessageManagerError::EnvelopeAlreadyExists);
         };
 
         let _ = msgs.and_then(|map| map.insert(envelope_id, message));
@@ -80,7 +77,7 @@ impl MessageManager for InMemoryMessageManager {
         account_id: AccountId,
         device_id: DeviceId,
         envelope_id: EnvelopeId,
-    ) -> Result<ServerEnvelope, ServerError> {
+    ) -> Result<ServerEnvelope, MessageManagerError> {
         let key = DeviceAddress::new(account_id, device_id);
 
         match self.envelopes.lock().await.get(&key) {
@@ -88,7 +85,7 @@ impl MessageManager for InMemoryMessageManager {
                 .get(&envelope_id)
                 .cloned()
                 .ok_or(MessageManagerError::EnvelopeDoesNotExists)?),
-            None => Err(MessageManagerError::AccountDoesNotExist)?,
+            None => Err(MessageManagerError::AccountDoesNotExist),
         }
     }
 
@@ -97,7 +94,7 @@ impl MessageManager for InMemoryMessageManager {
         account_id: AccountId,
         device_id: DeviceId,
         envelope_id: EnvelopeId,
-    ) -> Result<(), ServerError> {
+    ) -> Result<(), MessageManagerError> {
         let key = DeviceAddress::new(account_id, device_id);
 
         match self.envelopes.lock().await.get_mut(&key) {
@@ -127,7 +124,7 @@ impl MessageManager for InMemoryMessageManager {
         &mut self,
         account_id: AccountId,
         device_id: DeviceId,
-    ) -> Result<mpsc::Receiver<EnvelopeId>, ServerError> {
+    ) -> Result<mpsc::Receiver<EnvelopeId>, MessageManagerError> {
         let key = DeviceAddress::new(account_id, device_id);
         let (sender, receiver) = mpsc::channel(self.channel_buffer);
 
@@ -153,7 +150,7 @@ impl MessageManager for InMemoryMessageManager {
         &mut self,
         account_id: AccountId,
         device_id: DeviceId,
-    ) -> Result<(), ServerError> {
+    ) -> Result<(), MessageManagerError> {
         let ids = self.get_envelope_ids(account_id, device_id).await;
         match ids {
             Some(ids) => {
@@ -182,7 +179,7 @@ impl MessageManager for InMemoryMessageManager {
         account_id: AccountId,
         device_id: DeviceId,
         envelope_id: EnvelopeId,
-    ) -> Result<(), ServerError> {
+    ) -> Result<(), MessageManagerError> {
         let key = EnvelopeKey::new(account_id, device_id, envelope_id);
 
         if self.pending_messages.lock().await.contains(&key) {
@@ -197,7 +194,7 @@ impl MessageManager for InMemoryMessageManager {
         account_id: AccountId,
         device_id: DeviceId,
         envelope_id: EnvelopeId,
-    ) -> Result<(), ServerError> {
+    ) -> Result<(), MessageManagerError> {
         let key = EnvelopeKey::new(account_id, device_id, envelope_id);
 
         if !self.pending_messages.lock().await.contains(&key) {

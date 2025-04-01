@@ -12,12 +12,15 @@ use sam_common::{
 use tokio::sync::mpsc;
 use tokio::sync::mpsc::{Receiver, Sender};
 
-use crate::protocol::error::{WebSocketError, WebSocketSessionError};
 use crate::protocol::message::{handle_client_message, prepare_server_envelope};
 use crate::{
     auth::authenticated_user::AuthenticatedUser,
     managers::traits::message_manager::MessageManager,
     state::{state_type::StateType, ServerState},
+};
+use crate::{
+    protocol::error::{WebSocketError, WebSocketSessionError},
+    ServerError,
 };
 
 macro_rules! closing_err {
@@ -170,7 +173,7 @@ async fn websocket_dispatcher<T: StateType>(
             Ok(envelope) => prepare_server_envelope(&mut state, &auth_user, envelope)
                 .await
                 .map_err(WebSocketSessionError::from),
-            Err(e) => Err(WebSocketSessionError::from(e)),
+            Err(e) => Err(WebSocketSessionError::from(ServerError::from(e))),
         };
 
         let is_msg_res_err = msg_res.is_err();
