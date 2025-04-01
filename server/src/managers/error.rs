@@ -29,10 +29,7 @@ impl IntoResponse for AccountManagerError {
                 StatusCode::INTERNAL_SERVER_ERROR,
                 "Could not decode bytes from database",
             ),
-            AccountManagerError::ServiceUnavailable => (
-                StatusCode::INTERNAL_SERVER_ERROR,
-                "A database error occurred",
-            ),
+            AccountManagerError::ServiceUnavailable => (StatusCode::SERVICE_UNAVAILABLE, ""),
         }
         .into_response()
     }
