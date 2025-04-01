@@ -49,7 +49,7 @@ pub async fn handle_client_message<T: StateType>(
                         .await;
                     match remove_res {
                         Ok(_) => Ok(None),
-                        Err(e) => Err(e),
+                        Err(e) => Err(e.into()),
                     }
                 }
                 Err(e) => {
@@ -58,7 +58,7 @@ pub async fn handle_client_message<T: StateType>(
                         e,
                         auth_user.account().username()
                     );
-                    Err(e)
+                    Err(e.into())
                 }
             }
         }

@@ -1,4 +1,4 @@
-use crate::ServerError;
+use crate::managers::error::MessageManagerError;
 use sam_common::{
     address::{AccountId, DeviceId, MessageId},
     sam_message::ServerEnvelope,
@@ -16,19 +16,19 @@ pub trait MessageManager: Send + Sync + Clone {
         device_id: DeviceId,
         envelope_id: EnvelopeId,
         envelope: ServerEnvelope,
-    ) -> Result<(), ServerError>;
+    ) -> Result<(), MessageManagerError>;
     async fn get_envelope(
         &self,
         account_id: AccountId,
         device_id: DeviceId,
         envelope_id: EnvelopeId,
-    ) -> Result<ServerEnvelope, ServerError>;
+    ) -> Result<ServerEnvelope, MessageManagerError>;
     async fn remove_envelope(
         &mut self,
         account_id: AccountId,
         device_id: DeviceId,
         envelope_id: EnvelopeId,
-    ) -> Result<(), ServerError>;
+    ) -> Result<(), MessageManagerError>;
     async fn get_envelope_ids(
         &self,
         account_id: AccountId,
@@ -38,23 +38,23 @@ pub trait MessageManager: Send + Sync + Clone {
         &mut self,
         account_id: AccountId,
         device_id: DeviceId,
-    ) -> Result<Receiver<EnvelopeId>, ServerError>;
+    ) -> Result<Receiver<EnvelopeId>, MessageManagerError>;
     async fn dispatch_envelopes(
         &mut self,
         account_id: AccountId,
         device_id: DeviceId,
-    ) -> Result<(), ServerError>;
+    ) -> Result<(), MessageManagerError>;
     async fn unsubscribe(&mut self, account_id: AccountId, device_id: DeviceId);
     async fn add_pending_message(
         &mut self,
         account_id: AccountId,
         device_id: DeviceId,
         envelope_id: EnvelopeId,
-    ) -> Result<(), ServerError>;
+    ) -> Result<(), MessageManagerError>;
     async fn remove_pending_message(
         &mut self,
         account_id: AccountId,
         device_id: DeviceId,
         envelope_id: EnvelopeId,
-    ) -> Result<(), ServerError>;
+    ) -> Result<(), MessageManagerError>;
 }
