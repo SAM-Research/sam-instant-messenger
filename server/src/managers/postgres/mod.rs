@@ -1,21 +1,19 @@
 use account::PostgresAccountManager;
-use device::PostgresDeviceManager;
-use keys::PostgresKeyManager;
-use message::PostgresMessageManager;
 
 use crate::StateType;
 
+use super::in_memory::{
+    device::InMemoryDeviceManager, keys::InMemoryKeyManager, message::InMemoryMessageManager,
+};
+
 pub mod account;
-pub mod device;
-pub mod keys;
-pub mod message;
 
 #[derive(Clone)]
-pub struct InMemStateType;
+pub struct PostgresStateType;
 
-impl StateType for InMemStateType {
+impl StateType for PostgresStateType {
     type AccountManager = PostgresAccountManager;
-    type DeviceManager = PostgresDeviceManager;
-    type MessageManager = PostgresMessageManager;
-    type KeyManager = PostgresKeyManager;
+    type DeviceManager = InMemoryDeviceManager;
+    type MessageManager = InMemoryMessageManager;
+    type KeyManager = InMemoryKeyManager;
 }
