@@ -3,10 +3,7 @@ use std::{collections::HashMap, sync::Arc};
 use tokio::sync::Mutex;
 
 use crate::managers::error::AccountManagerError;
-use crate::{
-    managers::{entities::account::Account, traits::account_manager::AccountManager},
-    ServerError,
-};
+use crate::managers::{entities::account::Account, traits::account_manager::AccountManager};
 
 #[derive(Clone)]
 pub struct InMemoryAccountManager {
@@ -29,7 +26,7 @@ impl InMemoryAccountManager {
 
 #[async_trait::async_trait]
 impl AccountManager for InMemoryAccountManager {
-    async fn get_account(&self, id: AccountId) -> Result<Account, ServerError> {
+    async fn get_account(&self, id: AccountId) -> Result<Account, AccountManagerError> {
         Ok(self
             .accounts
             .lock()
@@ -42,7 +39,7 @@ impl AccountManager for InMemoryAccountManager {
     async fn get_account_id_from_username(
         &self,
         username: String,
-    ) -> Result<AccountId, ServerError> {
+    ) -> Result<AccountId, AccountManagerError> {
         let account = self
             .accounts
             .lock()
@@ -55,7 +52,7 @@ impl AccountManager for InMemoryAccountManager {
         Ok(account.id())
     }
 
-    async fn add_account(&mut self, account: &Account) -> Result<(), ServerError> {
+    async fn add_account(&mut self, account: &Account) -> Result<(), AccountManagerError> {
         if self.accounts.lock().await.contains_key(&account.id()) {
             return Err(AccountManagerError::AccountAlreadyExists)?;
         } else if self
@@ -74,7 +71,7 @@ impl AccountManager for InMemoryAccountManager {
         Ok(())
     }
 
-    async fn remove_account(&mut self, account_id: AccountId) -> Result<(), ServerError> {
+    async fn remove_account(&mut self, account_id: AccountId) -> Result<(), AccountManagerError> {
         let _ = self
             .accounts
             .lock()
