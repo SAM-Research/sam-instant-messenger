@@ -42,7 +42,7 @@ impl AccountManager for PostgresAccountManager {
                     .username(row.username)
                     .build())
             }
-            Err(sqlx::Error::RowNotFound) => Err(AccountManagerError::AccountDoesNotExist.into()),
+            Err(sqlx::Error::RowNotFound) => Err(AccountManagerError::AccountDoesNotExist),
             Err(err) => {
                 error!("Could not fetch account from database: {err}");
                 Err(AccountManagerError::ServiceUnavailable)
