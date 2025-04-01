@@ -3,6 +3,8 @@ use axum::response::{IntoResponse, Response};
 use derive_more::{Display, Error, From};
 use log::error;
 
+use crate::auth::error::AuthorizationError;
+
 #[derive(Debug, From, Display, Error)]
 pub enum AccountManagerError {
     AccountDoesNotExist,
@@ -64,6 +66,7 @@ impl IntoResponse for DeviceManagerError {
 pub enum KeyManagerError {
     AccountDoesNotExist,
     KeyDoesNotExist,
+    Authorization(AuthorizationError),
 }
 
 impl IntoResponse for KeyManagerError {
@@ -71,11 +74,13 @@ impl IntoResponse for KeyManagerError {
         error!("KeyManagerError occurred {}", self);
         match self {
             KeyManagerError::AccountDoesNotExist => {
-                (StatusCode::NOT_FOUND, "Account does not exist.")
+                (StatusCode::NOT_FOUND, "Account does not exist.").into_response()
             }
-            KeyManagerError::KeyDoesNotExist => (StatusCode::NOT_FOUND, "Key does not exist."),
+            KeyManagerError::KeyDoesNotExist => {
+                (StatusCode::NOT_FOUND, "Key does not exist.").into_response()
+            }
+            KeyManagerError::Authorization(err) => err.into_response(),
         }
-        .into_response()
     }
 }
 

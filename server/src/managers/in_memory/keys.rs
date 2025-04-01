@@ -9,7 +9,6 @@ use crate::{
     managers::traits::key_manager::{
         LastResortKeyManager, PqPreKeyManager, PreKeyManager, SignedPreKeyManager,
     },
-    ServerError,
 };
 use libsignal_protocol::IdentityKey;
 use sam_common::{
@@ -49,7 +48,7 @@ impl PreKeyManager for InMemoryKeyManager {
         &self,
         account_id: AccountId,
         device_id: DeviceId,
-    ) -> Result<Option<EcPreKey>, ServerError> {
+    ) -> Result<Option<EcPreKey>, KeyManagerError> {
         let key = DeviceAddress::new(account_id, device_id);
 
         Ok(self
@@ -65,7 +64,7 @@ impl PreKeyManager for InMemoryKeyManager {
         &self,
         account_id: AccountId,
         device_id: DeviceId,
-    ) -> Result<Option<Vec<u32>>, ServerError> {
+    ) -> Result<Option<Vec<u32>>, KeyManagerError> {
         let key = DeviceAddress::new(account_id, device_id);
 
         Ok(self
@@ -81,7 +80,7 @@ impl PreKeyManager for InMemoryKeyManager {
         account_id: AccountId,
         device_id: DeviceId,
         key: EcPreKey,
-    ) -> Result<(), ServerError> {
+    ) -> Result<(), KeyManagerError> {
         let dkey = DeviceAddress::new(account_id, device_id);
 
         if let Entry::Vacant(e) = self.pre_keys.lock().await.entry(dkey) {
@@ -93,8 +92,7 @@ impl PreKeyManager for InMemoryKeyManager {
             .await
             .get_mut(&dkey)
             .map(|keys| keys.push(key))
-            .ok_or(KeyManagerError::AccountDoesNotExist)?;
-        Ok(())
+            .ok_or(KeyManagerError::AccountDoesNotExist)
     }
 
     async fn remove_pre_key(
@@ -102,7 +100,7 @@ impl PreKeyManager for InMemoryKeyManager {
         account_id: AccountId,
         device_id: DeviceId,
         id: u32,
-    ) -> Result<(), ServerError> {
+    ) -> Result<(), KeyManagerError> {
         let dkey = DeviceAddress::new(account_id, device_id);
 
         self.pre_keys.lock().await.get_mut(&dkey).and_then(|keys| {
@@ -129,7 +127,7 @@ impl SignedPreKeyManager for InMemoryKeyManager {
         &self,
         account_id: AccountId,
         device_id: DeviceId,
-    ) -> Result<SignedEcPreKey, ServerError> {
+    ) -> Result<SignedEcPreKey, KeyManagerError> {
         let key = DeviceAddress::new(account_id, device_id);
 
         self.signed_pre_keys
@@ -137,7 +135,7 @@ impl SignedPreKeyManager for InMemoryKeyManager {
             .await
             .get(&key)
             .cloned()
-            .ok_or(ServerError::from(KeyManagerError::AccountDoesNotExist))
+            .ok_or(KeyManagerError::AccountDoesNotExist)
     }
 
     async fn set_signed_pre_key(
@@ -146,7 +144,7 @@ impl SignedPreKeyManager for InMemoryKeyManager {
         device_id: DeviceId,
         identity: &IdentityKey,
         key: SignedEcPreKey,
-    ) -> Result<(), ServerError> {
+    ) -> Result<(), KeyManagerError> {
         let dkey = DeviceAddress::new(account_id, device_id);
 
         verify_key(identity, &key)?;
@@ -159,7 +157,7 @@ impl SignedPreKeyManager for InMemoryKeyManager {
         &mut self,
         account_id: AccountId,
         device_id: DeviceId,
-    ) -> Result<(), ServerError> {
+    ) -> Result<(), KeyManagerError> {
         let key = DeviceAddress::new(account_id, device_id);
 
         let _ = self
@@ -178,7 +176,7 @@ impl PqPreKeyManager for InMemoryKeyManager {
         &self,
         account_id: AccountId,
         device_id: DeviceId,
-    ) -> Result<Option<PqPreKey>, ServerError> {
+    ) -> Result<Option<PqPreKey>, KeyManagerError> {
         let key = DeviceAddress::new(account_id, device_id);
 
         Ok(self
@@ -194,7 +192,7 @@ impl PqPreKeyManager for InMemoryKeyManager {
         &self,
         account_id: AccountId,
         device_id: DeviceId,
-    ) -> Result<Option<Vec<u32>>, ServerError> {
+    ) -> Result<Option<Vec<u32>>, KeyManagerError> {
         let key = DeviceAddress::new(account_id, device_id);
 
         Ok(self
@@ -211,7 +209,7 @@ impl PqPreKeyManager for InMemoryKeyManager {
         device_id: DeviceId,
         identity: &IdentityKey,
         key: PqPreKey,
-    ) -> Result<(), ServerError> {
+    ) -> Result<(), KeyManagerError> {
         let dkey = DeviceAddress::new(account_id, device_id);
 
         verify_key(identity, &key)?;
@@ -234,7 +232,7 @@ impl PqPreKeyManager for InMemoryKeyManager {
         account_id: AccountId,
         device_id: DeviceId,
         id: u32,
-    ) -> Result<(), ServerError> {
+    ) -> Result<(), KeyManagerError> {
         let dkey = DeviceAddress::new(account_id, device_id);
 
         self.pq_pre_keys
@@ -266,24 +264,24 @@ impl LastResortKeyManager for InMemoryKeyManager {
         &self,
         account_id: AccountId,
         device_id: DeviceId,
-    ) -> Result<PqPreKey, ServerError> {
+    ) -> Result<PqPreKey, KeyManagerError> {
         let key = DeviceAddress::new(account_id, device_id);
 
-        Ok(self
-            .last_resort_keys
+        self.last_resort_keys
             .lock()
             .await
             .get(&key)
             .cloned()
-            .ok_or(KeyManagerError::KeyDoesNotExist)?)
+            .ok_or(KeyManagerError::KeyDoesNotExist)
     }
+
     async fn set_last_resort_key(
         &mut self,
         account_id: AccountId,
         device_id: DeviceId,
         identity: &IdentityKey,
         key: PqPreKey,
-    ) -> Result<(), ServerError> {
+    ) -> Result<(), KeyManagerError> {
         let dkey = DeviceAddress::new(account_id, device_id);
 
         verify_key(identity, &key)?;
@@ -291,19 +289,19 @@ impl LastResortKeyManager for InMemoryKeyManager {
         let _ = self.last_resort_keys.lock().await.insert(dkey, key);
         Ok(())
     }
+
     async fn remove_last_resort_key(
         &mut self,
         account_id: AccountId,
         device_id: DeviceId,
-    ) -> Result<(), ServerError> {
+    ) -> Result<(), KeyManagerError> {
         let key = DeviceAddress::new(account_id, device_id);
 
-        let _ = self
-            .last_resort_keys
+        self.last_resort_keys
             .lock()
             .await
             .remove(&key)
-            .ok_or(KeyManagerError::KeyDoesNotExist)?;
-        Ok(())
+            .map(|_| ())
+            .ok_or(KeyManagerError::KeyDoesNotExist)
     }
 }
