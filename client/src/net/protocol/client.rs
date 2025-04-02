@@ -6,8 +6,7 @@ use prost::Message as PMessage;
 use sam_common::{
     address::MessageId,
     sam_message::{
-        server_message::Content, ClientEnvelope, ClientMessage, ClientMessageType,
-        ExtraDevicesStatus, MissingDevicesError, ServerEnvelope, ServerMessage, ServerMessageType,
+        ClientEnvelope, ClientMessage, ClientMessageType, ServerEnvelope, ServerMessage,
     },
 };
 use tokio::sync::mpsc::{channel, Receiver, Sender};
@@ -17,18 +16,18 @@ use tokio_tungstenite::tungstenite::{
 };
 
 use super::{
+    decode::{EnvelopeOrStatus, MessageStatus, ServerStatus},
     error::ProtocolError,
-    traits::MessageStatus,
     websocket::{WebSocket, WebSocketClient, WebSocketError, WebSocketReceiver},
     SamProtocolClient,
 };
 
-enum ServerStatus {
+/*enum ServerStatus {
     Ack(MessageId),
     ExtraDevices(MessageId, ExtraDevicesStatus),
     MissingDevices(MessageId, MissingDevicesError),
     EmptyMessage,
-}
+}*/
 
 struct SamProtocolReceiver {
     client: Arc<Mutex<WebSocketClient>>,
@@ -65,70 +64,24 @@ impl SamProtocolReceiver {
         &mut self,
         message: ServerMessage,
     ) -> Result<Option<MessageId>, ProtocolError> {
-        let id = MessageId::try_from(message.id.clone())
-            .inspect_err(|e| debug!("{e}"))
-            .map_err(|_| ProtocolError::MalformedServerMessage)?;
-
-        let content = match message.r#type() {
-            ServerMessageType::ServerAck => {
-                return self.dispatch_server_status(ServerStatus::Ack(id)).await
-            }
-            ServerMessageType::EmptyMessage => {
-                return self
-                    .dispatch_server_status(ServerStatus::EmptyMessage)
-                    .await
-            }
-            ServerMessageType::ServerMessage => {
-                let content = message
-                    .content
-                    .ok_or(ProtocolError::MalformedServerMessage)?;
-                if !matches!(content, Content::ServerEnvelope(_)) {
-                    return Err(ProtocolError::MalformedServerMessage);
-                }
-                content
-            }
-            ServerMessageType::NotEncryptedForAllDevices => {
-                let content = message
-                    .content
-                    .ok_or(ProtocolError::MalformedServerMessage)?;
-                if !matches!(content, Content::MissingDevices(_)) {
-                    return Err(ProtocolError::MalformedServerMessage);
-                }
-                content
-            }
-            ServerMessageType::EncryptedForExtraMessages => {
-                let content = message
-                    .content
-                    .ok_or(ProtocolError::MalformedServerMessage)?;
-                if !matches!(content, Content::ExtraDevices(_)) {
-                    return Err(ProtocolError::MalformedServerMessage);
-                }
-                content
-            }
-        };
-
-        match content {
-            Content::ServerEnvelope(envelope) => {
-                self.dispatch_envelope(envelope).await.map(|_| Some(id))
-            }
-            Content::MissingDevices(err) => {
-                self.dispatch_server_status(ServerStatus::MissingDevices(id, err))
-                    .await
-            }
-            Content::ExtraDevices(status) => {
-                self.dispatch_server_status(ServerStatus::ExtraDevices(id, status))
-                    .await
-            }
+        match EnvelopeOrStatus::try_from(message)? {
+            EnvelopeOrStatus::Envelope(id, envelope) => self.dispatch_envelope(id, envelope).await,
+            EnvelopeOrStatus::Status(status) => self.dispatch_server_status(status).await,
         }
     }
 
-    async fn dispatch_envelope(&mut self, envelope: ServerEnvelope) -> Result<(), ProtocolError> {
+    async fn dispatch_envelope(
+        &mut self,
+        id: MessageId,
+        envelope: ServerEnvelope,
+    ) -> Result<Option<MessageId>, ProtocolError> {
         match &self.enqueue_envelope {
             Some(sender) => sender
                 .send(envelope)
                 .await
                 .inspect_err(|e| debug!("{e}"))
-                .map_err(|_| ProtocolError::WebSocketError(WebSocketError::Disconnected)),
+                .map_err(|_| ProtocolError::WebSocketError(WebSocketError::Disconnected))
+                .map(|_| Some(id)),
             None => Err(ProtocolError::WebSocketError(WebSocketError::Disconnected)),
         }
     }
@@ -227,56 +180,23 @@ impl ProtocolClient {
         req_id: MessageId,
         status: ServerStatus,
     ) -> Result<MessageStatus, ProtocolError> {
-        match status {
-            ServerStatus::Ack(res_id) => self
-                .check_id(req_id, res_id)
-                .await
-                .map(|_| MessageStatus::Ok),
-            ServerStatus::ExtraDevices(res_id, extra) => {
-                let lists = extra
-                    .device_lists
-                    .into_iter()
-                    .map(|li| li.try_into())
-                    .collect::<Result<Vec<_>, _>>()?;
-                self.check_id(req_id, res_id)
+        match status.validate(req_id)? {
+            Some(status) => Ok(status),
+            None => {
+                let res = self
+                    .client
+                    .lock()
                     .await
-                    .map(|_| MessageStatus::ExtraDevices(lists))
+                    .send(Message::Close(Some(CloseFrame {
+                        code: CloseCode::Error,
+                        reason: "Request and Response Id did not match".into(),
+                    })))
+                    .await;
+                match res {
+                    Ok(()) => Err(ProtocolError::ReceivedWrongResponseId),
+                    Err(err) => Err(ProtocolError::WebSocketError(err)),
+                }
             }
-            ServerStatus::MissingDevices(res_id, missing) => {
-                let lists = missing
-                    .device_lists
-                    .into_iter()
-                    .map(|li| li.try_into())
-                    .collect::<Result<Vec<_>, _>>()?;
-                self.check_id(req_id, res_id)
-                    .await
-                    .map(|_| MessageStatus::MissingDevices(lists))
-            }
-            ServerStatus::EmptyMessage => Err(ProtocolError::EmptyMessage),
-        }
-    }
-
-    async fn check_id(
-        &mut self,
-        req_id: MessageId,
-        res_id: MessageId,
-    ) -> Result<MessageId, ProtocolError> {
-        if res_id != req_id {
-            let res = self
-                .client
-                .lock()
-                .await
-                .send(Message::Close(Some(CloseFrame {
-                    code: CloseCode::Error,
-                    reason: "Request and Response Id did not match".into(),
-                })))
-                .await;
-            match res {
-                Ok(()) => Err(ProtocolError::ReceivedWrongResponseId),
-                Err(err) => Err(ProtocolError::WebSocketError(err)),
-            }
-        } else {
-            Ok(req_id)
         }
     }
 }
