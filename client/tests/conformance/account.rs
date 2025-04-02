@@ -1,4 +1,4 @@
-use super::{in_mem, sqlite};
+use super::{sam_in_mem, sam_sqlite};
 use rstest::rstest;
 use sam_client::storage::AccountStore;
 use sam_client::ClientError;
@@ -6,8 +6,8 @@ use sam_common::address::AccountId;
 use sam_common::DeviceId;
 
 #[rstest]
-#[case(in_mem().await.account_store)]
-#[case(sqlite().await.account_store)]
+#[case(sam_in_mem().await.account_store)]
+#[case(sam_sqlite().await.account_store)]
 #[tokio::test]
 async fn account_id_can_be_stored_and_retrieved(#[case] mut account_store: impl AccountStore) {
     let account_id = AccountId::generate();
@@ -23,8 +23,8 @@ async fn account_id_can_be_stored_and_retrieved(#[case] mut account_store: impl 
 }
 
 #[rstest]
-#[case(in_mem().await.account_store)]
-#[case(sqlite().await.account_store)]
+#[case(sam_in_mem().await.account_store)]
+#[case(sam_sqlite().await.account_store)]
 #[tokio::test]
 async fn password_can_be_stored_and_retrieved(#[case] mut account_store: impl AccountStore) {
     let password = "MyPassword".to_owned();
@@ -40,8 +40,8 @@ async fn password_can_be_stored_and_retrieved(#[case] mut account_store: impl Ac
 }
 
 #[rstest]
-#[case(in_mem().await.account_store)]
-#[case(sqlite().await.account_store)]
+#[case(sam_in_mem().await.account_store)]
+#[case(sam_sqlite().await.account_store)]
 #[tokio::test]
 async fn username_can_be_stored_and_retrieved(#[case] mut account_store: impl AccountStore) {
     let username = "MyUsername".to_owned();
@@ -57,8 +57,8 @@ async fn username_can_be_stored_and_retrieved(#[case] mut account_store: impl Ac
 }
 
 #[rstest]
-#[case(in_mem().await.account_store)]
-#[case(sqlite().await.account_store)]
+#[case(sam_in_mem().await.account_store)]
+#[case(sam_sqlite().await.account_store)]
 #[tokio::test]
 async fn device_id_can_be_stored_and_retrieved(
     #[case] mut account_store: impl AccountStore,

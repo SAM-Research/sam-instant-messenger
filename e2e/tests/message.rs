@@ -12,7 +12,7 @@ use sam_client::{
         protocol::WebSocketProtocolClientConfig,
         tls::{create_tls_config, MutualTlsConfig},
     },
-    storage::sqlite::SqliteStoreConfig,
+    storage::sqlite::{SqliteSamStoreConfig, SqliteSignalStoreConfig},
     Client, ClientError,
 };
 use sam_common::{api::LinkDeviceToken, AccountId};
@@ -28,7 +28,8 @@ async fn client(address: &str, username: &str, device_name: &str) -> Client<Sqli
     Client::from_registration()
         .username(username)
         .device_name(device_name)
-        .store_config(SqliteStoreConfig::in_memory().await)
+        .signal_store_config(SqliteSignalStoreConfig::in_memory().await)
+        .sam_store_config(SqliteSamStoreConfig::in_memory().await)
         .api_client_config(HttpClientConfig::new(address.to_string()))
         .protocol_config(WebSocketProtocolClientConfig::new(address.to_string()))
         .upload_prekey_count(5)
@@ -48,7 +49,8 @@ async fn tls_client(
     Client::from_registration()
         .username(username)
         .device_name(device_name)
-        .store_config(SqliteStoreConfig::in_memory().await)
+        .signal_store_config(SqliteSignalStoreConfig::in_memory().await)
+        .sam_store_config(SqliteSamStoreConfig::in_memory().await)
         .api_client_config(HttpClientConfig::new_with_tls(
             address.to_string(),
             client_config.clone(),
@@ -70,7 +72,8 @@ async fn client_device(
     token: LinkDeviceToken,
 ) -> Client<SqliteClientType> {
     Client::from_provisioning()
-        .store_config(SqliteStoreConfig::in_memory().await)
+        .signal_store_config(SqliteSignalStoreConfig::in_memory().await)
+        .sam_store_config(SqliteSamStoreConfig::in_memory().await)
         .api_client_config(HttpClientConfig::new(address.to_string()))
         .protocol_config(WebSocketProtocolClientConfig::new(address.to_string()))
         .device_name(device_name)
@@ -485,7 +488,8 @@ async fn sqlite_stores_alice_send_to_bob() {
         let mut alice: Client<SqliteClientType> = Client::from_registration()
             .username("Alice")
             .device_name("Alice's Device")
-            .store_config(SqliteStoreConfig::new(path.clone()))
+            .signal_store_config(SqliteSignalStoreConfig::new(path.clone()))
+            .sam_store_config(SqliteSamStoreConfig::new(path.clone()))
             .protocol_config(WebSocketProtocolClientConfig::new(address.to_owned()))
             .api_client_config(HttpClientConfig::new(address.to_owned()))
             .call()
@@ -495,13 +499,18 @@ async fn sqlite_stores_alice_send_to_bob() {
         alice.disconnect().await.expect("can disconnect alice");
         drop(alice);
 
-        let store = SqliteStoreConfig::new(path)
+        let signal_store = SqliteSignalStoreConfig::new(path.clone())
             .load()
             .await
-            .expect("can create a store");
+            .expect("can create a signal store");
+        let sam_store = SqliteSamStoreConfig::new(path)
+            .load()
+            .await
+            .expect("can create a sam store");
 
         let mut alice: Client<SqliteClientType> = Client::from_store()
-            .store(store)
+            .signal_store(signal_store)
+            .sam_store(sam_store)
             .protocol_config(WebSocketProtocolClientConfig::new(address.to_owned()))
             .api_client_config(HttpClientConfig::new(address.to_owned()))
             .call()
@@ -511,7 +520,8 @@ async fn sqlite_stores_alice_send_to_bob() {
         let bob: Client<SqliteClientType> = Client::from_registration()
             .username("Bob")
             .device_name("Bob's Device")
-            .store_config(SqliteStoreConfig::new("sqlite::memory:".to_owned()))
+            .signal_store_config(SqliteSignalStoreConfig::new("sqlite::memory:".to_owned()))
+            .sam_store_config(SqliteSamStoreConfig::new("sqlite::memory:".to_owned()))
             .protocol_config(WebSocketProtocolClientConfig::new(address.to_owned()))
             .api_client_config(HttpClientConfig::new(address.to_owned()))
             .call()

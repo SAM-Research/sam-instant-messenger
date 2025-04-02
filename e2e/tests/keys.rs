@@ -1,7 +1,7 @@
 use sam_client::client::SqliteClientType;
 use sam_client::net::http_client::HttpClientConfig;
 use sam_client::net::protocol::WebSocketProtocolClientConfig;
-use sam_client::storage::sqlite::SqliteStoreConfig;
+use sam_client::storage::sqlite::{SqliteSamStoreConfig, SqliteSignalStoreConfig};
 use sam_client::Client;
 
 mod utils;
@@ -25,7 +25,8 @@ pub async fn alice_can_upload_keys() {
     let mut alice: Client<SqliteClientType> = Client::from_registration()
         .username("Alice")
         .device_name("Alice's Device")
-        .store_config(SqliteStoreConfig::in_memory().await)
+        .signal_store_config(SqliteSignalStoreConfig::in_memory().await)
+        .sam_store_config(SqliteSamStoreConfig::in_memory().await)
         .api_client_config(HttpClientConfig::new(address.clone()))
         .protocol_config(WebSocketProtocolClientConfig::new(address.clone()))
         .call()

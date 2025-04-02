@@ -8,7 +8,10 @@ use sam_client::{
         http_client::HttpClientConfig, protocol::WebSocketProtocolClientConfig,
         tls::create_tls_config,
     },
-    storage::{sqlite::SqliteStoreConfig, AccountStore, StoreConfig},
+    storage::{
+        sqlite::{SqliteSamStore, SqliteSamStoreConfig, SqliteSignalStoreConfig},
+        AccountStore, SamStoreConfig, SignalStoreConfig,
+    },
     Client, ClientError,
 };
 use sam_common::{address::RegistrationId, AccountId};
@@ -23,7 +26,8 @@ pub async fn register_alice(address: String) -> Result<Client<SqliteClientType>,
     Client::from_registration()
         .username("Alice")
         .device_name("Alice's Device")
-        .store_config(SqliteStoreConfig::in_memory().await)
+        .signal_store_config(SqliteSignalStoreConfig::in_memory().await)
+        .sam_store_config(SqliteSamStoreConfig::in_memory().await)
         .api_client_config(HttpClientConfig::new(address.clone()))
         .protocol_config(WebSocketProtocolClientConfig::new(address))
         .call()
@@ -73,25 +77,30 @@ pub async fn cannot_create_client_without_valid_account() {
     let mut csprng = OsRng;
     let key_pair = IdentityKeyPair::generate(&mut csprng);
     let registration_id = RegistrationId::generate(&mut csprng);
-    let mut store = SqliteStoreConfig::in_memory()
+    let mut signal_store = SqliteSignalStoreConfig::in_memory()
         .await
         .create_store(key_pair, registration_id)
         .await
         .expect("can create in-memory store");
+    let mut sam_store = SqliteSamStoreConfig::in_memory()
+        .await
+        .create_store()
+        .await
+        .expect("Can create sam store");
 
-    store
+    sam_store
         .account_store
         .set_account_id(AccountId::generate())
         .await
         .expect("Can set account_id");
 
-    store
+    sam_store
         .account_store
         .set_device_id(1.into())
         .await
         .expect("Can set device_id");
 
-    store
+    sam_store
         .account_store
         .set_password("Alice's Password".to_owned())
         .await
@@ -101,7 +110,8 @@ pub async fn cannot_create_client_without_valid_account() {
     let protocol_client = WebSocketProtocolClientConfig::new(address);
 
     let client: Result<Client<SqliteClientType>, _> = Client::from_store()
-        .store(store)
+        .signal_store(signal_store)
+        .sam_store(sam_store)
         .api_client_config(api_client)
         .protocol_config(protocol_client)
         .call()
@@ -147,7 +157,8 @@ pub async fn alice_can_find_bobs_account_id() {
     let bob: Client<SqliteClientType> = Client::from_registration()
         .username("Bob")
         .device_name("Bob's Device")
-        .store_config(SqliteStoreConfig::in_memory().await)
+        .signal_store_config(SqliteSignalStoreConfig::in_memory().await)
+        .sam_store_config(SqliteSamStoreConfig::in_memory().await)
         .api_client_config(HttpClientConfig::new(address.clone()))
         .protocol_config(WebSocketProtocolClientConfig::new(address))
         .call()
@@ -178,7 +189,8 @@ pub async fn one_client_can_register_with_tls() {
     let client: Result<Client<SqliteClientType>, _> = Client::from_registration()
         .username("Alice")
         .device_name("Alice's Device")
-        .store_config(SqliteStoreConfig::in_memory().await)
+        .signal_store_config(SqliteSignalStoreConfig::in_memory().await)
+        .sam_store_config(SqliteSamStoreConfig::in_memory().await)
         .api_client_config(HttpClientConfig::new_with_tls(
             address.clone(),
             client_config.clone(),
@@ -206,7 +218,8 @@ pub async fn two_clients_cannot_have_the_same_username() {
     let _alice: Client<SqliteClientType> = Client::from_registration()
         .username("Alice")
         .device_name("Alice's Device")
-        .store_config(SqliteStoreConfig::in_memory().await)
+        .signal_store_config(SqliteSignalStoreConfig::in_memory().await)
+        .sam_store_config(SqliteSamStoreConfig::in_memory().await)
         .api_client_config(HttpClientConfig::new(address.clone()))
         .protocol_config(WebSocketProtocolClientConfig::new(address.clone()))
         .call()
@@ -216,7 +229,8 @@ pub async fn two_clients_cannot_have_the_same_username() {
     let alice_2: Result<Client<SqliteClientType>, _> = Client::from_registration()
         .username("Alice")
         .device_name("Alice's Device")
-        .store_config(SqliteStoreConfig::in_memory().await)
+        .signal_store_config(SqliteSignalStoreConfig::in_memory().await)
+        .sam_store_config(SqliteSamStoreConfig::in_memory().await)
         .api_client_config(HttpClientConfig::new(address.clone()))
         .protocol_config(WebSocketProtocolClientConfig::new(address))
         .call()

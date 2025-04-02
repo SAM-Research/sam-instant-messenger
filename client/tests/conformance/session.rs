@@ -1,12 +1,12 @@
-use super::{in_mem, sqlite};
+use super::{signal_in_mem, signal_sqlite};
 
 use super::alice_address;
 use libsignal_protocol::{SessionRecord, SessionStore};
 use rstest::rstest;
 
 #[rstest]
-#[case(in_mem().await.session_store)]
-#[case(sqlite().await.session_store)]
+#[case(signal_in_mem().await.session_store)]
+#[case(signal_sqlite().await.session_store)]
 #[tokio::test]
 async fn load_and_store_session(#[case] mut session_store: impl SessionStore) {
     let address = alice_address();
@@ -29,8 +29,8 @@ async fn load_and_store_session(#[case] mut session_store: impl SessionStore) {
 }
 
 #[rstest]
-#[case(in_mem().await.session_store)]
-#[case(sqlite().await.session_store)]
+#[case(signal_in_mem().await.session_store)]
+#[case(signal_sqlite().await.session_store)]
 #[tokio::test]
 async fn no_session_in_new_store(#[case] session_store: impl SessionStore) {
     let address = alice_address();

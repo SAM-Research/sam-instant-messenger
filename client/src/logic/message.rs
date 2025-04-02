@@ -9,14 +9,18 @@ use crate::{
         protocol::{MessageStatus, SamProtocolClient},
         ApiClient,
     },
-    storage::{AccountStore, ContactStore, MessageStore, SamStoreType, Store},
+    storage::{
+        AccountStore, ContactStore, MessageStore, SamStore, SamStoreType, SignalStore,
+        SignalStoreType,
+    },
     ClientError,
 };
 
 use super::key::fetch_prekeys;
 
-pub async fn process_messages<T: SamStoreType>(
-    store: &mut Store<T>,
+pub async fn process_messages<T: SignalStoreType, U: SamStoreType>(
+    signal_store: &mut SignalStore<T>,
+    sam_store: &mut SamStore<U>,
     envelope_queue: &mut Receiver<ServerEnvelope>,
     block: bool,
 ) -> Result<(), ClientError> {
@@ -25,7 +29,7 @@ pub async fn process_messages<T: SamStoreType>(
     }
     while let Some(envelope) = envelope_queue.recv().await {
         // TODO: How should we handle failure to decrypt and/or store message?
-        let envelope = match decrypt(envelope, store).await {
+        let envelope = match decrypt(envelope, signal_store, sam_store).await {
             Ok(denvelope) => denvelope,
             Err(e) => {
                 error!("Failed to decrypt message: {e}");
@@ -33,12 +37,12 @@ pub async fn process_messages<T: SamStoreType>(
             }
         };
 
-        store
+        sam_store
             .contact_store
             .add_device(envelope.source_account_id(), envelope.source_device_id())
             .await?;
 
-        let _ = store
+        let _ = sam_store
             .message_store
             .store_message(envelope)
             .await
@@ -50,29 +54,38 @@ pub async fn process_messages<T: SamStoreType>(
     Ok(())
 }
 
-pub async fn send_message<T: SamStoreType, R: Rng + CryptoRng>(
-    store: &mut Store<T>,
+pub async fn send_message<T: SignalStoreType, U: SamStoreType, R: Rng + CryptoRng>(
+    signal_store: &mut SignalStore<T>,
+    sam_store: &mut SamStore<U>,
     api_client: &impl ApiClient,
     ws_client: &mut impl SamProtocolClient,
     recipient: AccountId,
     msg: impl Into<Vec<u8>>,
     mut rng: &mut R,
 ) -> Result<(), ClientError> {
-    if !store.contact_store.contains_contact(recipient).await? {
-        fetch_prekeys(store, api_client, recipient, None, &mut rng).await?;
+    if !sam_store.contact_store.contains_contact(recipient).await? {
+        fetch_prekeys(
+            signal_store,
+            sam_store,
+            api_client,
+            recipient,
+            None,
+            &mut rng,
+        )
+        .await?;
     }
 
-    let my_id = store.account_store.get_account_id().await?;
-    if !store.contact_store.contains_contact(my_id).await? {
-        fetch_prekeys(store, api_client, my_id, None, &mut rng).await?;
+    let my_id = sam_store.account_store.get_account_id().await?;
+    if !sam_store.contact_store.contains_contact(my_id).await? {
+        fetch_prekeys(signal_store, sam_store, api_client, my_id, None, &mut rng).await?;
     }
-    let envelope = encrypt(msg, vec![recipient, my_id], store).await?;
+    let envelope = encrypt(msg, vec![recipient, my_id], signal_store, sam_store).await?;
     let status = ws_client.send_message(envelope).await?;
     match status {
         MessageStatus::ExtraDevices(device_lists) => {
             for list in device_lists {
                 for device in list.devices {
-                    store
+                    sam_store
                         .contact_store
                         .remove_device(list.account_id, device)
                         .await?;
@@ -83,7 +96,8 @@ pub async fn send_message<T: SamStoreType, R: Rng + CryptoRng>(
         MessageStatus::MissingDevices(device_lists) => {
             for list in device_lists {
                 fetch_prekeys(
-                    store,
+                    signal_store,
+                    sam_store,
                     api_client,
                     list.account_id,
                     Some(list.devices),

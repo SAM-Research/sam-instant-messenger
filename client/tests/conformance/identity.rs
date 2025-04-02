@@ -2,11 +2,11 @@ use libsignal_protocol::{Direction, IdentityKeyPair, IdentityKeyStore, ProtocolA
 use rand::rngs::OsRng;
 use rstest::rstest;
 
-use super::{bob_address, in_mem, key_pair, sqlite};
+use super::{bob_address, key_pair, signal_in_mem, signal_sqlite};
 
 #[rstest]
-#[case(in_mem().await.identity_key_store)]
-#[case(sqlite().await.identity_key_store)]
+#[case(signal_in_mem().await.identity_key_store)]
+#[case(signal_sqlite().await.identity_key_store)]
 #[tokio::test]
 async fn no_identity_in_new_store(#[case] identity_key_store: impl IdentityKeyStore) {
     assert_eq!(
@@ -19,16 +19,16 @@ async fn no_identity_in_new_store(#[case] identity_key_store: impl IdentityKeySt
 }
 
 #[rstest]
-#[case(in_mem().await.identity_key_store)]
-#[case(sqlite().await.identity_key_store)]
+#[case(signal_in_mem().await.identity_key_store)]
+#[case(signal_sqlite().await.identity_key_store)]
 #[tokio::test]
 async fn own_identity_in_new_store(#[case] identity_key_store: impl IdentityKeyStore) {
     assert!(identity_key_store.get_identity_key_pair().await.is_ok());
 }
 
 #[rstest]
-#[case(in_mem().await.identity_key_store)]
-#[case(sqlite().await.identity_key_store)]
+#[case(signal_in_mem().await.identity_key_store)]
+#[case(signal_sqlite().await.identity_key_store)]
 #[tokio::test]
 async fn save_and_retrieve_identity(#[case] mut identity_key_store: impl IdentityKeyStore) {
     let bob_address = ProtocolAddress::new("bob".to_owned(), 0.into());
@@ -50,8 +50,8 @@ async fn save_and_retrieve_identity(#[case] mut identity_key_store: impl Identit
 }
 
 #[rstest]
-#[case(in_mem().await.identity_key_store)]
-#[case(sqlite().await.identity_key_store)]
+#[case(signal_in_mem().await.identity_key_store)]
+#[case(signal_sqlite().await.identity_key_store)]
 #[tokio::test]
 async fn save_identity_returns_false_if_key_is_known(
     #[case] mut identity_key_store: impl IdentityKeyStore,
@@ -80,8 +80,8 @@ async fn save_identity_returns_false_if_key_is_known(
 }
 
 #[rstest]
-#[case(in_mem().await.identity_key_store)]
-#[case(sqlite().await.identity_key_store)]
+#[case(signal_in_mem().await.identity_key_store)]
+#[case(signal_sqlite().await.identity_key_store)]
 #[tokio::test]
 async fn save_identity_returns_false_if_key_overwritten(
     #[case] mut identity_key_store: impl IdentityKeyStore,
@@ -111,8 +111,8 @@ async fn save_identity_returns_false_if_key_overwritten(
 }
 
 #[rstest]
-#[case(in_mem().await.identity_key_store)]
-#[case(sqlite().await.identity_key_store)]
+#[case(signal_in_mem().await.identity_key_store)]
+#[case(signal_sqlite().await.identity_key_store)]
 #[tokio::test]
 async fn identity_is_trusted_on_first_use(#[case] mut identity_key_store: impl IdentityKeyStore) {
     let bob_address = bob_address();
@@ -144,8 +144,8 @@ async fn identity_is_trusted_on_first_use(#[case] mut identity_key_store: impl I
 }
 
 #[rstest]
-#[case(in_mem().await.identity_key_store)]
-#[case(sqlite().await.identity_key_store)]
+#[case(signal_in_mem().await.identity_key_store)]
+#[case(signal_sqlite().await.identity_key_store)]
 #[tokio::test]
 async fn identity_is_not_trusted_before_first_use(
     #[case] mut identity_key_store: impl IdentityKeyStore,

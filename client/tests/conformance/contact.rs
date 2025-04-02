@@ -1,13 +1,13 @@
 use std::collections::HashSet;
 
-use super::{in_mem, sqlite};
+use super::{sam_in_mem, sam_sqlite};
 use rstest::rstest;
 use sam_client::storage::ContactStore;
 use sam_common::address::AccountId;
 
 #[rstest]
-#[case(in_mem().await.contact_store)]
-#[case(sqlite().await.contact_store)]
+#[case(sam_in_mem().await.contact_store)]
+#[case(sam_sqlite().await.contact_store)]
 #[tokio::test]
 async fn contact_device_can_be_stored_and_retrieved(#[case] mut contact_store: impl ContactStore) {
     let account_id = AccountId::generate();
@@ -27,8 +27,8 @@ async fn contact_device_can_be_stored_and_retrieved(#[case] mut contact_store: i
 }
 
 #[rstest]
-#[case(in_mem().await.contact_store)]
-#[case(sqlite().await.contact_store)]
+#[case(sam_in_mem().await.contact_store)]
+#[case(sam_sqlite().await.contact_store)]
 #[tokio::test]
 async fn contact_device_can_be_deleted(#[case] mut contact_store: impl ContactStore) {
     let account_id = AccountId::generate();

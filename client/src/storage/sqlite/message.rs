@@ -67,19 +67,17 @@ mod test {
     use crate::{
         encryption::envelope::DecryptedEnvelope,
         storage::{
-            sqlite::SqliteStoreConfig, traits::message::MessageStore, ContactStore, StoreConfig,
+            sqlite::SqliteSamStoreConfig, traits::message::MessageStore, ContactStore,
+            SamStoreConfig, SignalStoreConfig,
         },
     };
 
     #[tokio::test]
     async fn test_store_and_send_to_subscriber() {
         let mut csprng = OsRng;
-        let mut store = SqliteStoreConfig::in_memory()
+        let mut store = SqliteSamStoreConfig::in_memory()
             .await
-            .create_store(
-                IdentityKeyPair::generate(&mut csprng),
-                RegistrationId::generate(&mut csprng),
-            )
+            .create_store()
             .await
             .expect("Can create store");
 

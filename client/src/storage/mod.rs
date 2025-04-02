@@ -15,25 +15,31 @@ pub mod sqlite;
 pub mod traits;
 
 pub use inmem::{
-    InMemoryAccountStore, InMemoryContactStore, InMemoryMessageStore, InMemoryStore,
-    InMemoryStoreConfig, InMemoryStoreType,
+    InMemoryAccountStore, InMemoryContactStore, InMemoryMessageStore, InMemorySamStoreType,
 };
 pub use sqlite::{
     SqliteContactStore, SqliteIdentityKeyStore, SqliteKyberPreKeyStore, SqliteMessageStore,
-    SqlitePreKeyStore, SqliteSenderKeyStore, SqliteSessionStore, SqliteSignedPreKeyStore,
-    SqliteStore, SqliteStoreConfig, SqliteStoreType,
+    SqlitePreKeyStore, SqliteSenderKeyStore, SqliteSessionStore, SqliteSignalStoreConfig,
+    SqliteSignedPreKeyStore,
 };
 pub use traits::{account::AccountStore, contact::ContactStore, message::MessageStore};
 
 #[async_trait(?Send)]
-pub trait StoreConfig {
-    type StoreType: SamStoreType;
+pub trait SignalStoreConfig {
+    type StoreType: SignalStoreType;
 
     async fn create_store<ID: Into<u32>>(
         self,
         key_pair: IdentityKeyPair,
         registration_id: ID,
-    ) -> Result<Store<Self::StoreType>, ClientError>;
+    ) -> Result<SignalStore<Self::StoreType>, ClientError>;
+}
+
+#[async_trait]
+pub trait SamStoreConfig {
+    type StoreType: SamStoreType;
+
+    async fn create_store(self) -> Result<SamStore<Self::StoreType>, ClientError>;
 }
 
 #[async_trait(?Send)]
@@ -42,7 +48,6 @@ pub trait ProvidesKeyId<T> {
 }
 
 pub trait SignalStoreType {
-    type ContactStore: ContactStore;
     type IdentityKeyStore: IdentityKeyStore;
     type PreKeyStore: PreKeyStore + ProvidesKeyId<PreKeyId> + PreKeyGenerator;
     type SignedPreKeyStore: SignedPreKeyStore
@@ -51,22 +56,27 @@ pub trait SignalStoreType {
     type KyberPreKeyStore: KyberPreKeyStore + ProvidesKeyId<KyberPreKeyId> + KyberKeyGenerator;
     type SessionStore: SessionStore;
     type SenderKeyStore: SenderKeyStore;
+}
+
+pub trait SamStoreType {
+    type ContactStore: ContactStore;
+    type AccountStore: AccountStore;
     type MessageStore: MessageStore;
 }
 
-pub trait SamStoreType: SignalStoreType {
-    type AccountStore: AccountStore;
+#[derive(Debug, Builder)]
+pub struct SamStore<T: SamStoreType> {
+    pub account_store: T::AccountStore,
+    pub message_store: T::MessageStore,
+    pub contact_store: T::ContactStore,
 }
 
 #[derive(Debug, Builder)]
-pub struct Store<T: SamStoreType> {
-    pub contact_store: T::ContactStore,
-    pub account_store: T::AccountStore,
+pub struct SignalStore<T: SignalStoreType> {
     pub identity_key_store: T::IdentityKeyStore,
     pub pre_key_store: T::PreKeyStore,
     pub signed_pre_key_store: T::SignedPreKeyStore,
     pub kyber_pre_key_store: T::KyberPreKeyStore,
     pub session_store: T::SessionStore,
     pub sender_key_store: T::SenderKeyStore,
-    pub message_store: T::MessageStore,
 }

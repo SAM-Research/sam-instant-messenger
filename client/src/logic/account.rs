@@ -6,15 +6,16 @@ use crate::{
     encryption::generate_password,
     net::ApiClient,
     storage::{
-        key_generation::create_registration_pre_keys, AccountStore, ContactStore, SamStoreType,
-        Store,
+        key_generation::create_registration_pre_keys, AccountStore, ContactStore, SamStore,
+        SamStoreType, SignalStore, SignalStoreType,
     },
     ClientError,
 };
 
-pub async fn register_account<T: SamStoreType, R: Rng + CryptoRng>(
+pub async fn register_account<T: SignalStoreType, U: SamStoreType, R: Rng + CryptoRng>(
     api_client: &impl ApiClient,
-    store: &mut Store<T>,
+    signal_store: &mut SignalStore<T>,
+    sam_store: &mut SamStore<U>,
     username: &str,
     device_name: &str,
     password_length: usize,
@@ -22,14 +23,17 @@ pub async fn register_account<T: SamStoreType, R: Rng + CryptoRng>(
     mut rng: &mut R,
 ) -> Result<(), ClientError> {
     let password = generate_password(password_length, &mut rng);
-    let id_pair = store.identity_key_store.get_identity_key_pair().await?;
+    let id_pair = signal_store
+        .identity_key_store
+        .get_identity_key_pair()
+        .await?;
     let key_bundle =
-        create_registration_pre_keys(store, upload_prekey_count, id_pair, &mut rng).await?;
+        create_registration_pre_keys(signal_store, upload_prekey_count, id_pair, &mut rng).await?;
     let registration_request = RegistrationRequest {
         identity_key: id_pair.identity_key().to_owned(),
         device_activation: DeviceActivationInfo {
             name: device_name.to_owned(),
-            registration_id: store
+            registration_id: signal_store
                 .identity_key_store
                 .get_local_registration_id()
                 .await?
@@ -42,13 +46,16 @@ pub async fn register_account<T: SamStoreType, R: Rng + CryptoRng>(
         .register_account(username, &password, registration_request)
         .await?
         .account_id;
-    store
+    sam_store
         .account_store
         .set_username(username.to_owned())
         .await?;
     let device_id = 1.into();
-    store.account_store.set_account_id(account_id).await?;
-    store.account_store.set_device_id(device_id).await?;
-    store.account_store.set_password(password).await?;
-    store.contact_store.add_device(account_id, device_id).await
+    sam_store.account_store.set_account_id(account_id).await?;
+    sam_store.account_store.set_device_id(device_id).await?;
+    sam_store.account_store.set_password(password).await?;
+    sam_store
+        .contact_store
+        .add_device(account_id, device_id)
+        .await
 }

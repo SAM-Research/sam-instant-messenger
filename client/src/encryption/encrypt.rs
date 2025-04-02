@@ -13,7 +13,7 @@ use sam_common::{
 };
 
 use crate::{
-    storage::{AccountStore, ContactStore, SamStoreType, Store},
+    storage::{AccountStore, ContactStore, SamStore, SamStoreType, SignalStore, SignalStoreType},
     ClientError,
 };
 
@@ -40,16 +40,17 @@ use super::{
 pub async fn encrypt(
     message: impl Into<Vec<u8>>,
     recipients: Vec<AccountId>,
-    store: &mut Store<impl SamStoreType>,
+    signal_store: &mut SignalStore<impl SignalStoreType>,
+    sam_store: &mut SamStore<impl SamStoreType>,
 ) -> Result<ClientEnvelope, ClientError> {
     let bytes = pad_message(&message.into());
 
     let mut recipient_addrs = HashMap::new();
-    let my_id = store.account_store.get_account_id().await?;
-    let my_device_id = store.account_store.get_device_id().await?;
+    let my_id = sam_store.account_store.get_account_id().await?;
+    let my_device_id = sam_store.account_store.get_device_id().await?;
 
     for recipient in recipients {
-        let mut devices = store.contact_store.get_all_devices(recipient).await?;
+        let mut devices = sam_store.contact_store.get_all_devices(recipient).await?;
         if recipient == my_id {
             devices.retain(|id| *id != my_device_id);
         }
@@ -65,8 +66,8 @@ pub async fn encrypt(
             let message = message_encrypt(
                 &bytes,
                 &addr,
-                &mut store.session_store,
-                &mut store.identity_key_store,
+                &mut signal_store.session_store,
+                &mut signal_store.identity_key_store,
                 SystemTime::now(),
             )
             .await?;
@@ -101,7 +102,8 @@ pub async fn encrypt(
 /// * `Err(ClientError)` if decryption fails.
 pub async fn decrypt(
     envelope: ServerEnvelope,
-    store: &mut Store<impl SamStoreType>,
+    signal_store: &mut SignalStore<impl SignalStoreType>,
+    sam_store: &mut SamStore<impl SamStoreType>,
 ) -> Result<DecryptedEnvelope, ClientError> {
     let message = match envelope.r#type() {
         SamMessageType::SignalMessage => {
@@ -126,11 +128,11 @@ pub async fn decrypt(
         &message_decrypt(
             &message,
             &ProtocolAddress::new(source.to_string(), envelope.source_device_id.into()),
-            &mut store.session_store,
-            &mut store.identity_key_store,
-            &mut store.pre_key_store,
-            &store.signed_pre_key_store,
-            &mut store.kyber_pre_key_store,
+            &mut signal_store.session_store,
+            &mut signal_store.identity_key_store,
+            &mut signal_store.pre_key_store,
+            &signal_store.signed_pre_key_store,
+            &mut signal_store.kyber_pre_key_store,
             &mut OsRng,
         )
         .await?,
@@ -161,46 +163,47 @@ mod test {
     use crate::{
         encryption::encrypt::{decrypt, encrypt},
         storage::{
-            inmem::InMemoryStoreConfig,
+            inmem::{InMemorySamStoreConfig, InMemorySignalStoreConfig},
             key_generation::{
                 into_libsignal_bundle, KyberKeyGenerator, PreKeyGenerator, SignedPreKeyGenerator,
             },
-            AccountStore, ContactStore, SamStoreType, Store, StoreConfig,
+            AccountStore, ContactStore, SamStoreConfig, SignalStore, SignalStoreConfig,
+            SignalStoreType,
         },
     };
 
     pub async fn create_pre_key_bundle<R: Rng + CryptoRng>(
-        store: &mut Store<impl SamStoreType>,
+        signal_store: &mut SignalStore<impl SignalStoreType>,
         device_id: DeviceId,
         csprng: &mut R,
     ) -> Result<PreKeyBundle, SignalProtocolError> {
-        let pair = store
+        let pair = signal_store
             .identity_key_store
             .get_identity_key_pair()
             .await
             .expect("Can get identity");
         Ok(PreKeyBundle {
             device_id: *device_id,
-            registration_id: store
+            registration_id: signal_store
                 .identity_key_store
                 .get_local_registration_id()
                 .await
                 .expect("Can get reg id"),
             pre_key: Some(
-                store
+                signal_store
                     .pre_key_store
                     .generate_key(csprng)
                     .await
                     .expect("Can create pre key")
                     .into(),
             ),
-            pq_pre_key: store
+            pq_pre_key: signal_store
                 .kyber_pre_key_store
                 .generate_key(pair.private_key())
                 .await
                 .expect("Can create pq")
                 .into(),
-            signed_pre_key: store
+            signed_pre_key: signal_store
                 .signed_pre_key_store
                 .generate_key(csprng, pair.private_key())
                 .await
@@ -233,45 +236,53 @@ mod test {
         let mut csprng = OsRng;
         let alice_key_pair = IdentityKeyPair::generate(&mut csprng);
         let alice_registration_id = RegistrationId::generate(&mut csprng);
-        let mut alice_store = InMemoryStoreConfig::default()
+        let mut alice_signal_store = InMemorySignalStoreConfig::default()
             .create_store(alice_key_pair, alice_registration_id)
             .await
-            .expect("Can create alice store");
+            .expect("Can create alice signal store");
+        let mut alice_sam_store = InMemorySamStoreConfig::default()
+            .create_store()
+            .await
+            .expect("Can create alice sam store");
 
         let bob_key_pair = IdentityKeyPair::generate(&mut csprng);
         let bob_registration_id = RegistrationId::generate(&mut csprng);
 
-        let mut bob_store = InMemoryStoreConfig::default()
+        let mut bob_signal_store = InMemorySignalStoreConfig::default()
             .create_store(bob_key_pair, bob_registration_id)
             .await
             .expect("Can create bob store");
+        let mut bob_sam_store = InMemorySamStoreConfig::default()
+            .create_store()
+            .await
+            .expect("Can create bob sam store");
         let bob = AccountId::generate();
         let alice = AccountId::generate();
 
         let my_struct = MyStruct {
             string: "Hello, World!".to_owned(),
         };
-        alice_store
+        alice_sam_store
             .account_store
             .set_account_id(alice)
             .await
             .expect("Can add self account id");
-        alice_store
+        alice_sam_store
             .account_store
             .set_device_id(1.into())
             .await
             .expect("can add self device id");
-        alice_store
+        alice_sam_store
             .contact_store
             .add_device(bob, 1.into())
             .await
             .expect("Can add bobs device");
 
-        let bob_bundle = create_pre_key_bundle(&mut bob_store, 1.into(), &mut csprng)
+        let bob_bundle = create_pre_key_bundle(&mut bob_signal_store, 1.into(), &mut csprng)
             .await
             .expect("Can create bob's pre key bundle");
 
-        let id_pair = bob_store
+        let id_pair = bob_signal_store
             .identity_key_store
             .get_identity_key_pair()
             .await
@@ -283,17 +294,22 @@ mod test {
 
         let _ = process_prekey_bundle(
             &ProtocolAddress::new(bob.to_string(), 1.into()),
-            &mut alice_store.session_store,
-            &mut alice_store.identity_key_store,
+            &mut alice_signal_store.session_store,
+            &mut alice_signal_store.identity_key_store,
             &signal_bundle,
             SystemTime::now(),
             &mut csprng,
         )
         .await;
 
-        let client_envelope = encrypt(my_struct.clone(), vec![bob], &mut alice_store)
-            .await
-            .expect("Can encrypt message");
+        let client_envelope = encrypt(
+            my_struct.clone(),
+            vec![bob],
+            &mut alice_signal_store,
+            &mut alice_sam_store,
+        )
+        .await
+        .expect("Can encrypt message");
 
         let message = client_envelope
             .messages
@@ -310,7 +326,7 @@ mod test {
             .content(message.content.clone())
             .build();
 
-        let decrypted = decrypt(envelope, &mut bob_store)
+        let decrypted = decrypt(envelope, &mut bob_signal_store, &mut bob_sam_store)
             .await
             .expect("should be able to decrypt");
 

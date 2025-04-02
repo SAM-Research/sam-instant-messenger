@@ -6,29 +6,34 @@ use crate::{
     encryption::generate_password,
     net::ApiClient,
     storage::{
-        key_generation::create_registration_pre_keys, AccountStore, ContactStore, SamStoreType,
-        Store,
+        key_generation::create_registration_pre_keys, AccountStore, ContactStore, SamStore,
+        SamStoreType, SignalStore, SignalStoreType,
     },
     ClientError,
 };
 
-pub async fn provision_device<T: SamStoreType, R: Rng + CryptoRng>(
+pub async fn provision_device<T: SignalStoreType, U: SamStoreType, R: Rng + CryptoRng>(
     api_client: &impl ApiClient,
-    store: &mut Store<T>,
+    signal_store: &mut SignalStore<T>,
+    sam_store: &mut SamStore<U>,
     device_name: &str,
     token: LinkDeviceToken,
     upload_prekey_count: usize,
     password_length: usize,
     mut rng: &mut R,
 ) -> Result<(), ClientError> {
-    let id_key_pair = store.identity_key_store.get_identity_key_pair().await?;
+    let id_key_pair = signal_store
+        .identity_key_store
+        .get_identity_key_pair()
+        .await?;
     let key_bundle =
-        create_registration_pre_keys(store, upload_prekey_count, id_key_pair, &mut rng).await?;
+        create_registration_pre_keys(signal_store, upload_prekey_count, id_key_pair, &mut rng)
+            .await?;
     let request = LinkDeviceRequest {
         token,
         device_activation: DeviceActivationInfo {
             name: device_name.to_owned(),
-            registration_id: store
+            registration_id: signal_store
                 .identity_key_store
                 .get_local_registration_id()
                 .await?
@@ -38,17 +43,23 @@ pub async fn provision_device<T: SamStoreType, R: Rng + CryptoRng>(
     };
     let password = generate_password(password_length, &mut rng);
     let response = api_client.link_device(&password, request).await?;
-    store.account_store.set_username(response.username).await?;
-    store
+    sam_store
+        .account_store
+        .set_username(response.username)
+        .await?;
+    sam_store
         .account_store
         .set_account_id(response.account_id)
         .await?;
-    store
+    sam_store
         .account_store
         .set_device_id(response.device_id)
         .await?;
-    store.account_store.set_password(password.clone()).await?;
-    store
+    sam_store
+        .account_store
+        .set_password(password.clone())
+        .await?;
+    sam_store
         .contact_store
         .add_device(response.account_id, response.device_id)
         .await

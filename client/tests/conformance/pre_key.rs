@@ -1,4 +1,4 @@
-use super::{in_mem, sqlite};
+use super::{signal_in_mem, signal_sqlite};
 use libsignal_protocol::{KeyPair, PreKeyRecord, PreKeyStore};
 use rand::rngs::OsRng;
 use rand::{rngs::StdRng, SeedableRng as _};
@@ -6,8 +6,8 @@ use rstest::rstest;
 use sam_client::storage::key_generation::PreKeyGenerator;
 
 #[rstest]
-#[case(in_mem().await.pre_key_store)]
-#[case(sqlite().await.pre_key_store)]
+#[case(signal_in_mem().await.pre_key_store)]
+#[case(signal_sqlite().await.pre_key_store)]
 #[tokio::test]
 async fn pre_key_can_be_saved_and_retrieved(#[case] mut pre_key_store: impl PreKeyStore) {
     let id = 0.into();
@@ -35,8 +35,8 @@ async fn pre_key_can_be_saved_and_retrieved(#[case] mut pre_key_store: impl PreK
 }
 
 #[rstest]
-#[case(in_mem().await.pre_key_store)]
-#[case(sqlite().await.pre_key_store)]
+#[case(signal_in_mem().await.pre_key_store)]
+#[case(signal_sqlite().await.pre_key_store)]
 #[tokio::test]
 async fn pre_key_can_be_removed(#[case] mut pre_key_store: impl PreKeyStore) {
     let id = 0.into();
@@ -62,8 +62,8 @@ async fn pre_key_can_be_removed(#[case] mut pre_key_store: impl PreKeyStore) {
 }
 
 #[rstest]
-#[case(in_mem().await.pre_key_store)]
-#[case(sqlite().await.pre_key_store)]
+#[case(signal_in_mem().await.pre_key_store)]
+#[case(signal_sqlite().await.pre_key_store)]
 #[tokio::test]
 async fn pre_keys_ids_are_generated_properly(
     #[case] mut generator: impl PreKeyStore + PreKeyGenerator,

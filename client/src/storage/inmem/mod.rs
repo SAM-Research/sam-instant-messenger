@@ -1,4 +1,6 @@
-use super::{SamStoreType, SignalStoreType, Store, StoreConfig};
+use super::{
+    SamStore, SamStoreConfig, SamStoreType, SignalStore, SignalStoreConfig, SignalStoreType,
+};
 use crate::ClientError;
 pub use account::InMemoryAccountStore;
 use async_trait::async_trait;
@@ -17,11 +19,9 @@ pub mod pre_key;
 pub mod signed_pre_key;
 
 #[derive(Debug)]
-pub struct InMemoryStoreType;
+pub struct InMemorySignalStoreType;
 
-impl SignalStoreType for InMemoryStoreType {
-    type ContactStore = InMemoryContactStore;
-
+impl SignalStoreType for InMemorySignalStoreType {
     type IdentityKeyStore = InMemIdentityKeyStore;
 
     type PreKeyStore = InMemPreKeyStore;
@@ -33,34 +33,50 @@ impl SignalStoreType for InMemoryStoreType {
     type SessionStore = InMemSessionStore;
 
     type SenderKeyStore = InMemSenderKeyStore;
+}
 
+pub struct InMemorySamStoreType;
+
+impl SamStoreType for InMemorySamStoreType {
+    type AccountStore = InMemoryAccountStore;
+    type ContactStore = InMemoryContactStore;
     type MessageStore = InMemoryMessageStore;
 }
 
-impl SamStoreType for InMemoryStoreType {
-    type AccountStore = InMemoryAccountStore;
-}
-
-pub type InMemoryStore = Store<InMemoryStoreType>;
+pub type InMemorySignalStore = SignalStore<InMemorySignalStoreType>;
+pub type InMemorySamStore = SamStore<InMemorySamStoreType>;
 
 #[derive(Debug, Default)]
-pub struct InMemoryStoreConfig {}
+pub struct InMemorySignalStoreConfig {}
+
+#[derive(Debug, Default)]
+pub struct InMemorySamStoreConfig {}
 
 #[async_trait(?Send)]
-impl StoreConfig for InMemoryStoreConfig {
-    type StoreType = InMemoryStoreType;
+impl SignalStoreConfig for InMemorySignalStoreConfig {
+    type StoreType = InMemorySignalStoreType;
     async fn create_store<ID: Into<u32>>(
         self,
         key_pair: IdentityKeyPair,
         registration_id: ID,
-    ) -> Result<InMemoryStore, ClientError> {
-        Ok(InMemoryStore::builder()
+    ) -> Result<InMemorySignalStore, ClientError> {
+        Ok(InMemorySignalStore::builder()
             .identity_key_store(InMemIdentityKeyStore::new(key_pair, registration_id.into()))
             .pre_key_store(InMemPreKeyStore::default())
             .signed_pre_key_store(InMemSignedPreKeyStore::default())
             .kyber_pre_key_store(InMemKyberPreKeyStore::default())
             .sender_key_store(InMemSenderKeyStore::default())
             .session_store(InMemSessionStore::default())
+            .build())
+    }
+}
+
+#[async_trait]
+impl SamStoreConfig for InMemorySamStoreConfig {
+    type StoreType = InMemorySamStoreType;
+
+    async fn create_store(self) -> Result<InMemorySamStore, ClientError> {
+        Ok(InMemorySamStore::builder()
             .account_store(InMemoryAccountStore::default())
             .contact_store(InMemoryContactStore::default())
             .message_store(InMemoryMessageStore::new(10))

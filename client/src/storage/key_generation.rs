@@ -1,4 +1,4 @@
-use crate::storage::{ProvidesKeyId, SamStoreType, Store};
+use crate::storage::{ProvidesKeyId, SamStore, SamStoreType};
 use crate::{signal_time_now, ClientError};
 use async_trait::async_trait;
 use libsignal_core::curve::{KeyPair, PrivateKey};
@@ -12,6 +12,8 @@ use libsignal_protocol::{
 use rand::{CryptoRng, Rng};
 use sam_common::api::keys::RegistrationPreKeys;
 use sam_common::api::{EcPreKey, PqPreKey};
+
+use super::{SignalStore, SignalStoreType};
 
 #[async_trait(?Send)]
 pub trait PreKeyGenerator {
@@ -138,8 +140,8 @@ pub(crate) fn into_libsignal_bundle(
     ))
 }
 
-pub async fn create_registration_pre_keys<S: SamStoreType, R: Rng + CryptoRng>(
-    store: &mut Store<S>,
+pub async fn create_registration_pre_keys<S: SignalStoreType, R: Rng + CryptoRng>(
+    store: &mut SignalStore<S>,
     prekey_count: usize,
     id_key_pair: IdentityKeyPair,
     mut csprng: &mut R,

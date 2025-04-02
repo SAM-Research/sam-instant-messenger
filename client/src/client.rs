@@ -12,7 +12,9 @@ use tokio::sync::mpsc::Receiver as MpscReceiver;
 use crate::logic::provision_device;
 use crate::net::protocol::ProtocolClient;
 use crate::net::HttpClient;
-use crate::storage::{InMemoryStoreType, SqliteStoreType};
+use crate::storage::inmem::InMemorySignalStoreType;
+use crate::storage::sqlite::{SqliteSamStoreType, SqliteSignalStoreType};
+use crate::storage::{InMemorySamStoreType, SamStoreConfig, SignalStore, SignalStoreType};
 use crate::{
     encryption::envelope::DecryptedEnvelope,
     logic::{process_messages, publish_prekeys, register_account, send_message},
@@ -21,26 +23,37 @@ use crate::{
         protocol::traits::{ProtocolConfig, SamProtocolClient},
         ApiClient,
     },
-    storage::{traits::message::MessageStore, AccountStore, SamStoreType, Store, StoreConfig},
+    storage::{
+        traits::message::MessageStore, AccountStore, SamStore, SamStoreType, SignalStoreConfig,
+    },
     ClientError,
 };
 pub trait ClientType {
-    type Store: SamStoreType;
+    type SignalStore: SignalStoreType;
+    type SamStore: SamStoreType;
     type ApiClient: ApiClient;
     type ProtocolClient: SamProtocolClient;
     type Rng: Rng + CryptoRng + Default;
 }
 
-pub struct DefaultClientType<T: SamStoreType, U: ApiClient, V: SamProtocolClient> {
-    _store: std::marker::PhantomData<T>,
+pub struct DefaultClientType<
+    S: SignalStoreType,
+    T: SamStoreType,
+    U: ApiClient,
+    V: SamProtocolClient,
+> {
+    _signal_store: std::marker::PhantomData<S>,
+    _sam_store: std::marker::PhantomData<T>,
     _api: std::marker::PhantomData<U>,
     _protocol: std::marker::PhantomData<V>,
 }
 
-impl<T: SamStoreType, U: ApiClient, V: SamProtocolClient> ClientType
-    for DefaultClientType<T, U, V>
+impl<T: SamStoreType, S: SignalStoreType, U: ApiClient, V: SamProtocolClient> ClientType
+    for DefaultClientType<S, T, U, V>
 {
-    type Store = T;
+    type SignalStore = S;
+
+    type SamStore = T;
 
     type ApiClient = U;
 
@@ -49,11 +62,14 @@ impl<T: SamStoreType, U: ApiClient, V: SamProtocolClient> ClientType
     type Rng = OsRng;
 }
 
-pub type InMemoryClientType = DefaultClientType<InMemoryStoreType, HttpClient, ProtocolClient>;
-pub type SqliteClientType = DefaultClientType<SqliteStoreType, HttpClient, ProtocolClient>;
+pub type InMemoryClientType =
+    DefaultClientType<InMemorySignalStoreType, InMemorySamStoreType, HttpClient, ProtocolClient>;
+pub type SqliteClientType =
+    DefaultClientType<SqliteSignalStoreType, SqliteSamStoreType, HttpClient, ProtocolClient>;
 
 pub struct Client<T: ClientType> {
-    store: Store<T::Store>,
+    signal_store: SignalStore<T::SignalStore>,
+    sam_store: SamStore<T::SamStore>,
     api_client: T::ApiClient,
     protocol_client: T::ProtocolClient,
     envelope_queue: MpscReceiver<ServerEnvelope>,
@@ -65,7 +81,8 @@ impl<T: ClientType> Client<T> {
     /// Creates a new client for the account described in the token
     #[builder]
     pub async fn from_provisioning(
-        store_config: impl StoreConfig<StoreType = T::Store>,
+        signal_store_config: impl SignalStoreConfig<StoreType = T::SignalStore>,
+        sam_store_config: impl SamStoreConfig<StoreType = T::SamStore>,
         protocol_config: impl ProtocolConfig<ProtocolClient = T::ProtocolClient>,
         api_client_config: impl ApiClientConfig<ApiClient = T::ApiClient>,
         device_name: &str,
@@ -78,13 +95,15 @@ impl<T: ClientType> Client<T> {
         let api_client = api_client_config.create().await?;
         let registration_id = RegistrationId::generate(&mut rng);
 
-        let mut store = store_config
+        let mut signal_store = signal_store_config
             .create_store(id_key_pair, registration_id)
             .await?;
+        let mut sam_store = sam_store_config.create_store().await?;
 
         provision_device(
             &api_client,
-            &mut store,
+            &mut signal_store,
+            &mut sam_store,
             device_name,
             token,
             upload_prekey_count,
@@ -95,16 +114,17 @@ impl<T: ClientType> Client<T> {
 
         let mut protocol_client = protocol_config
             .create(
-                store.account_store.get_account_id().await?,
-                store.account_store.get_device_id().await?,
-                store.account_store.get_password().await?,
+                sam_store.account_store.get_account_id().await?,
+                sam_store.account_store.get_device_id().await?,
+                sam_store.account_store.get_password().await?,
             )
             .await?;
 
         let queue = protocol_client.connect().await?;
 
         Ok(Self {
-            store,
+            signal_store,
+            sam_store,
             api_client,
             protocol_client,
             envelope_queue: queue,
@@ -115,7 +135,8 @@ impl<T: ClientType> Client<T> {
     /// Register a new account.
     #[builder]
     pub async fn from_registration(
-        store_config: impl StoreConfig<StoreType = T::Store>,
+        signal_store_config: impl SignalStoreConfig<StoreType = T::SignalStore>,
+        sam_store_config: impl SamStoreConfig<StoreType = T::SamStore>,
         protocol_config: impl ProtocolConfig<ProtocolClient = T::ProtocolClient>,
         api_client_config: impl ApiClientConfig<ApiClient = T::ApiClient>,
         username: &str,
@@ -127,14 +148,16 @@ impl<T: ClientType> Client<T> {
     ) -> Result<Self, ClientError> {
         let registration_id = RegistrationId::generate(&mut rng);
         let id_key_pair = IdentityKeyPair::generate(&mut rng);
-        let mut store = store_config
+        let mut signal_store = signal_store_config
             .create_store(id_key_pair, registration_id)
             .await?;
+        let mut sam_store = sam_store_config.create_store().await?;
         let api_client = api_client_config.create().await?;
 
         register_account(
             &api_client,
-            &mut store,
+            &mut signal_store,
+            &mut sam_store,
             username,
             device_name,
             password_length,
@@ -145,15 +168,16 @@ impl<T: ClientType> Client<T> {
 
         let mut protocol_client = protocol_config
             .create(
-                store.account_store.get_account_id().await?,
-                store.account_store.get_device_id().await?,
-                store.account_store.get_password().await?,
+                sam_store.account_store.get_account_id().await?,
+                sam_store.account_store.get_device_id().await?,
+                sam_store.account_store.get_password().await?,
             )
             .await?;
         let queue = protocol_client.connect().await?;
 
         Ok(Self {
-            store,
+            signal_store,
+            sam_store,
             protocol_client,
             api_client,
             envelope_queue: queue,
@@ -164,20 +188,22 @@ impl<T: ClientType> Client<T> {
     /// Instantiate a client from a valid store.
     #[builder]
     pub async fn from_store(
-        store: Store<T::Store>,
+        signal_store: SignalStore<T::SignalStore>,
+        sam_store: SamStore<T::SamStore>,
         protocol_config: impl ProtocolConfig<ProtocolClient = T::ProtocolClient>,
         api_client_config: impl ApiClientConfig<ApiClient = T::ApiClient>,
         #[builder(default = <T::Rng as Default>::default())] rng: T::Rng,
     ) -> Result<Self, ClientError> {
-        let account_id = store.account_store.get_account_id().await?;
-        let device_id = store.account_store.get_device_id().await?;
-        let password = store.account_store.get_password().await?;
+        let account_id = sam_store.account_store.get_account_id().await?;
+        let device_id = sam_store.account_store.get_device_id().await?;
+        let password = sam_store.account_store.get_password().await?;
         let mut protocol_client = protocol_config
             .create(account_id, device_id, password)
             .await?;
         let queue = protocol_client.connect().await?;
         Ok(Self {
-            store,
+            signal_store,
+            sam_store,
             protocol_client,
             api_client: api_client_config.create().await?,
             envelope_queue: queue,
@@ -186,16 +212,16 @@ impl<T: ClientType> Client<T> {
     }
 
     pub async fn account_id(&self) -> Result<AccountId, ClientError> {
-        self.store.account_store.get_account_id().await
+        self.sam_store.account_store.get_account_id().await
     }
 
     pub async fn device_id(&self) -> Result<DeviceId, ClientError> {
-        self.store.account_store.get_device_id().await
+        self.sam_store.account_store.get_device_id().await
     }
 
     pub async fn identity_key_pair(&self) -> Result<IdentityKeyPair, ClientError> {
         Ok(self
-            .store
+            .signal_store
             .identity_key_store
             .get_identity_key_pair()
             .await?)
@@ -206,7 +232,7 @@ impl<T: ClientType> Client<T> {
     pub async fn delete_account(self) -> Result<(), (Self, ClientError)> {
         let account_id = self.account_id().await;
         let device_id = self.device_id().await;
-        let password = self.store.account_store.get_password().await;
+        let password = self.sam_store.account_store.get_password().await;
 
         let Ok(account_id) = account_id else {
             return Err((self, account_id.unwrap_err()));
@@ -239,7 +265,7 @@ impl<T: ClientType> Client<T> {
     pub async fn delete_device(self) -> Result<(), (Self, ClientError)> {
         let account_id = self.account_id().await;
         let device_id = self.device_id().await;
-        let password = self.store.account_store.get_password().await;
+        let password = self.sam_store.account_store.get_password().await;
 
         let Ok(account_id) = account_id else {
             return Err((self, account_id.unwrap_err()));
@@ -272,7 +298,7 @@ impl<T: ClientType> Client<T> {
             .delete_device(
                 self.account_id().await?,
                 self.device_id().await?,
-                &self.store.account_store.get_password().await?,
+                &self.sam_store.account_store.get_password().await?,
                 device_id,
             )
             .await?;
@@ -286,7 +312,7 @@ impl<T: ClientType> Client<T> {
             .get_user_account_id(
                 self.account_id().await?,
                 self.device_id().await?,
-                self.store.account_store.get_password().await?.as_str(),
+                self.sam_store.account_store.get_password().await?.as_str(),
                 username,
             )
             .await?;
@@ -320,7 +346,8 @@ impl<T: ClientType> Client<T> {
         msg: impl Into<Vec<u8>>,
     ) -> Result<(), ClientError> {
         send_message(
-            &mut self.store,
+            &mut self.signal_store,
+            &mut self.sam_store,
             &self.api_client,
             &mut self.protocol_client,
             recipient,
@@ -332,17 +359,17 @@ impl<T: ClientType> Client<T> {
 
     /// Returns a broadcast receiver for incoming messages that have been decrypted.
     pub fn subscribe(&self) -> Receiver<DecryptedEnvelope> {
-        self.store.message_store.subscribe()
+        self.sam_store.message_store.subscribe()
     }
 
     /// Recieve and decrypt messages. Block until at least one message is received.
     pub async fn process_messages_blocking(&mut self) -> Result<(), ClientError> {
-        process_messages(&mut self.store, &mut self.envelope_queue, true).await
+        process_messages(&mut self.signal_store, &mut self.sam_store, &mut self.envelope_queue, true).await
     }
 
     /// Recieve and decrypt messages.
     pub async fn process_messages(&mut self) -> Result<(), ClientError> {
-        process_messages(&mut self.store, &mut self.envelope_queue, false).await
+        process_messages(&mut self.signal_store, &mut self.sam_store, &mut self.envelope_queue, false).await
     }
 
     /// Publish new prekeys.
@@ -354,7 +381,8 @@ impl<T: ClientType> Client<T> {
         #[builder(default = false)] new_last_resort: bool,
     ) -> Result<(), ClientError> {
         publish_prekeys(
-            &mut self.store,
+            &mut self.signal_store,
+            &mut self.sam_store,
             &self.api_client,
             onetime_prekeys,
             new_signed_prekey,
@@ -371,7 +399,7 @@ impl<T: ClientType> Client<T> {
             .provision_device(
                 self.account_id().await?,
                 self.device_id().await?,
-                &self.store.account_store.get_password().await?,
+                &self.sam_store.account_store.get_password().await?,
             )
             .await?)
     }
