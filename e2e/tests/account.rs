@@ -9,7 +9,7 @@ use sam_client::{
         tls::create_tls_config,
     },
     storage::{
-        sqlite::{SqliteSamStore, SqliteSamStoreConfig, SqliteSignalStoreConfig},
+        sqlite::{SqliteSamStoreConfig, SqliteSignalStoreConfig},
         AccountStore, SamStoreConfig, SignalStoreConfig,
     },
     Client, ClientError,
@@ -77,7 +77,7 @@ pub async fn cannot_create_client_without_valid_account() {
     let mut csprng = OsRng;
     let key_pair = IdentityKeyPair::generate(&mut csprng);
     let registration_id = RegistrationId::generate(&mut csprng);
-    let mut signal_store = SqliteSignalStoreConfig::in_memory()
+    let signal_store = SqliteSignalStoreConfig::in_memory()
         .await
         .create_store(key_pair, registration_id)
         .await

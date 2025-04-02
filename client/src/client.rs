@@ -100,17 +100,17 @@ impl<T: ClientType> Client<T> {
             .await?;
         let mut sam_store = sam_store_config.create_store().await?;
 
-        provision_device(
-            &api_client,
-            &mut signal_store,
-            &mut sam_store,
-            device_name,
-            token,
-            upload_prekey_count,
-            password_length,
-            &mut rng,
-        )
-        .await?;
+        provision_device()
+            .api_client(&api_client)
+            .signal_store(&mut signal_store)
+            .sam_store(&mut sam_store)
+            .device_name(device_name)
+            .token(token)
+            .upload_prekey_count(upload_prekey_count)
+            .password_length(password_length)
+            .rng(&mut rng)
+            .call()
+            .await?;
 
         let mut protocol_client = protocol_config
             .create(
@@ -154,17 +154,17 @@ impl<T: ClientType> Client<T> {
         let mut sam_store = sam_store_config.create_store().await?;
         let api_client = api_client_config.create().await?;
 
-        register_account(
-            &api_client,
-            &mut signal_store,
-            &mut sam_store,
-            username,
-            device_name,
-            password_length,
-            upload_prekey_count,
-            &mut rng,
-        )
-        .await?;
+        register_account()
+            .api_client(&api_client)
+            .signal_store(&mut signal_store)
+            .sam_store(&mut sam_store)
+            .username(username)
+            .device_name(device_name)
+            .password_length(password_length)
+            .upload_prekey_count(upload_prekey_count)
+            .rng(&mut rng)
+            .call()
+            .await?;
 
         let mut protocol_client = protocol_config
             .create(
@@ -364,12 +364,24 @@ impl<T: ClientType> Client<T> {
 
     /// Recieve and decrypt messages. Block until at least one message is received.
     pub async fn process_messages_blocking(&mut self) -> Result<(), ClientError> {
-        process_messages(&mut self.signal_store, &mut self.sam_store, &mut self.envelope_queue, true).await
+        process_messages(
+            &mut self.signal_store,
+            &mut self.sam_store,
+            &mut self.envelope_queue,
+            true,
+        )
+        .await
     }
 
     /// Recieve and decrypt messages.
     pub async fn process_messages(&mut self) -> Result<(), ClientError> {
-        process_messages(&mut self.signal_store, &mut self.sam_store, &mut self.envelope_queue, false).await
+        process_messages(
+            &mut self.signal_store,
+            &mut self.sam_store,
+            &mut self.envelope_queue,
+            false,
+        )
+        .await
     }
 
     /// Publish new prekeys.

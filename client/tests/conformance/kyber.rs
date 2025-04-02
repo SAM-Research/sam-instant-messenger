@@ -5,7 +5,7 @@ use libsignal_protocol::{
 };
 use rand::rngs::OsRng;
 use rstest::rstest;
-use sam_client::storage::{key_generation::KyberKeyGenerator as _, SamStore, SamStoreType};
+use sam_client::storage::key_generation::KyberKeyGenerator as _;
 use sam_client::storage::{SignalStore, SignalStoreType};
 
 #[rstest]
@@ -60,7 +60,9 @@ async fn saved_kyber_pre_key_can_be_retrieved(
 #[case(signal_in_mem().await)]
 #[case(signal_sqlite().await)]
 #[tokio::test]
-async fn kyber_pre_keys_ids_are_generated_properly(#[case] mut store: SignalStore<impl SignalStoreType>) {
+async fn kyber_pre_keys_ids_are_generated_properly(
+    #[case] mut store: SignalStore<impl SignalStoreType>,
+) {
     let expected: Vec<u32> = (1u32..=10u32).collect();
 
     let mut ids: Vec<u32> = Vec::new();

@@ -103,7 +103,6 @@ pub async fn encrypt(
 pub async fn decrypt(
     envelope: ServerEnvelope,
     signal_store: &mut SignalStore<impl SignalStoreType>,
-    sam_store: &mut SamStore<impl SamStoreType>,
 ) -> Result<DecryptedEnvelope, ClientError> {
     let message = match envelope.r#type() {
         SamMessageType::SignalMessage => {
@@ -252,10 +251,7 @@ mod test {
             .create_store(bob_key_pair, bob_registration_id)
             .await
             .expect("Can create bob store");
-        let mut bob_sam_store = InMemorySamStoreConfig::default()
-            .create_store()
-            .await
-            .expect("Can create bob sam store");
+
         let bob = AccountId::generate();
         let alice = AccountId::generate();
 
@@ -326,7 +322,7 @@ mod test {
             .content(message.content.clone())
             .build();
 
-        let decrypted = decrypt(envelope, &mut bob_signal_store, &mut bob_sam_store)
+        let decrypted = decrypt(envelope, &mut bob_signal_store)
             .await
             .expect("should be able to decrypt");
 

@@ -1,4 +1,4 @@
-use crate::storage::{ProvidesKeyId, SamStore, SamStoreType};
+use crate::storage::ProvidesKeyId;
 use crate::{signal_time_now, ClientError};
 use async_trait::async_trait;
 use libsignal_core::curve::{KeyPair, PrivateKey};

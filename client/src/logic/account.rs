@@ -1,3 +1,4 @@
+use bon::builder;
 use libsignal_protocol::IdentityKeyStore;
 use rand::{CryptoRng, Rng};
 use sam_common::api::{device::DeviceActivationInfo, RegistrationRequest};
@@ -12,6 +13,7 @@ use crate::{
     ClientError,
 };
 
+#[builder]
 pub async fn register_account<T: SignalStoreType, U: SamStoreType, R: Rng + CryptoRng>(
     api_client: &impl ApiClient,
     signal_store: &mut SignalStore<T>,

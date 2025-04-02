@@ -29,7 +29,7 @@ pub async fn process_messages<T: SignalStoreType, U: SamStoreType>(
     }
     while let Some(envelope) = envelope_queue.recv().await {
         // TODO: How should we handle failure to decrypt and/or store message?
-        let envelope = match decrypt(envelope, signal_store, sam_store).await {
+        let envelope = match decrypt(envelope, signal_store).await {
             Ok(denvelope) => denvelope,
             Err(e) => {
                 error!("Failed to decrypt message: {e}");

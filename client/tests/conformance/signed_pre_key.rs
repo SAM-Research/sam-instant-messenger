@@ -6,9 +6,9 @@ use libsignal_protocol::{
 use rand::rngs::OsRng;
 use rand::{rngs::StdRng, SeedableRng as _};
 use rstest::rstest;
+use sam_client::signal_time_now;
 use sam_client::storage::key_generation::SignedPreKeyGenerator as _;
 use sam_client::storage::{SignalStore, SignalStoreType};
-use sam_client::{signal_time_now, storage::SamStore};
 
 #[rstest]
 #[case(signal_in_mem().await.signed_pre_key_store)]

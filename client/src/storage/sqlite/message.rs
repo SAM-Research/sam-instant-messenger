@@ -58,23 +58,19 @@ impl MessageStore for SqliteMessageStore {
 
 #[cfg(test)]
 mod test {
+    use sam_common::{AccountId, DeviceId};
     use std::time::Duration;
-
-    use libsignal_protocol::IdentityKeyPair;
-    use rand::rngs::OsRng;
-    use sam_common::{address::RegistrationId, AccountId, DeviceId};
 
     use crate::{
         encryption::envelope::DecryptedEnvelope,
         storage::{
             sqlite::SqliteSamStoreConfig, traits::message::MessageStore, ContactStore,
-            SamStoreConfig, SignalStoreConfig,
+            SamStoreConfig,
         },
     };
 
     #[tokio::test]
     async fn test_store_and_send_to_subscriber() {
-        let mut csprng = OsRng;
         let mut store = SqliteSamStoreConfig::in_memory()
             .await
             .create_store()
