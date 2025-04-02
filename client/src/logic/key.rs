@@ -13,12 +13,12 @@ use crate::{
             generate_ec_pre_keys, generate_pq_pre_keys, into_libsignal_bundle, KyberKeyGenerator,
             SignedPreKeyGenerator,
         },
-        AccountStore, ContactStore, Store, StoreType,
+        AccountStore, ContactStore, Store, SamStoreType,
     },
     ClientError,
 };
 
-pub async fn fetch_prekeys<T: StoreType, R: Rng + CryptoRng>(
+pub async fn fetch_prekeys<T: SamStoreType, R: Rng + CryptoRng>(
     store: &mut Store<T>,
     api_client: &impl ApiClient,
     account_id: AccountId,
@@ -57,7 +57,7 @@ pub async fn fetch_prekeys<T: StoreType, R: Rng + CryptoRng>(
     Ok(())
 }
 
-pub async fn publish_prekeys<T: StoreType, R: Rng + CryptoRng>(
+pub async fn publish_prekeys<T: SamStoreType, R: Rng + CryptoRng>(
     store: &mut Store<T>,
     api_client: &impl ApiClient,
     onetime_prekeys: usize,

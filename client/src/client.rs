@@ -21,23 +21,23 @@ use crate::{
         protocol::traits::{ProtocolConfig, SamProtocolClient},
         ApiClient,
     },
-    storage::{traits::message::MessageStore, AccountStore, Store, StoreConfig, StoreType},
+    storage::{traits::message::MessageStore, AccountStore, Store, StoreConfig, SamStoreType},
     ClientError,
 };
 pub trait ClientType {
-    type Store: StoreType;
+    type Store: SamStoreType;
     type ApiClient: ApiClient;
     type ProtocolClient: SamProtocolClient;
     type Rng: Rng + CryptoRng + Default;
 }
 
-pub struct DefaultClientType<T: StoreType, U: ApiClient, V: SamProtocolClient> {
+pub struct DefaultClientType<T: SamStoreType, U: ApiClient, V: SamProtocolClient> {
     _store: std::marker::PhantomData<T>,
     _api: std::marker::PhantomData<U>,
     _protocol: std::marker::PhantomData<V>,
 }
 
-impl<T: StoreType, U: ApiClient, V: SamProtocolClient> ClientType for DefaultClientType<T, U, V> {
+impl<T: SamStoreType, U: ApiClient, V: SamProtocolClient> ClientType for DefaultClientType<T, U, V> {
     type Store = T;
 
     type ApiClient = U;

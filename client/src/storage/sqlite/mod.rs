@@ -11,7 +11,7 @@ pub use session::SqliteSessionStore;
 pub use signed_pre_key::SqliteSignedPreKeyStore;
 use sqlx::sqlite::SqlitePoolOptions;
 
-use super::{Store, StoreConfig, StoreType};
+use super::{SamStoreType, SignalStoreType, Store, StoreConfig};
 use crate::ClientError;
 
 pub mod account;
@@ -27,10 +27,8 @@ pub mod signed_pre_key;
 #[derive(Debug)]
 pub struct SqliteStoreType;
 
-impl StoreType for SqliteStoreType {
+impl SignalStoreType for SqliteStoreType {
     type ContactStore = SqliteContactStore;
-
-    type AccountStore = SqliteAccountStore;
 
     type IdentityKeyStore = SqliteIdentityKeyStore;
 
@@ -45,6 +43,10 @@ impl StoreType for SqliteStoreType {
     type SenderKeyStore = SqliteSenderKeyStore;
 
     type MessageStore = SqliteMessageStore;
+}
+
+impl SamStoreType for SqliteStoreType {
+    type AccountStore = SqliteAccountStore;
 }
 
 pub type SqliteStore = Store<SqliteStoreType>;

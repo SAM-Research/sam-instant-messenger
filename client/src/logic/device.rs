@@ -6,12 +6,12 @@ use crate::{
     encryption::generate_password,
     net::ApiClient,
     storage::{
-        key_generation::create_registration_pre_keys, AccountStore, ContactStore, Store, StoreType,
+        key_generation::create_registration_pre_keys, AccountStore, ContactStore, Store, SamStoreType,
     },
     ClientError,
 };
 
-pub async fn provision_device<T: StoreType, R: Rng + CryptoRng>(
+pub async fn provision_device<T: SamStoreType, R: Rng + CryptoRng>(
     api_client: &impl ApiClient,
     store: &mut Store<T>,
     device_name: &str,

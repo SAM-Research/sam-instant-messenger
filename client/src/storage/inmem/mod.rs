@@ -1,4 +1,4 @@
-use super::{Store, StoreConfig, StoreType};
+use super::{SamStoreType, SignalStoreType, Store, StoreConfig};
 use crate::ClientError;
 pub use account::InMemoryAccountStore;
 use async_trait::async_trait;
@@ -19,11 +19,8 @@ pub mod signed_pre_key;
 #[derive(Debug)]
 pub struct InMemoryStoreType;
 
-impl StoreType for InMemoryStoreType {
+impl SignalStoreType for InMemoryStoreType {
     type ContactStore = InMemoryContactStore;
-
-    type AccountStore = InMemoryAccountStore;
-
     type IdentityKeyStore = InMemIdentityKeyStore;
 
     type PreKeyStore = InMemPreKeyStore;
@@ -37,6 +34,13 @@ impl StoreType for InMemoryStoreType {
     type SenderKeyStore = InMemSenderKeyStore;
 
     type MessageStore = InMemoryMessageStore;
+}
+
+
+impl SamStoreType for InMemoryStoreType {
+
+    type AccountStore = InMemoryAccountStore;
+
 }
 
 pub type InMemoryStore = Store<InMemoryStoreType>;

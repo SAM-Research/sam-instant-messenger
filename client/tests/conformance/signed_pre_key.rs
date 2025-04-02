@@ -6,7 +6,7 @@ use libsignal_protocol::{
 use rand::rngs::OsRng;
 use rand::{rngs::StdRng, SeedableRng as _};
 use rstest::rstest;
-use sam_client::storage::{key_generation::SignedPreKeyGenerator as _, StoreType};
+use sam_client::storage::{key_generation::SignedPreKeyGenerator as _, SamStoreType};
 use sam_client::{signal_time_now, storage::Store};
 
 #[rstest]
@@ -64,7 +64,7 @@ async fn signed_pre_key_can_be_saved_and_retrieved(
 #[case(in_mem().await)]
 #[case(sqlite().await)]
 #[tokio::test]
-async fn signed_pre_keys_ids_are_generated_properly(#[case] mut store: Store<impl StoreType>) {
+async fn signed_pre_keys_ids_are_generated_properly(#[case] mut store: Store<impl SamStoreType>) {
     let mut rng = StdRng::seed_from_u64(128);
     let expected: Vec<u32> = (1u32..=10u32).collect();
 

@@ -9,13 +9,13 @@ use crate::{
         protocol::{MessageStatus, SamProtocolClient},
         ApiClient,
     },
-    storage::{AccountStore, ContactStore, MessageStore, Store, StoreType},
+    storage::{AccountStore, ContactStore, MessageStore, Store, SamStoreType},
     ClientError,
 };
 
 use super::key::fetch_prekeys;
 
-pub async fn process_messages<T: StoreType>(
+pub async fn process_messages<T: SamStoreType>(
     store: &mut Store<T>,
     envelope_queue: &mut Receiver<ServerEnvelope>,
     block: bool,
@@ -50,7 +50,7 @@ pub async fn process_messages<T: StoreType>(
     Ok(())
 }
 
-pub async fn send_message<T: StoreType, R: Rng + CryptoRng>(
+pub async fn send_message<T: SamStoreType, R: Rng + CryptoRng>(
     store: &mut Store<T>,
     api_client: &impl ApiClient,
     ws_client: &mut impl SamProtocolClient,

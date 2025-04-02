@@ -27,7 +27,7 @@ pub use traits::{account::AccountStore, contact::ContactStore, message::MessageS
 
 #[async_trait(?Send)]
 pub trait StoreConfig {
-    type StoreType: StoreType;
+    type StoreType: SamStoreType;
 
     async fn create_store<ID: Into<u32>>(
         self,
@@ -41,9 +41,8 @@ pub trait ProvidesKeyId<T> {
     async fn next_key_id(&self) -> Result<T, ClientError>;
 }
 
-pub trait StoreType {
+pub trait SignalStoreType {
     type ContactStore: ContactStore;
-    type AccountStore: AccountStore;
     type IdentityKeyStore: IdentityKeyStore;
     type PreKeyStore: PreKeyStore + ProvidesKeyId<PreKeyId> + PreKeyGenerator;
     type SignedPreKeyStore: SignedPreKeyStore
@@ -55,8 +54,12 @@ pub trait StoreType {
     type MessageStore: MessageStore;
 }
 
+pub trait SamStoreType: SignalStoreType {
+    type AccountStore: AccountStore;
+}
+
 #[derive(Debug, Builder)]
-pub struct Store<T: StoreType> {
+pub struct Store<T: SamStoreType> {
     pub contact_store: T::ContactStore,
     pub account_store: T::AccountStore,
     pub identity_key_store: T::IdentityKeyStore,

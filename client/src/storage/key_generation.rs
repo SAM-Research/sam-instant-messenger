@@ -1,4 +1,4 @@
-use crate::storage::{ProvidesKeyId, Store, StoreType};
+use crate::storage::{ProvidesKeyId, Store, SamStoreType};
 use crate::{signal_time_now, ClientError};
 use async_trait::async_trait;
 use libsignal_core::curve::{KeyPair, PrivateKey};
@@ -138,7 +138,7 @@ pub(crate) fn into_libsignal_bundle(
     ))
 }
 
-pub async fn create_registration_pre_keys<S: StoreType, R: Rng + CryptoRng>(
+pub async fn create_registration_pre_keys<S: SamStoreType, R: Rng + CryptoRng>(
     store: &mut Store<S>,
     prekey_count: usize,
     id_key_pair: IdentityKeyPair,

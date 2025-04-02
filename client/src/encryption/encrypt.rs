@@ -13,7 +13,7 @@ use sam_common::{
 };
 
 use crate::{
-    storage::{AccountStore, ContactStore, Store, StoreType},
+    storage::{AccountStore, ContactStore, Store, SamStoreType},
     ClientError,
 };
 
@@ -40,7 +40,7 @@ use super::{
 pub async fn encrypt(
     message: impl Into<Vec<u8>>,
     recipients: Vec<AccountId>,
-    store: &mut Store<impl StoreType>,
+    store: &mut Store<impl SamStoreType>,
 ) -> Result<ClientEnvelope, ClientError> {
     let bytes = pad_message(&message.into());
 
@@ -101,7 +101,7 @@ pub async fn encrypt(
 /// * `Err(ClientError)` if decryption fails.
 pub async fn decrypt(
     envelope: ServerEnvelope,
-    store: &mut Store<impl StoreType>,
+    store: &mut Store<impl SamStoreType>,
 ) -> Result<DecryptedEnvelope, ClientError> {
     let message = match envelope.r#type() {
         SamMessageType::SignalMessage => {
@@ -165,12 +165,12 @@ mod test {
             key_generation::{
                 into_libsignal_bundle, KyberKeyGenerator, PreKeyGenerator, SignedPreKeyGenerator,
             },
-            AccountStore, ContactStore, Store, StoreConfig, StoreType,
+            AccountStore, ContactStore, Store, StoreConfig, SamStoreType,
         },
     };
 
     pub async fn create_pre_key_bundle<R: Rng + CryptoRng>(
-        store: &mut Store<impl StoreType>,
+        store: &mut Store<impl SamStoreType>,
         device_id: DeviceId,
         csprng: &mut R,
     ) -> Result<PreKeyBundle, SignalProtocolError> {
