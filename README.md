@@ -44,22 +44,31 @@ In order to run the end-to-end tests, you need to generate certificates.
 ./generate_cert.sh ../e2e/cert
 ```
 
-# Changing the database queries for SqliteStore.
+# Database Queries
 
-If you need to edit the database queries for SqliteStore, you must first instal sqlx-cli:
+If you need to edit the database queries, you must first install sqlx-cli:
 
 ```
 cargo install sqlx-cli
 ```
 
-Then, create a .env file pointing to a Sqlite database file:
+
+## Changing the Database Queries for SqliteStore.
+
+Create a .env file inside the `client` directory pointing to a Sqlite database file:
 
 ```
-~/path/to/project/client/database/dev.db
+DATABASE_URL=~/path/to/project/client/database/dev.db
 ```
 
 Then, to create the file if it does not exist yet, type the following:
 
+first:
+
+```
+cd client
+```
+then:
 ```
 sqlx db create
 ```
@@ -73,7 +82,31 @@ sqlx migrate run
 Once this is done, you can edit the queries. When you are done, remember to run:
 
 ```
-cargo sqlx prepare --workspace
+cargo sqlx prepare
 ```
 
 from the project root.
+
+## Changing the Database Queries for Postgres Managers.
+
+Create a .env file inside the `server` directory pointing to the test database:
+
+```
+DATABASE_URL=postgres://test:test@127.0.0.1:5432/sam_test_db
+```
+
+Then you need to run the test database using docker compose:
+
+```
+docker compose -f server/database/test-database.yml up
+```
+
+You can now modify the database queries. When you are done, you should run sqlx prepare so others will not need an active database connection to compile the project:
+
+```
+cd server
+```
+
+```
+cargo sqlx prepare
+```
