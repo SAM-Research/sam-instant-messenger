@@ -22,13 +22,6 @@ use super::{
     SamProtocolClient,
 };
 
-/*enum ServerStatus {
-    Ack(MessageId),
-    ExtraDevices(MessageId, ExtraDevicesStatus),
-    MissingDevices(MessageId, MissingDevicesError),
-    EmptyMessage,
-}*/
-
 struct SamProtocolReceiver {
     client: Arc<Mutex<WebSocketClient>>,
     enqueue_status: Sender<ServerStatus>,
