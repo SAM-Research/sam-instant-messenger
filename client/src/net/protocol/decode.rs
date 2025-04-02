@@ -107,7 +107,7 @@ impl ServerStatus {
             ServerStatus::Ack(id)
             | ServerStatus::EmptyMessage(id)
             | ServerStatus::MissingDevices(id, _)
-            | ServerStatus::ExtraDevices(id, _) => id.clone(),
+            | ServerStatus::ExtraDevices(id, _) => *id,
         }
     }
 
@@ -137,8 +137,8 @@ impl TryInto<MessageStatus> for ServerStatus {
     }
 }
 
-impl Into<EnvelopeOrStatus> for ServerStatus {
-    fn into(self) -> EnvelopeOrStatus {
-        EnvelopeOrStatus::Status(self)
+impl From<ServerStatus> for EnvelopeOrStatus {
+    fn from(val: ServerStatus) -> Self {
+        EnvelopeOrStatus::Status(val)
     }
 }
