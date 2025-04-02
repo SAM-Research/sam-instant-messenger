@@ -21,7 +21,7 @@ use crate::{
         protocol::traits::{ProtocolConfig, SamProtocolClient},
         ApiClient,
     },
-    storage::{traits::message::MessageStore, AccountStore, Store, StoreConfig, SamStoreType},
+    storage::{traits::message::MessageStore, AccountStore, SamStoreType, Store, StoreConfig},
     ClientError,
 };
 pub trait ClientType {
@@ -37,7 +37,9 @@ pub struct DefaultClientType<T: SamStoreType, U: ApiClient, V: SamProtocolClient
     _protocol: std::marker::PhantomData<V>,
 }
 
-impl<T: SamStoreType, U: ApiClient, V: SamProtocolClient> ClientType for DefaultClientType<T, U, V> {
+impl<T: SamStoreType, U: ApiClient, V: SamProtocolClient> ClientType
+    for DefaultClientType<T, U, V>
+{
     type Store = T;
 
     type ApiClient = U;

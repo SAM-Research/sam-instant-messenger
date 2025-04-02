@@ -13,7 +13,7 @@ use sam_common::{
 };
 
 use crate::{
-    storage::{AccountStore, ContactStore, Store, SamStoreType},
+    storage::{AccountStore, ContactStore, SamStoreType, Store},
     ClientError,
 };
 
@@ -165,7 +165,7 @@ mod test {
             key_generation::{
                 into_libsignal_bundle, KyberKeyGenerator, PreKeyGenerator, SignedPreKeyGenerator,
             },
-            AccountStore, ContactStore, Store, StoreConfig, SamStoreType,
+            AccountStore, ContactStore, SamStoreType, Store, StoreConfig,
         },
     };
 

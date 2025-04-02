@@ -6,7 +6,8 @@ use crate::{
     encryption::generate_password,
     net::ApiClient,
     storage::{
-        key_generation::create_registration_pre_keys, AccountStore, ContactStore, Store, SamStoreType,
+        key_generation::create_registration_pre_keys, AccountStore, ContactStore, SamStoreType,
+        Store,
     },
     ClientError,
 };

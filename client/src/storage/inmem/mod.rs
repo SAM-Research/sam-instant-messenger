@@ -21,6 +21,7 @@ pub struct InMemoryStoreType;
 
 impl SignalStoreType for InMemoryStoreType {
     type ContactStore = InMemoryContactStore;
+
     type IdentityKeyStore = InMemIdentityKeyStore;
 
     type PreKeyStore = InMemPreKeyStore;
@@ -36,11 +37,8 @@ impl SignalStoreType for InMemoryStoreType {
     type MessageStore = InMemoryMessageStore;
 }
 
-
 impl SamStoreType for InMemoryStoreType {
-
     type AccountStore = InMemoryAccountStore;
-
 }
 
 pub type InMemoryStore = Store<InMemoryStoreType>;

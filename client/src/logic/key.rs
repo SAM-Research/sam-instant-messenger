@@ -13,7 +13,7 @@ use crate::{
             generate_ec_pre_keys, generate_pq_pre_keys, into_libsignal_bundle, KyberKeyGenerator,
             SignedPreKeyGenerator,
         },
-        AccountStore, ContactStore, Store, SamStoreType,
+        AccountStore, ContactStore, SamStoreType, Store,
     },
     ClientError,
 };

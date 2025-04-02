@@ -9,7 +9,7 @@ use crate::{
         protocol::{MessageStatus, SamProtocolClient},
         ApiClient,
     },
-    storage::{AccountStore, ContactStore, MessageStore, Store, SamStoreType},
+    storage::{AccountStore, ContactStore, MessageStore, SamStoreType, Store},
     ClientError,
 };
 

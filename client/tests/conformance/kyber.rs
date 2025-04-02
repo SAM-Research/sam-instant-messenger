@@ -5,7 +5,7 @@ use libsignal_protocol::{
 };
 use rand::rngs::OsRng;
 use rstest::rstest;
-use sam_client::storage::{key_generation::KyberKeyGenerator as _, Store, SamStoreType};
+use sam_client::storage::{key_generation::KyberKeyGenerator as _, SamStoreType, Store};
 
 #[rstest]
 #[case(in_mem().await.kyber_pre_key_store)]
