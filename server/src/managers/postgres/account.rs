@@ -162,6 +162,7 @@ mod test {
     }
 
     #[tokio::test]
+    #[ignore = "requires a postgres test database"]
     async fn postgres_account_manager() {
         let _ = env_logger::try_init();
         let mut manager = accounts(connection_str()).await;
@@ -197,6 +198,7 @@ mod test {
     }
 
     #[tokio::test]
+    #[ignore = "requires a postgres test database"]
     async fn postgres_account_manager_get_account_does_not_exist() {
         let manager = accounts(connection_str()).await;
 
@@ -209,6 +211,7 @@ mod test {
     }
 
     #[tokio::test]
+    #[ignore = "requires a postgres test database"]
     async fn postgres_account_manager_remove_account_does_not_exist() {
         let mut manager = accounts(connection_str()).await;
 
@@ -221,6 +224,7 @@ mod test {
     }
 
     #[tokio::test]
+    #[ignore = "requires a postgres test database"]
     async fn postgres_account_manager_removed_account_cannot_be_retrieved() {
         let mut manager = accounts(connection_str()).await;
         let username = Uuid::new_v4();
@@ -242,6 +246,7 @@ mod test {
     }
 
     #[tokio::test]
+    #[ignore = "requires a postgres test database"]
     async fn postgres_account_manager_get_by_username_account_does_not_exist() {
         let manager = accounts(connection_str()).await;
 
@@ -254,6 +259,7 @@ mod test {
     }
 
     #[tokio::test]
+    #[ignore = "requires a postgres test database"]
     async fn postgres_account_manager_cannot_insert_duplicate_ids() {
         let mut manager = accounts(connection_str()).await;
         let id = AccountId::generate();
@@ -287,6 +293,7 @@ mod test {
     }
 
     #[tokio::test]
+    #[ignore = "requires a postgres test database"]
     async fn postgres_account_manager_cannot_insert_duplicate_usernames() {
         let mut manager = accounts(connection_str()).await;
         let username = Uuid::new_v4();
