@@ -8,7 +8,9 @@ use crate::{
     managers::traits::{
         account_manager::AccountManager,
         device_manager::DeviceManager,
-        key_manager::{LastResortKeyManager, PqPreKeyManager, PreKeyManager, SignedPreKeyManager},
+        key_manager::{
+            EcPreKeyManager, LastResortPqPreKeyManager, PqPreKeyManager, SignedPreKeyManager,
+        },
     },
     state::{state_type::StateType, ServerState},
     ServerError,
@@ -24,14 +26,27 @@ pub async fn get_keybundle<T: StateType>(
         .get_device(account_id, device_id)
         .await?
         .registration_id();
-    let pre_key = state.keys.get_pre_key(account_id, device_id).await?;
-    let pq_pre_key = state.keys.get_pq_pre_key(account_id, device_id).await?;
-    let signed_pre_key = state.keys.get_signed_pre_key(account_id, device_id).await?;
+    let pre_key = state
+        .keys
+        .pre_keys
+        .get_pre_key(account_id, device_id)
+        .await?;
+    let pq_pre_key = state
+        .keys
+        .pq_pre_keys
+        .get_pq_pre_key(account_id, device_id)
+        .await?;
+    let signed_pre_key = state
+        .keys
+        .signed_pre_keys
+        .get_signed_pre_key(account_id, device_id)
+        .await?;
 
     let pre_key = match pre_key {
         Some(key) => {
             state
                 .keys
+                .pre_keys
                 .remove_pre_key(account_id, device_id, key.id())
                 .await?;
             Some(key)
@@ -43,6 +58,7 @@ pub async fn get_keybundle<T: StateType>(
         Some(key) => {
             state
                 .keys
+                .pq_pre_keys
                 .remove_pq_pre_key(account_id, device_id, key.id())
                 .await?;
             key
@@ -50,6 +66,7 @@ pub async fn get_keybundle<T: StateType>(
         None => {
             state
                 .keys
+                .last_resort_keys
                 .get_last_resort_key(account_id, device_id)
                 .await?
         }
@@ -75,6 +92,7 @@ pub async fn add_keybundle<T: StateType>(
         for pre_key in pre_keys {
             state
                 .keys
+                .pre_keys
                 .add_pre_key(account_id, device_id, pre_key)
                 .await?;
         }
@@ -82,6 +100,7 @@ pub async fn add_keybundle<T: StateType>(
     if let Some(key) = key_bundle.signed_pre_key {
         state
             .keys
+            .signed_pre_keys
             .set_signed_pre_key(account_id, device_id, identity, key)
             .await?;
     }
@@ -90,6 +109,7 @@ pub async fn add_keybundle<T: StateType>(
         for pre_key in pre_keys {
             state
                 .keys
+                .pq_pre_keys
                 .add_pq_pre_key(account_id, device_id, identity, pre_key)
                 .await?;
         }
@@ -98,6 +118,7 @@ pub async fn add_keybundle<T: StateType>(
     if let Some(key) = key_bundle.pq_last_resort_pre_key {
         state
             .keys
+            .last_resort_keys
             .set_last_resort_key(account_id, device_id, identity, key)
             .await?
     }
@@ -187,7 +208,8 @@ mod test {
                 account_manager::AccountManager,
                 device_manager::DeviceManager,
                 key_manager::{
-                    LastResortKeyManager, PqPreKeyManager, PreKeyManager as _, SignedPreKeyManager,
+                    EcPreKeyManager as _, LastResortPqPreKeyManager, PqPreKeyManager,
+                    SignedPreKeyManager,
                 },
             },
         },
@@ -223,21 +245,25 @@ mod test {
         .expect("User can create key bundle");
         assert!(state
             .keys
+            .last_resort_keys
             .get_last_resort_key(account_id, 1.into())
             .await
             .is_ok());
         assert!(state
             .keys
+            .signed_pre_keys
             .get_signed_pre_key(account_id, 1.into())
             .await
             .is_ok());
         assert!(state
             .keys
+            .pre_keys
             .get_pre_key_ids(account_id, 1.into())
             .await
             .is_ok());
         assert!(state
             .keys
+            .pq_pre_keys
             .get_pq_pre_key_ids(account_id, 1.into())
             .await
             .is_ok());
@@ -346,21 +372,25 @@ mod test {
 
         assert!(state
             .keys
+            .last_resort_keys
             .get_last_resort_key(account_id, 1.into())
             .await
             .is_ok());
         assert!(state
             .keys
+            .signed_pre_keys
             .get_signed_pre_key(account_id, 1.into())
             .await
             .is_ok());
         assert!(state
             .keys
+            .pre_keys
             .get_pre_key_ids(account_id, 1.into())
             .await
             .is_ok());
         assert!(state
             .keys
+            .pq_pre_keys
             .get_pq_pre_key_ids(account_id, 1.into())
             .await
             .is_ok());

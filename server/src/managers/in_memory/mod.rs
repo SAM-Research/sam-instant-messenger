@@ -1,5 +1,8 @@
 use device::InMemoryDeviceManager;
-use keys::InMemoryKeyManager;
+use keys::{
+    InMemoryEcPreKeyManager, InMemoryKeyManager, InMemoryLastResortPqPreKeyManager,
+    InMemoryPqPreKeyManager, InMemorySignedPreKeyManager,
+};
 use message::InMemoryMessageManager;
 
 pub mod account;
@@ -14,6 +17,8 @@ use account::InMemoryAccountManager;
 
 use crate::state::{state_type::StateType, ServerState};
 
+use super::KeyManager;
+
 #[derive(Clone)]
 pub struct InMemStateType;
 
@@ -21,7 +26,7 @@ impl StateType for InMemStateType {
     type AccountManager = InMemoryAccountManager;
     type DeviceManager = InMemoryDeviceManager;
     type MessageManager = InMemoryMessageManager;
-    type KeyManager = InMemoryKeyManager;
+    type KeyManagerType = InMemoryKeyManager;
 }
 
 impl ServerState<InMemStateType> {
@@ -34,7 +39,12 @@ impl ServerState<InMemStateType> {
             InMemoryAccountManager::default(),
             InMemoryDeviceManager::new(link_secret, provision_expire_seconds),
             InMemoryMessageManager::new(message_buffer),
-            InMemoryKeyManager::default(),
+            KeyManager::new(
+                InMemoryEcPreKeyManager::default(),
+                InMemoryPqPreKeyManager::default(),
+                InMemorySignedPreKeyManager::default(),
+                InMemoryLastResortPqPreKeyManager::default(),
+            ),
         )
     }
 
@@ -46,7 +56,12 @@ impl ServerState<InMemStateType> {
             InMemoryAccountManager::default(),
             InMemoryDeviceManager::new(LINK_SECRET.to_string(), 600),
             InMemoryMessageManager::default(),
-            InMemoryKeyManager::default(),
+            KeyManager::new(
+                InMemoryEcPreKeyManager::default(),
+                InMemoryPqPreKeyManager::default(),
+                InMemorySignedPreKeyManager::default(),
+                InMemoryLastResortPqPreKeyManager::default(),
+            ),
         )
     }
 }
