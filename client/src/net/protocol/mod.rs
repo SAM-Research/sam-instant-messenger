@@ -9,13 +9,14 @@ use tokio_tungstenite::Connector;
 use websocket::WebSocketClientConfig;
 
 pub mod client;
+pub mod decode;
 pub mod error;
 pub mod traits;
 pub mod websocket;
 
 pub use client::ProtocolClient;
-pub use traits::{DeviceList, MessageStatus, ProtocolConfig, SamProtocolClient};
-
+pub use decode::{DeviceList, MessageStatus};
+pub use traits::{ProtocolConfig, SamProtocolClient};
 pub struct WebSocketProtocolClientConfig {
     base_url: String,
     config: Option<ClientConfig>,

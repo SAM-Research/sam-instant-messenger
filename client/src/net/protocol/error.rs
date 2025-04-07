@@ -1,12 +1,17 @@
-use derive_more::{Display, Error};
+use derive_more::{Display, Error, From};
 
 use super::websocket::WebSocketError;
 
-#[derive(Debug, Error, Display)]
+#[derive(Debug, Error, Display, From)]
 pub enum ProtocolError {
-    MalformedServerMessage,
     InvalidCredentials,
     ReceivedWrongResponseId,
-    EmptyMessage,
+    DecodeError(DecodeError),
     WebSocketError(WebSocketError),
+}
+
+#[derive(Debug, Error, Display, From)]
+pub enum DecodeError {
+    MalformedServerMessage,
+    EmptyMessage,
 }
