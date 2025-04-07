@@ -1,14 +1,14 @@
 use log::error;
 use rand::{CryptoRng, Rng};
-use sam_common::{sam_message::ServerEnvelope, AccountId};
+use sam_common::{
+    sam_message::{ClientEnvelope, ServerEnvelope},
+    AccountId,
+};
 use tokio::sync::mpsc::Receiver;
 
 use crate::{
     encryption::{decrypt, encrypt},
-    net::{
-        protocol::{MessageStatus, SamProtocolClient},
-        ApiClient,
-    },
+    net::{protocol::MessageStatus, ApiClient},
     storage::{
         AccountStore, ContactStore, MessageStore, SamStore, SamStoreType, SignalStore,
         SignalStoreType,
@@ -54,15 +54,14 @@ pub async fn process_messages<T: SignalStoreType, U: SamStoreType>(
     Ok(())
 }
 
-pub async fn send_message<T: SignalStoreType, U: SamStoreType, R: Rng + CryptoRng>(
+pub async fn prepare_message<T: SignalStoreType, U: SamStoreType, R: Rng + CryptoRng>(
     signal_store: &mut SignalStore<T>,
     sam_store: &mut SamStore<U>,
     api_client: &impl ApiClient,
-    ws_client: &mut impl SamProtocolClient,
     recipient: AccountId,
     msg: impl Into<Vec<u8>>,
     mut rng: &mut R,
-) -> Result<(), ClientError> {
+) -> Result<ClientEnvelope, ClientError> {
     if !sam_store.contact_store.contains_contact(recipient).await? {
         fetch_prekeys(
             signal_store,
@@ -80,7 +79,16 @@ pub async fn send_message<T: SignalStoreType, U: SamStoreType, R: Rng + CryptoRn
         fetch_prekeys(signal_store, sam_store, api_client, my_id, None, &mut rng).await?;
     }
     let envelope = encrypt(msg, vec![recipient, my_id], signal_store, sam_store).await?;
-    let status = ws_client.send_message(envelope).await?;
+    Ok(envelope)
+}
+
+pub async fn handle_message_response<T: SignalStoreType, U: SamStoreType, R: Rng + CryptoRng>(
+    signal_store: &mut SignalStore<T>,
+    sam_store: &mut SamStore<U>,
+    api_client: &impl ApiClient,
+    mut rng: &mut R,
+    status: MessageStatus,
+) -> Result<(), ClientError> {
     match status {
         MessageStatus::ExtraDevices(device_lists) => {
             for list in device_lists {

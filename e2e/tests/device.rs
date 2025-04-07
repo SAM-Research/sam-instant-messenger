@@ -130,7 +130,7 @@ async fn can_unlink_device() {
 
 #[tokio::test]
 async fn can_delete_device() {
-    let address = "127.0.0.1:9381";
+    let address = "127.0.0.1:9382";
     let mut server = TestServer::start(address, None).await;
 
     server
@@ -188,7 +188,7 @@ async fn can_delete_device() {
 
 #[tokio::test]
 async fn can_delete_account() {
-    let address = "127.0.0.1:9382";
+    let address = "127.0.0.1:9383";
     let mut server = TestServer::start(address, None).await;
 
     server

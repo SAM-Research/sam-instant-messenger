@@ -9,7 +9,7 @@ use sam_common::{
 use tokio::sync::broadcast::Receiver;
 use tokio::sync::mpsc::Receiver as MpscReceiver;
 
-use crate::logic::provision_device;
+use crate::logic::{handle_message_response, prepare_message, provision_device};
 use crate::net::protocol::ProtocolClient;
 use crate::net::HttpClient;
 use crate::storage::inmem::InMemorySignalStoreType;
@@ -17,7 +17,7 @@ use crate::storage::sqlite::{SqliteSamStoreType, SqliteSignalStoreType};
 use crate::storage::{InMemorySamStoreType, SamStoreConfig, SignalStore, SignalStoreType};
 use crate::{
     encryption::envelope::DecryptedEnvelope,
-    logic::{process_messages, publish_prekeys, register_account, send_message},
+    logic::{process_messages, publish_prekeys, register_account},
     net::{
         api_trait::ApiClientConfig,
         protocol::traits::{ProtocolConfig, SamProtocolClient},
@@ -345,16 +345,25 @@ impl<T: ClientType> Client<T> {
         recipient: AccountId,
         msg: impl Into<Vec<u8>>,
     ) -> Result<(), ClientError> {
-        send_message(
+        let client_envelope = prepare_message(
             &mut self.signal_store,
             &mut self.sam_store,
             &self.api_client,
-            &mut self.protocol_client,
             recipient,
             msg,
             &mut self.rng,
         )
-        .await
+        .await?;
+        let status = self.protocol_client.send_message(client_envelope).await?;
+        handle_message_response(
+            &mut self.signal_store,
+            &mut self.sam_store,
+            &self.api_client,
+            &mut self.rng,
+            status,
+        )
+        .await?;
+        Ok(())
     }
 
     /// Returns a broadcast receiver for incoming messages that have been decrypted.
