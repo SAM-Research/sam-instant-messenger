@@ -96,11 +96,7 @@ pub async fn generate_pq_pre_key(
     id: KyberPreKeyId,
     private_key: &PrivateKey,
 ) -> Result<KyberPreKeyRecord, SignalProtocolError> {
-    KyberPreKeyRecord::generate(
-        KeyType::Kyber1024,
-        id,
-        private_key,
-    )
+    KyberPreKeyRecord::generate(KeyType::Kyber1024, id, private_key)
 }
 
 #[async_trait(?Send)]
