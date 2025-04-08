@@ -1,5 +1,4 @@
 use super::{decode::MessageStatus, error::ProtocolError};
-use async_trait::async_trait;
 
 use sam_common::{
     sam_message::{ClientEnvelope, ServerEnvelope},
@@ -18,11 +17,10 @@ pub trait SamProtocolClient {
     ) -> Result<MessageStatus, ProtocolError>;
 }
 
-#[async_trait(?Send)]
 pub trait ProtocolConfig {
     type ProtocolClient: SamProtocolClient;
 
-    async fn create(
+    fn create(
         self,
         account_id: AccountId,
         device_id: DeviceId,

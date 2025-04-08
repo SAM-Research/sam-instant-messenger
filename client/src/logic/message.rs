@@ -8,10 +8,7 @@ use tokio::sync::mpsc::Receiver;
 
 use crate::{
     encryption::{decrypt, encrypt},
-    net::{
-        protocol::{MessageStatus, SamProtocolClient},
-        ApiClient,
-    },
+    net::{protocol::MessageStatus, ApiClient},
     storage::{AccountStore, ContactStore, MessageStore, Store, StoreType},
     ClientError,
 };
