@@ -6,7 +6,7 @@ use sam_common::{AccountId, DeviceId};
 use std::sync::Arc;
 use tokio_tungstenite::tungstenite::http;
 use tokio_tungstenite::Connector;
-use websocket::{WebSocketClient, WebSocketClientConfig};
+use websocket::WebSocketClientConfig;
 
 pub mod client;
 pub mod decode;
@@ -17,6 +17,7 @@ pub mod websocket;
 pub use client::ProtocolClient;
 pub use decode::{DeviceList, MessageStatus};
 pub use traits::{ProtocolConfig, SamProtocolClient};
+
 pub struct WebSocketProtocolClientConfig {
     base_url: String,
     config: Option<ClientConfig>,
@@ -36,34 +37,21 @@ impl WebSocketProtocolClientConfig {
             config: Some(config),
         }
     }
-    pub fn to_websocket_client(
-        self,
-        account_id: AccountId,
-        device_id: DeviceId,
-        password: String,
-    ) -> Result<WebSocketClient, ProtocolError> {
-        let (url, connector) = match self.config {
-            None => (format!("ws://{}", self.base_url), None),
-            Some(config) => (
-                format!("wss://{}", self.base_url),
-                Some(Connector::Rustls(Arc::new(config))),
-            ),
-        };
-        let basic = format!("{account_id}.{device_id}:{password}");
-        let basic = format!("Basic {}", BASE64_STANDARD.encode(basic));
-        let ws_client = WebSocketClientConfig::builder()
-            .maybe_tls(connector)
-            .url(format!("{}/api/v1/websocket", url))
-            .headers(vec![(
-                http::header::AUTHORIZATION,
-                http::HeaderValue::from_str(&basic)
-                    .inspect_err(|e| debug!("{e}"))
-                    .map_err(|_| ProtocolError::InvalidCredentials)?,
-            )])
-            .build()
-            .into();
-        Ok(ws_client)
+}
+
+pub fn get_ws_url(config: Option<ClientConfig>, base_url: String) -> (String, Option<Connector>) {
+    match config {
+        None => (format!("ws://{}", base_url), None),
+        Some(config) => (
+            format!("wss://{}", base_url),
+            Some(Connector::Rustls(Arc::new(config))),
+        ),
     }
+}
+
+pub fn get_ws_auth(account_id: AccountId, device_id: DeviceId, password: String) -> String {
+    let basic = format!("{account_id}.{device_id}:{password}");
+    format!("Basic {}", BASE64_STANDARD.encode(basic))
 }
 
 impl ProtocolConfig for WebSocketProtocolClientConfig {
@@ -75,7 +63,19 @@ impl ProtocolConfig for WebSocketProtocolClientConfig {
         device_id: DeviceId,
         password: String,
     ) -> Result<Self::ProtocolClient, ProtocolError> {
-        let ws_client = self.to_websocket_client(account_id, device_id, password)?;
+        let (url, connector) = get_ws_url(self.config, self.base_url);
+        let basic = get_ws_auth(account_id, device_id, password);
+        let ws_client = WebSocketClientConfig::builder()
+            .maybe_tls(connector)
+            .url(format!("{}/api/v1/websocket", url))
+            .headers(vec![(
+                http::header::AUTHORIZATION,
+                http::HeaderValue::from_str(&basic)
+                    .inspect_err(|e| debug!("{e}"))
+                    .map_err(|_| ProtocolError::InvalidCredentials)?,
+            )])
+            .build()
+            .into();
         Ok(ProtocolClient::new(ws_client))
     }
 }
