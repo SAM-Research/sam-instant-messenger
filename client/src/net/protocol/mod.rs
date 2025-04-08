@@ -6,7 +6,7 @@ use sam_common::{AccountId, DeviceId};
 use std::sync::Arc;
 use tokio_tungstenite::tungstenite::http;
 use tokio_tungstenite::Connector;
-use websocket::WebSocketClientConfig;
+use websocket::{WebSocketClient, WebSocketClientConfig};
 
 pub mod client;
 pub mod decode;
@@ -36,18 +36,13 @@ impl WebSocketProtocolClientConfig {
             config: Some(config),
         }
     }
-}
 
-#[async_trait::async_trait(?Send)]
-impl ProtocolConfig for WebSocketProtocolClientConfig {
-    type ProtocolClient = ProtocolClient;
-
-    async fn create(
+    pub fn to_websocket_client(
         self,
         account_id: AccountId,
         device_id: DeviceId,
         password: String,
-    ) -> Result<Self::ProtocolClient, error::ProtocolError> {
+    ) -> Result<WebSocketClient, ProtocolError> {
         let (url, connector) = match self.config {
             None => (format!("ws://{}", self.base_url), None),
             Some(config) => (
@@ -68,7 +63,20 @@ impl ProtocolConfig for WebSocketProtocolClientConfig {
             )])
             .build()
             .into();
+        Ok(ws_client)
+    }
+}
 
+impl ProtocolConfig for WebSocketProtocolClientConfig {
+    type ProtocolClient = ProtocolClient;
+
+    fn create(
+        self,
+        account_id: AccountId,
+        device_id: DeviceId,
+        password: String,
+    ) -> Result<Self::ProtocolClient, ProtocolError> {
+        let ws_client = self.to_websocket_client(account_id, device_id, password)?;
         Ok(ProtocolClient::new(ws_client))
     }
 }
