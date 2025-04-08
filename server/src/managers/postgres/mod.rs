@@ -15,5 +15,5 @@ impl StateType for PostgresStateType {
     type AccountManager = PostgresAccountManager;
     type DeviceManager = InMemoryDeviceManager;
     type MessageManager = InMemoryMessageManager;
-    type KeyManager = InMemoryKeyManager;
+    type KeyManagerType = InMemoryKeyManager;
 }

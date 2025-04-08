@@ -7,7 +7,7 @@ use sam_common::{
 use crate::managers::error::KeyManagerError;
 
 #[async_trait::async_trait]
-pub trait PreKeyManager: Send + Sync + Clone {
+pub trait EcPreKeyManager: Send + Sync + Clone {
     async fn get_pre_key(
         &self,
         account_id: AccountId,
@@ -33,7 +33,7 @@ pub trait PreKeyManager: Send + Sync + Clone {
 }
 
 #[async_trait::async_trait]
-pub trait SignedPreKeyManager {
+pub trait SignedPreKeyManager: Send + Sync + Clone {
     async fn get_signed_pre_key(
         &self,
         account_id: AccountId,
@@ -54,7 +54,7 @@ pub trait SignedPreKeyManager {
 }
 
 #[async_trait::async_trait]
-pub trait PqPreKeyManager {
+pub trait PqPreKeyManager: Send + Sync + Clone {
     async fn get_pq_pre_key(
         &self,
         account_id: AccountId,
@@ -81,7 +81,7 @@ pub trait PqPreKeyManager {
 }
 
 #[async_trait::async_trait]
-pub trait LastResortKeyManager {
+pub trait LastResortPqPreKeyManager: Send + Sync + Clone {
     async fn get_last_resort_key(
         &self,
         account_id: AccountId,

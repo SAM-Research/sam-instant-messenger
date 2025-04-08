@@ -3,13 +3,14 @@ use std::{
     sync::Arc,
 };
 
-use crate::managers::error::KeyManagerError;
+use crate::managers::{error::KeyManagerError, KeyManagerType};
 use crate::{
     auth::keys::verify_key,
     managers::traits::key_manager::{
-        LastResortKeyManager, PqPreKeyManager, PreKeyManager, SignedPreKeyManager,
+        EcPreKeyManager, LastResortPqPreKeyManager, PqPreKeyManager, SignedPreKeyManager,
     },
 };
+use async_trait::async_trait;
 use libsignal_protocol::IdentityKey;
 use sam_common::{
     address::{AccountId, DeviceAddress, DeviceId},
@@ -17,33 +18,41 @@ use sam_common::{
 };
 use tokio::sync::Mutex;
 
-#[derive(Clone)]
-pub struct InMemoryKeyManager {
+#[derive(Clone, Debug, Default)]
+pub struct InMemoryEcPreKeyManager {
     pre_keys: Arc<Mutex<HashMap<DeviceAddress, Vec<EcPreKey>>>>,
+}
+
+#[derive(Clone, Debug, Default)]
+pub struct InMemorySignedPreKeyManager {
     signed_pre_keys: Arc<Mutex<HashMap<DeviceAddress, SignedEcPreKey>>>,
+}
+
+#[derive(Clone, Debug, Default)]
+pub struct InMemoryPqPreKeyManager {
     pq_pre_keys: Arc<Mutex<HashMap<DeviceAddress, Vec<PqPreKey>>>>,
+}
+
+#[derive(Clone, Debug, Default)]
+pub struct InMemoryLastResortPqPreKeyManager {
     last_resort_keys: Arc<Mutex<HashMap<DeviceAddress, PqPreKey>>>,
 }
 
-impl Default for InMemoryKeyManager {
-    fn default() -> Self {
-        Self::new()
-    }
+#[derive(Clone)]
+pub struct InMemoryKeyManager;
+
+impl KeyManagerType for InMemoryKeyManager {
+    type EcPreKeyManager = InMemoryEcPreKeyManager;
+
+    type PqPreKeyManager = InMemoryPqPreKeyManager;
+
+    type SignedPreKeyManager = InMemorySignedPreKeyManager;
+
+    type LastResortPqPreKeyManager = InMemoryLastResortPqPreKeyManager;
 }
 
-impl InMemoryKeyManager {
-    pub fn new() -> Self {
-        InMemoryKeyManager {
-            pre_keys: Arc::new(Mutex::new(HashMap::new())),
-            signed_pre_keys: Arc::new(Mutex::new(HashMap::new())),
-            pq_pre_keys: Arc::new(Mutex::new(HashMap::new())),
-            last_resort_keys: Arc::new(Mutex::new(HashMap::new())),
-        }
-    }
-}
-
-#[async_trait::async_trait]
-impl PreKeyManager for InMemoryKeyManager {
+#[async_trait]
+impl EcPreKeyManager for InMemoryEcPreKeyManager {
     async fn get_pre_key(
         &self,
         account_id: AccountId,
@@ -121,8 +130,8 @@ impl PreKeyManager for InMemoryKeyManager {
     }
 }
 
-#[async_trait::async_trait]
-impl SignedPreKeyManager for InMemoryKeyManager {
+#[async_trait]
+impl SignedPreKeyManager for InMemorySignedPreKeyManager {
     async fn get_signed_pre_key(
         &self,
         account_id: AccountId,
@@ -170,8 +179,8 @@ impl SignedPreKeyManager for InMemoryKeyManager {
     }
 }
 
-#[async_trait::async_trait]
-impl PqPreKeyManager for InMemoryKeyManager {
+#[async_trait]
+impl PqPreKeyManager for InMemoryPqPreKeyManager {
     async fn get_pq_pre_key(
         &self,
         account_id: AccountId,
@@ -258,8 +267,8 @@ impl PqPreKeyManager for InMemoryKeyManager {
     }
 }
 
-#[async_trait::async_trait]
-impl LastResortKeyManager for InMemoryKeyManager {
+#[async_trait]
+impl LastResortPqPreKeyManager for InMemoryLastResortPqPreKeyManager {
     async fn get_last_resort_key(
         &self,
         account_id: AccountId,
