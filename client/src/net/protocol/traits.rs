@@ -17,10 +17,11 @@ pub trait SamProtocolClient {
     ) -> Result<MessageStatus, ProtocolError>;
 }
 
+#[async_trait::async_trait]
 pub trait ProtocolConfig {
     type ProtocolClient: SamProtocolClient;
 
-    fn create(
+    async fn create(
         self,
         account_id: AccountId,
         device_id: DeviceId,

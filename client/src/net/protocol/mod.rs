@@ -39,7 +39,7 @@ impl WebSocketProtocolClientConfig {
     }
 }
 
-pub fn get_ws_url(config: Option<ClientConfig>, base_url: String) -> (String, Option<Connector>) {
+pub fn get_ws_url_and_connector(config: Option<ClientConfig>, base_url: String) -> (String, Option<Connector>) {
     match config {
         None => (format!("ws://{}", base_url), None),
         Some(config) => (
@@ -54,16 +54,17 @@ pub fn get_ws_auth(account_id: AccountId, device_id: DeviceId, password: String)
     format!("Basic {}", BASE64_STANDARD.encode(basic))
 }
 
+#[async_trait::async_trait]
 impl ProtocolConfig for WebSocketProtocolClientConfig {
     type ProtocolClient = ProtocolClient;
 
-    fn create(
+    async fn create(
         self,
         account_id: AccountId,
         device_id: DeviceId,
         password: String,
     ) -> Result<Self::ProtocolClient, ProtocolError> {
-        let (url, connector) = get_ws_url(self.config, self.base_url);
+        let (url, connector) = get_ws_url_and_connector(self.config, self.base_url);
         let basic = get_ws_auth(account_id, device_id, password);
         let ws_client = WebSocketClientConfig::builder()
             .maybe_tls(connector)
