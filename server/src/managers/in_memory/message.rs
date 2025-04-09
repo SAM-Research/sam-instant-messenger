@@ -3,6 +3,7 @@ use std::{
     sync::Arc,
 };
 
+use async_trait::async_trait;
 use log::debug;
 use sam_common::{
     address::{AccountId, DeviceAddress, DeviceId},
@@ -38,7 +39,7 @@ impl InMemoryMessageManager {
     }
 }
 
-#[async_trait::async_trait]
+#[async_trait]
 impl MessageManager for InMemoryMessageManager {
     async fn insert_envelope(
         &mut self,

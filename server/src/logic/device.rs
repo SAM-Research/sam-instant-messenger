@@ -118,7 +118,7 @@ mod test {
         managers::traits::{
             device_manager::DeviceManager,
             key_manager::{
-                LastResortKeyManager, PqPreKeyManager, PreKeyManager, SignedPreKeyManager,
+                EcPreKeyManager, LastResortPqPreKeyManager, PqPreKeyManager, SignedPreKeyManager,
             },
         },
         state::ServerState,
@@ -179,11 +179,13 @@ mod test {
 
         let ec_key_ids = state
             .keys
+            .pre_keys
             .get_pre_key_ids(account_id, 1.into())
             .await
             .unwrap();
         let signed_ec_id = state
             .keys
+            .signed_pre_keys
             .get_signed_pre_key(account_id, 1.into())
             .await
             .unwrap()
@@ -194,11 +196,13 @@ mod test {
 
         let pq_key_ids = state
             .keys
+            .pq_pre_keys
             .get_pq_pre_key_ids(account_id, 1.into())
             .await
             .unwrap();
         let last_resort_id = state
             .keys
+            .last_resort_keys
             .get_last_resort_key(account_id, 1.into())
             .await
             .unwrap()

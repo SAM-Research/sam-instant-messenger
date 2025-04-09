@@ -1,5 +1,6 @@
 use std::sync::Arc;
 
+use async_trait::async_trait;
 use futures_util::{lock::Mutex, stream::SplitStream, StreamExt};
 use log::{debug, error};
 use prost::Message as PMessage;
@@ -93,7 +94,7 @@ impl SamProtocolReceiver {
     }
 }
 
-#[async_trait::async_trait]
+#[async_trait]
 impl WebSocketReceiver for SamProtocolReceiver {
     async fn handler(&mut self, mut receiver: SplitStream<WebSocket>) {
         while let Some(Ok(msg)) = receiver.next().await {
@@ -189,7 +190,7 @@ impl ProtocolClient {
     }
 }
 
-#[async_trait::async_trait]
+#[async_trait]
 impl SamProtocolClient for ProtocolClient {
     async fn connect(&mut self) -> Result<Receiver<ServerEnvelope>, ProtocolError> {
         let (status_sender, status_receiver) = channel(10);

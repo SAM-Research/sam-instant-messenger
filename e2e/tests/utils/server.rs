@@ -1,7 +1,16 @@
 use sam_server::{
-    managers::in_memory::{
-        account::InMemoryAccountManager, device::InMemoryDeviceManager, keys::InMemoryKeyManager,
-        message::InMemoryMessageManager, InMemStateType,
+    managers::{
+        in_memory::{
+            account::InMemoryAccountManager,
+            device::InMemoryDeviceManager,
+            keys::{
+                InMemoryEcPreKeyManager, InMemoryLastResortPqPreKeyManager,
+                InMemoryPqPreKeyManager, InMemorySignedPreKeyManager,
+            },
+            message::InMemoryMessageManager,
+            InMemStateType,
+        },
+        KeyManager,
     },
     start_server, ServerConfig, ServerState,
 };
@@ -49,6 +58,11 @@ pub fn in_memory_server_state() -> ServerState<InMemStateType> {
         InMemoryAccountManager::default(),
         InMemoryDeviceManager::new("test".to_string(), 600),
         InMemoryMessageManager::default(),
-        InMemoryKeyManager::default(),
+        KeyManager::new(
+            InMemoryEcPreKeyManager::default(),
+            InMemoryPqPreKeyManager::default(),
+            InMemorySignedPreKeyManager::default(),
+            InMemoryLastResortPqPreKeyManager::default(),
+        ),
     )
 }

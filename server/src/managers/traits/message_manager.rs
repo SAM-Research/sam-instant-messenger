@@ -1,4 +1,5 @@
 use crate::managers::error::MessageManagerError;
+use async_trait::async_trait;
 use sam_common::{
     address::{AccountId, DeviceId, MessageId},
     sam_message::ServerEnvelope,
@@ -7,7 +8,7 @@ use tokio::sync::mpsc::Receiver;
 
 pub type EnvelopeId = MessageId;
 
-#[async_trait::async_trait]
+#[async_trait]
 pub trait MessageManager: Send + Sync + Clone {
     async fn channel_buffer(&self) -> usize;
     async fn insert_envelope(

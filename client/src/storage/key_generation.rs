@@ -5,8 +5,8 @@ use libsignal_core::curve::{KeyPair, PrivateKey};
 use libsignal_protocol::kem::{self, KeyType};
 use libsignal_protocol::{
     GenericSignedPreKey, IdentityKey, IdentityKeyPair, KyberPreKeyId, KyberPreKeyRecord,
-    KyberPreKeyStore, PreKeyBundle, PreKeyId, PreKeyRecord, PreKeyStore, PublicKey, SignedPreKeyId,
-    SignedPreKeyRecord, SignedPreKeyStore,
+    KyberPreKeyStore, PreKeyBundle, PreKeyId, PreKeyRecord, PreKeyStore, PublicKey,
+    SignalProtocolError, SignedPreKeyId, SignedPreKeyRecord, SignedPreKeyStore,
 };
 
 use rand::{CryptoRng, Rng};
@@ -21,6 +21,11 @@ pub trait PreKeyGenerator {
     ) -> Result<PreKeyRecord, ClientError>;
 }
 
+pub async fn generate_ec_pre_key<R: Rng + CryptoRng>(id: PreKeyId, csprng: &mut R) -> PreKeyRecord {
+    let key_pair = KeyPair::generate(csprng);
+    PreKeyRecord::new(id, &key_pair)
+}
+
 #[async_trait(?Send)]
 impl<T: PreKeyStore + ProvidesKeyId<PreKeyId>> PreKeyGenerator for T {
     async fn generate_key<R>(&mut self, csprng: &mut R) -> Result<PreKeyRecord, ClientError>
@@ -29,8 +34,7 @@ impl<T: PreKeyStore + ProvidesKeyId<PreKeyId>> PreKeyGenerator for T {
     {
         let id = self.next_key_id().await?;
 
-        let key_pair = KeyPair::generate(csprng);
-        let record = PreKeyRecord::new(id, &key_pair);
+        let record = generate_ec_pre_key(id, csprng).await;
         self.save_pre_key(id, &record).await?;
         Ok(record)
     }
@@ -45,6 +49,23 @@ pub trait SignedPreKeyGenerator {
     ) -> Result<SignedPreKeyRecord, ClientError>;
 }
 
+pub async fn generate_signed_pre_key<R: Rng + CryptoRng>(
+    id: SignedPreKeyId,
+    private_key: &PrivateKey,
+    csprng: &mut R,
+) -> Result<SignedPreKeyRecord, SignalProtocolError> {
+    let signed_pre_key_pair = KeyPair::generate(csprng);
+    let signature =
+        private_key.calculate_signature(&signed_pre_key_pair.public_key.serialize(), csprng)?;
+
+    Ok(SignedPreKeyRecord::new(
+        id,
+        signal_time_now(),
+        &signed_pre_key_pair,
+        &signature,
+    ))
+}
+
 #[async_trait(?Send)]
 impl<T: SignedPreKeyStore + ProvidesKeyId<SignedPreKeyId>> SignedPreKeyGenerator for T {
     async fn generate_key<R>(
@@ -56,13 +77,7 @@ impl<T: SignedPreKeyStore + ProvidesKeyId<SignedPreKeyId>> SignedPreKeyGenerator
         R: Rng + CryptoRng,
     {
         let id = self.next_key_id().await?;
-        let signed_pre_key_pair = KeyPair::generate(csprng);
-        let signature =
-            private_key.calculate_signature(&signed_pre_key_pair.public_key.serialize(), csprng)?;
-
-        let record =
-            SignedPreKeyRecord::new(id, signal_time_now(), &signed_pre_key_pair, &signature);
-
+        let record = generate_signed_pre_key(id, private_key, csprng).await?;
         self.save_signed_pre_key(id, &record).await?;
 
         Ok(record)
@@ -77,6 +92,13 @@ pub trait KyberKeyGenerator {
     ) -> Result<KyberPreKeyRecord, ClientError>;
 }
 
+pub async fn generate_pq_pre_key(
+    id: KyberPreKeyId,
+    private_key: &PrivateKey,
+) -> Result<KyberPreKeyRecord, SignalProtocolError> {
+    KyberPreKeyRecord::generate(KeyType::Kyber1024, id, private_key)
+}
+
 #[async_trait(?Send)]
 impl<T: KyberPreKeyStore + ProvidesKeyId<KyberPreKeyId>> KyberKeyGenerator for T {
     async fn generate_key(
@@ -84,8 +106,7 @@ impl<T: KyberPreKeyStore + ProvidesKeyId<KyberPreKeyId>> KyberKeyGenerator for T
         private_key: &PrivateKey,
     ) -> Result<KyberPreKeyRecord, ClientError> {
         let id = self.next_key_id().await?;
-        let record = KyberPreKeyRecord::generate(KeyType::Kyber1024, id, private_key)?;
-
+        let record = generate_pq_pre_key(id, private_key).await?;
         self.save_kyber_pre_key(id, &record).await?;
         Ok(record)
     }

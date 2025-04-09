@@ -1,3 +1,4 @@
+use async_trait::async_trait;
 use sam_common::address::{AccountId, DeviceAddress, DeviceId};
 use std::{
     collections::{HashMap, HashSet},
@@ -28,7 +29,7 @@ impl InMemoryDeviceManager {
     }
 }
 
-#[async_trait::async_trait]
+#[async_trait]
 impl DeviceManager for InMemoryDeviceManager {
     async fn get_device(
         &self,

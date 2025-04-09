@@ -1,3 +1,4 @@
+use async_trait::async_trait;
 use derive_more::{Display, Error};
 use futures_util::{
     stream::{SplitSink, SplitStream},
@@ -49,7 +50,7 @@ impl From<WebSocketClientConfig> for WebSocketClient {
     }
 }
 
-#[async_trait::async_trait]
+#[async_trait]
 pub trait WebSocketReceiver: Send + 'static {
     async fn handler(&mut self, receiver: SplitStream<WebSocket>);
 }
@@ -133,6 +134,7 @@ impl WebSocketClient {
 
 #[cfg(test)]
 mod test {
+    use async_trait::async_trait;
     use futures_util::stream::SplitStream;
     use futures_util::{SinkExt, StreamExt};
     use tokio::net::TcpListener;
@@ -161,7 +163,7 @@ mod test {
         enqueue: Sender<String>,
     }
 
-    #[async_trait::async_trait]
+    #[async_trait]
     impl WebSocketReceiver for WSReceiver {
         async fn handler(&mut self, mut receiver: SplitStream<WebSocket>) {
             if let Some(Ok(Message::Text(x))) = receiver.next().await {

@@ -11,7 +11,7 @@ use crate::{
             account_manager::AccountManager,
             device_manager::DeviceManager,
             key_manager::{
-                LastResortKeyManager, PqPreKeyManager, PreKeyManager, SignedPreKeyManager,
+                EcPreKeyManager, LastResortPqPreKeyManager, PqPreKeyManager, SignedPreKeyManager,
             },
             message_manager::MessageManager,
         },
@@ -35,27 +35,44 @@ pub async fn delete_account<T: StateType>(
                 }
             }
 
-            if let Some(ids) = state.keys.get_pre_key_ids(account_id, device_id).await? {
+            if let Some(ids) = state
+                .keys
+                .pre_keys
+                .get_pre_key_ids(account_id, device_id)
+                .await?
+            {
                 for id in ids {
-                    state.keys.remove_pre_key(account_id, device_id, id).await?
+                    state
+                        .keys
+                        .pre_keys
+                        .remove_pre_key(account_id, device_id, id)
+                        .await?
                 }
             }
 
             state
                 .keys
+                .signed_pre_keys
                 .remove_signed_pre_key(account_id, device_id)
                 .await?;
 
-            if let Some(ids) = state.keys.get_pq_pre_key_ids(account_id, device_id).await? {
+            if let Some(ids) = state
+                .keys
+                .pq_pre_keys
+                .get_pq_pre_key_ids(account_id, device_id)
+                .await?
+            {
                 for id in ids {
                     state
                         .keys
+                        .pq_pre_keys
                         .remove_pq_pre_key(account_id, device_id, id)
                         .await?
                 }
             }
             state
                 .keys
+                .last_resort_keys
                 .remove_last_resort_key(account_id, device_id)
                 .await?;
 
@@ -116,7 +133,7 @@ mod test {
             account_manager::AccountManager,
             device_manager::DeviceManager,
             key_manager::{
-                LastResortKeyManager, PqPreKeyManager, PreKeyManager, SignedPreKeyManager,
+                EcPreKeyManager, LastResortPqPreKeyManager, PqPreKeyManager, SignedPreKeyManager,
             },
         },
         state::ServerState,
@@ -186,11 +203,13 @@ mod test {
         // check if keys are inserted
         let ec_key_ids = state
             .keys
+            .pre_keys
             .get_pre_key_ids(alice_id, 1.into())
             .await
             .unwrap();
         let signed_ec_id = state
             .keys
+            .signed_pre_keys
             .get_signed_pre_key(alice_id, 1.into())
             .await
             .unwrap()
@@ -201,11 +220,13 @@ mod test {
 
         let pq_key_ids = state
             .keys
+            .pq_pre_keys
             .get_pq_pre_key_ids(alice_id, 1.into())
             .await
             .unwrap();
         let last_resort_id = state
             .keys
+            .last_resort_keys
             .get_last_resort_key(alice_id, 1.into())
             .await
             .unwrap()
@@ -257,21 +278,25 @@ mod test {
         assert!(state.devices.get_device(alice_id, 1.into()).await.is_err());
         assert!(state
             .keys
+            .last_resort_keys
             .get_last_resort_key(alice_id, 1.into())
             .await
             .is_err());
         assert!(state
             .keys
+            .signed_pre_keys
             .get_signed_pre_key(alice_id, 1.into())
             .await
             .is_err());
         assert!(state
             .keys
+            .pre_keys
             .get_pre_key_ids(alice_id, 1.into())
             .await
             .is_ok_and(|ids| ids.is_none()));
         assert!(state
             .keys
+            .pq_pre_keys
             .get_pq_pre_key_ids(alice_id, 1.into())
             .await
             .is_ok_and(|ids| ids.is_none()));

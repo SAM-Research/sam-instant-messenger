@@ -78,7 +78,7 @@ mod test {
     use crate::{
         managers::traits::{
             account_manager::AccountManager,
-            key_manager::{LastResortKeyManager, SignedPreKeyManager},
+            key_manager::{LastResortPqPreKeyManager, SignedPreKeyManager},
         },
         routes::{
             account::account_routes,
@@ -137,6 +137,7 @@ mod test {
 
         state
             .keys
+            .last_resort_keys
             .set_last_resort_key(
                 account_id,
                 device_id,
@@ -148,6 +149,7 @@ mod test {
 
         state
             .keys
+            .signed_pre_keys
             .set_signed_pre_key(
                 account_id,
                 device_id,

@@ -1,13 +1,13 @@
 use super::{decode::MessageStatus, error::ProtocolError};
-use async_trait::async_trait;
 
+use async_trait::async_trait;
 use sam_common::{
     sam_message::{ClientEnvelope, ServerEnvelope},
     AccountId, DeviceId,
 };
 use tokio::sync::mpsc::Receiver;
 
-#[async_trait::async_trait]
+#[async_trait]
 pub trait SamProtocolClient {
     async fn connect(&mut self) -> Result<Receiver<ServerEnvelope>, ProtocolError>;
     async fn disconnect(&mut self) -> Result<(), ProtocolError>;
@@ -18,7 +18,7 @@ pub trait SamProtocolClient {
     ) -> Result<MessageStatus, ProtocolError>;
 }
 
-#[async_trait(?Send)]
+#[async_trait]
 pub trait ProtocolConfig {
     type ProtocolClient: SamProtocolClient;
 

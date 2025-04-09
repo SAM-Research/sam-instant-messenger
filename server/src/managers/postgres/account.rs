@@ -1,3 +1,4 @@
+use async_trait::async_trait;
 use libsignal_protocol::IdentityKey;
 use log::error;
 use sam_common::AccountId;
@@ -18,7 +19,7 @@ impl PostgresAccountManager {
     }
 }
 
-#[async_trait::async_trait]
+#[async_trait]
 impl AccountManager for PostgresAccountManager {
     async fn get_account(&self, id: AccountId) -> Result<Account, AccountManagerError> {
         let uuid = id.uuid();

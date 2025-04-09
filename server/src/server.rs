@@ -4,6 +4,7 @@ use crate::ServerConfig;
 use axum::extract::Request;
 use axum::middleware::{from_fn, Next};
 use axum::response::IntoResponse;
+use axum::routing::get;
 use axum_server::tls_rustls::RustlsConfig;
 use log::info;
 
@@ -22,6 +23,7 @@ pub async fn start_server<T: StateType>(config: ServerConfig<T>) -> Result<(), s
     let state = config.state;
 
     let app = router()
+        .route("/hello", get(|| async { "Hello From Sam Server" }))
         .layer(from_fn(log_request))
         .with_state(state.clone());
 
