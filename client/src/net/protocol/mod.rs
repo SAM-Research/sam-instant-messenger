@@ -1,3 +1,4 @@
+use async_trait::async_trait;
 use base64::{prelude::BASE64_STANDARD, Engine};
 use error::ProtocolError;
 use log::debug;
@@ -17,6 +18,7 @@ pub mod websocket;
 pub use client::ProtocolClient;
 pub use decode::{DeviceList, MessageStatus};
 pub use traits::{ProtocolConfig, SamProtocolClient};
+
 pub struct WebSocketProtocolClientConfig {
     base_url: String,
     config: Option<ClientConfig>,
@@ -38,7 +40,25 @@ impl WebSocketProtocolClientConfig {
     }
 }
 
-#[async_trait::async_trait(?Send)]
+pub fn get_ws_url_and_connector(
+    config: Option<ClientConfig>,
+    base_url: String,
+) -> (String, Option<Connector>) {
+    match config {
+        None => (format!("ws://{}", base_url), None),
+        Some(config) => (
+            format!("wss://{}", base_url),
+            Some(Connector::Rustls(Arc::new(config))),
+        ),
+    }
+}
+
+pub fn get_ws_auth(account_id: AccountId, device_id: DeviceId, password: String) -> String {
+    let basic = format!("{account_id}.{device_id}:{password}");
+    format!("Basic {}", BASE64_STANDARD.encode(basic))
+}
+
+#[async_trait]
 impl ProtocolConfig for WebSocketProtocolClientConfig {
     type ProtocolClient = ProtocolClient;
 
@@ -47,16 +67,9 @@ impl ProtocolConfig for WebSocketProtocolClientConfig {
         account_id: AccountId,
         device_id: DeviceId,
         password: String,
-    ) -> Result<Self::ProtocolClient, error::ProtocolError> {
-        let (url, connector) = match self.config {
-            None => (format!("ws://{}", self.base_url), None),
-            Some(config) => (
-                format!("wss://{}", self.base_url),
-                Some(Connector::Rustls(Arc::new(config))),
-            ),
-        };
-        let basic = format!("{account_id}.{device_id}:{password}");
-        let basic = format!("Basic {}", BASE64_STANDARD.encode(basic));
+    ) -> Result<Self::ProtocolClient, ProtocolError> {
+        let (url, connector) = get_ws_url_and_connector(self.config, self.base_url);
+        let basic = get_ws_auth(account_id, device_id, password);
         let ws_client = WebSocketClientConfig::builder()
             .maybe_tls(connector)
             .url(format!("{}/api/v1/websocket", url))
@@ -68,7 +81,6 @@ impl ProtocolConfig for WebSocketProtocolClientConfig {
             )])
             .build()
             .into();
-
         Ok(ProtocolClient::new(ws_client))
     }
 }
