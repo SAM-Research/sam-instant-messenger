@@ -1,3 +1,4 @@
+use async_trait::async_trait;
 use libsignal_protocol::IdentityKey;
 use sam_common::{
     address::{AccountId, DeviceId},
@@ -6,7 +7,7 @@ use sam_common::{
 
 use crate::managers::error::KeyManagerError;
 
-#[async_trait::async_trait]
+#[async_trait]
 pub trait EcPreKeyManager: Send + Sync + Clone {
     async fn get_pre_key(
         &self,
@@ -32,7 +33,7 @@ pub trait EcPreKeyManager: Send + Sync + Clone {
     ) -> Result<(), KeyManagerError>;
 }
 
-#[async_trait::async_trait]
+#[async_trait]
 pub trait SignedPreKeyManager: Send + Sync + Clone {
     async fn get_signed_pre_key(
         &self,
@@ -53,7 +54,7 @@ pub trait SignedPreKeyManager: Send + Sync + Clone {
     ) -> Result<(), KeyManagerError>;
 }
 
-#[async_trait::async_trait]
+#[async_trait]
 pub trait PqPreKeyManager: Send + Sync + Clone {
     async fn get_pq_pre_key(
         &self,
@@ -80,7 +81,7 @@ pub trait PqPreKeyManager: Send + Sync + Clone {
     ) -> Result<(), KeyManagerError>;
 }
 
-#[async_trait::async_trait]
+#[async_trait]
 pub trait LastResortPqPreKeyManager: Send + Sync + Clone {
     async fn get_last_resort_key(
         &self,

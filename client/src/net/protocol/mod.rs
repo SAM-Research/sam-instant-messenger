@@ -1,3 +1,4 @@
+use async_trait::async_trait;
 use base64::{prelude::BASE64_STANDARD, Engine};
 use error::ProtocolError;
 use log::debug;
@@ -57,7 +58,7 @@ pub fn get_ws_auth(account_id: AccountId, device_id: DeviceId, password: String)
     format!("Basic {}", BASE64_STANDARD.encode(basic))
 }
 
-#[async_trait::async_trait]
+#[async_trait]
 impl ProtocolConfig for WebSocketProtocolClientConfig {
     type ProtocolClient = ProtocolClient;
 
