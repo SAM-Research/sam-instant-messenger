@@ -10,7 +10,7 @@ use sam_common::{
         ClientEnvelope, ClientMessage, ClientMessageType, ServerEnvelope, ServerMessage,
     },
 };
-use tokio::sync::mpsc::{channel, Receiver, Sender};
+use tokio::sync::mpsc::{self, channel, Receiver, Sender};
 use tokio_tungstenite::tungstenite::{
     protocol::{frame::coding::CloseCode, CloseFrame},
     Message,
@@ -26,15 +26,19 @@ use super::{
 struct SamProtocolReceiver {
     client: Arc<Mutex<WebSocketClient>>,
     enqueue_status: Sender<ServerStatus>,
-    enqueue_envelope: Option<Sender<ServerEnvelope>>,
+    enqueue_envelope: Sender<ServerEnvelope>,
 }
 
 impl SamProtocolReceiver {
-    fn new(client: Arc<Mutex<WebSocketClient>>, enqueue_status: Sender<ServerStatus>) -> Self {
+    fn new(
+        client: Arc<Mutex<WebSocketClient>>,
+        enqueue_status: Sender<ServerStatus>,
+        enqueue_envelope: Sender<ServerEnvelope>,
+    ) -> Self {
         Self {
             client,
             enqueue_status,
-            enqueue_envelope: None,
+            enqueue_envelope,
         }
     }
 
@@ -69,15 +73,12 @@ impl SamProtocolReceiver {
         id: MessageId,
         envelope: ServerEnvelope,
     ) -> Result<Option<MessageId>, ProtocolError> {
-        match &self.enqueue_envelope {
-            Some(sender) => sender
-                .send(envelope)
-                .await
-                .inspect_err(|e| debug!("{e}"))
-                .map_err(|_| ProtocolError::WebSocketError(WebSocketError::Disconnected))
-                .map(|_| Some(id)),
-            None => Err(ProtocolError::WebSocketError(WebSocketError::Disconnected)),
-        }
+        self.enqueue_envelope
+            .send(envelope)
+            .await
+            .inspect_err(|e| debug!("{e}"))
+            .map_err(|_| ProtocolError::WebSocketError(WebSocketError::Disconnected))
+            .map(|_| Some(id))
     }
 
     async fn dispatch_server_status(
@@ -94,13 +95,8 @@ impl SamProtocolReceiver {
 }
 
 #[async_trait]
-impl WebSocketReceiver<ServerEnvelope> for SamProtocolReceiver {
-    async fn handler(
-        &mut self,
-        mut receiver: SplitStream<WebSocket>,
-        enqueue: Sender<ServerEnvelope>,
-    ) {
-        self.enqueue_envelope = Some(enqueue);
+impl WebSocketReceiver for SamProtocolReceiver {
+    async fn handler(&mut self, mut receiver: SplitStream<WebSocket>) {
         while let Some(Ok(msg)) = receiver.next().await {
             let res = match msg {
                 Message::Binary(b) => ServerMessage::decode(b),
@@ -134,7 +130,6 @@ impl WebSocketReceiver<ServerEnvelope> for SamProtocolReceiver {
                 break; // disconnecting
             }
         }
-        self.enqueue_envelope = None;
     }
 }
 
@@ -200,7 +195,8 @@ impl SamProtocolClient for ProtocolClient {
     async fn connect(&mut self) -> Result<Receiver<ServerEnvelope>, ProtocolError> {
         let (status_sender, status_receiver) = channel(10);
 
-        let handler = SamProtocolReceiver::new(self.client.clone(), status_sender);
+        let (tx, rx) = mpsc::channel(10);
+        let handler = SamProtocolReceiver::new(self.client.clone(), status_sender, tx);
 
         self.status_messages = Some(status_receiver);
         self.client
@@ -209,7 +205,8 @@ impl SamProtocolClient for ProtocolClient {
             .connect(handler)
             .await
             .inspect_err(|e| error!("ProtocolClient Error: {e}"))
-            .map_err(ProtocolError::WebSocketError)
+            .map_err(ProtocolError::WebSocketError)?;
+        Ok(rx)
     }
     async fn disconnect(&mut self) -> Result<(), ProtocolError> {
         self.status_messages = None;
