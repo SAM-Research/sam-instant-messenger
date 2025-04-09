@@ -39,7 +39,10 @@ impl WebSocketProtocolClientConfig {
     }
 }
 
-pub fn get_ws_url_and_connector(config: Option<ClientConfig>, base_url: String) -> (String, Option<Connector>) {
+pub fn get_ws_url_and_connector(
+    config: Option<ClientConfig>,
+    base_url: String,
+) -> (String, Option<Connector>) {
     match config {
         None => (format!("ws://{}", base_url), None),
         Some(config) => (

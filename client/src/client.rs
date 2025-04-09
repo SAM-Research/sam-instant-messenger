@@ -91,11 +91,13 @@ impl<T: ClientType> Client<T> {
         )
         .await?;
 
-        let mut protocol_client = protocol_config.create(
-            store.account_store.get_account_id().await?,
-            store.account_store.get_device_id().await?,
-            store.account_store.get_password().await?,
-        ).await?;
+        let mut protocol_client = protocol_config
+            .create(
+                store.account_store.get_account_id().await?,
+                store.account_store.get_device_id().await?,
+                store.account_store.get_password().await?,
+            )
+            .await?;
 
         let queue = protocol_client.connect().await?;
 
@@ -139,11 +141,13 @@ impl<T: ClientType> Client<T> {
         )
         .await?;
 
-        let mut protocol_client = protocol_config.create(
-            store.account_store.get_account_id().await?,
-            store.account_store.get_device_id().await?,
-            store.account_store.get_password().await?,
-        ).await?;
+        let mut protocol_client = protocol_config
+            .create(
+                store.account_store.get_account_id().await?,
+                store.account_store.get_device_id().await?,
+                store.account_store.get_password().await?,
+            )
+            .await?;
         let queue = protocol_client.connect().await?;
 
         Ok(Self {
@@ -166,7 +170,9 @@ impl<T: ClientType> Client<T> {
         let account_id = store.account_store.get_account_id().await?;
         let device_id = store.account_store.get_device_id().await?;
         let password = store.account_store.get_password().await?;
-        let mut protocol_client = protocol_config.create(account_id, device_id, password).await?;
+        let mut protocol_client = protocol_config
+            .create(account_id, device_id, password)
+            .await?;
         let queue = protocol_client.connect().await?;
         Ok(Self {
             store,
