@@ -137,6 +137,7 @@ mod test {
     use async_trait::async_trait;
     use futures_util::stream::SplitStream;
     use futures_util::{SinkExt, StreamExt};
+    use test_utils::get_next_port;
     use tokio::net::TcpListener;
     use tokio::sync::mpsc::{self, Sender};
     use tokio_tungstenite::{accept_async, tungstenite::Message};
@@ -177,7 +178,7 @@ mod test {
 
     #[tokio::test]
     async fn test_echo_send() {
-        let addr = "127.0.0.1:9080".to_string();
+        let addr = format!("127.0.0.1:{}", get_next_port());
 
         test_server(addr.clone()).await;
 

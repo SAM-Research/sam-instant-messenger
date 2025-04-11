@@ -55,6 +55,7 @@ mod test {
         },
     };
 
+    use test_utils::get_next_port;
     use tokio::{sync::oneshot, task::JoinHandle};
     use tokio_tungstenite::{
         connect_async, tungstenite::client::IntoClientRequest, MaybeTlsStream, WebSocketStream,
@@ -137,7 +138,7 @@ mod test {
             .await
             .expect("can add extra device");
 
-        let address = "127.0.0.1:8007".to_string();
+        let address = format!("127.0.0.1:{}", get_next_port());
         let (thread, axum, started) = start_websocket_server(state.clone(), address.clone());
         started.await.expect("Server can start");
 

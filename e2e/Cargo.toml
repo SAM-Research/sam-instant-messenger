@@ -11,7 +11,7 @@ authors.workspace = true
 sam-common = { workspace = true }
 sam-client = { workspace = true }
 sam-server = { workspace = true }
-
+test-utils = { workspace = true }
 tokio = { workspace = true, features = ["macros", "rt-multi-thread"] }
 rand = { workspace = true }
 libsignal-protocol = { workspace = true }

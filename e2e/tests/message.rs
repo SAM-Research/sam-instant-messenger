@@ -18,6 +18,7 @@ use sam_client::{
 use sam_common::{api::LinkDeviceToken, AccountId};
 use sam_server::config::TlsConfig;
 use tempfile::NamedTempFile;
+use test_utils::get_next_port;
 use tokio::{sync::broadcast::Receiver, time::timeout};
 
 use crate::utils::server::TestServer;
@@ -89,15 +90,15 @@ async fn client_device(
 #[tokio::test]
 async fn test_alice_send_to_bob_offline() {
     timeout(Duration::from_secs(TIMEOUT_SECS), async {
-        let address = "127.0.0.1:9181";
-        let mut server = TestServer::start(address, None).await;
+        let address = format!("127.0.0.1:{}", get_next_port());
+        let mut server = TestServer::start(&address, None).await;
         server
             .started_rx()
             .await
             .expect("Should be able to start server");
 
-        let mut alice = client(address, "alice", "alice device").await;
-        let mut bob = client(address, "bob", "bob device").await;
+        let mut alice = client(&address, "alice", "alice device").await;
+        let mut bob = client(&address, "bob", "bob device").await;
 
         let bob_id = bob.account_id().await.expect("Bob can get his id");
 
@@ -129,15 +130,15 @@ async fn test_alice_send_to_bob_offline() {
 #[tokio::test]
 async fn test_alice_send_to_bob_two_devices() {
     timeout(Duration::from_secs(TIMEOUT_SECS), async {
-        let address = "127.0.0.1:9183";
-        let mut server = TestServer::start(address, None).await;
+        let address = format!("127.0.0.1:{}", get_next_port());
+        let mut server = TestServer::start(&address, None).await;
         server
             .started_rx()
             .await
             .expect("Should be able to start server");
 
-        let mut alice = client(address, "alice", "alice device").await;
-        let mut bob = client(address, "bob", "bob device").await;
+        let mut alice = client(&address, "alice", "alice device").await;
+        let mut bob = client(&address, "bob", "bob device").await;
 
         let token = bob
             .create_provision()
@@ -146,7 +147,7 @@ async fn test_alice_send_to_bob_two_devices() {
         let bob_id = bob.account_id().await.expect("Bob can get account id");
 
         let mut bob_device = client_device(
-            address,
+            &address,
             "bob_device",
             bob.identity_key_pair().await.expect("can get id pair"),
             token,
@@ -185,15 +186,15 @@ async fn test_alice_send_to_bob_two_devices() {
 #[tokio::test]
 async fn test_alice_send_to_bob_missing_devices() {
     timeout(Duration::from_secs(TIMEOUT_SECS), async {
-        let address = "127.0.0.1:9184";
-        let mut server = TestServer::start(address, None).await;
+        let address = format!("127.0.0.1:{}", get_next_port());
+        let mut server = TestServer::start(&address, None).await;
         server
             .started_rx()
             .await
             .expect("Should be able to start server");
 
-        let mut alice = client(address, "alice", "alice device").await;
-        let mut bob = client(address, "bob", "bob device").await;
+        let mut alice = client(&address, "alice", "alice device").await;
+        let mut bob = client(&address, "bob", "bob device").await;
 
         let token = bob
             .create_provision()
@@ -207,7 +208,7 @@ async fn test_alice_send_to_bob_missing_devices() {
             .expect("Alice can send message");
 
         let _bob_device = client_device(
-            address,
+            &address,
             "bob_device",
             bob.identity_key_pair().await.expect("can get id pair"),
             token,
@@ -228,15 +229,15 @@ async fn test_alice_send_to_bob_missing_devices() {
 #[tokio::test]
 async fn test_alice_send_to_bob_extra_devices() {
     timeout(Duration::from_secs(TIMEOUT_SECS), async {
-        let address = "127.0.0.1:9185";
-        let mut server = TestServer::start(address, None).await;
+        let address = format!("127.0.0.1:{}", get_next_port());
+        let mut server = TestServer::start(&address, None).await;
         server
             .started_rx()
             .await
             .expect("Should be able to start server");
 
-        let mut alice = client(address, "alice", "alice device").await;
-        let mut bob = client(address, "bob", "bob device").await;
+        let mut alice = client(&address, "alice", "alice device").await;
+        let mut bob = client(&address, "bob", "bob device").await;
 
         let token = bob
             .create_provision()
@@ -245,7 +246,7 @@ async fn test_alice_send_to_bob_extra_devices() {
         let bob_id = bob.account_id().await.expect("Bob can get account id");
 
         let mut bob_device = client_device(
-            address,
+            &address,
             "bob_device",
             bob.identity_key_pair().await.expect("can get id pair"),
             token,
@@ -303,15 +304,15 @@ async fn test_alice_send_to_bob_extra_devices() {
 #[tokio::test]
 async fn test_alice_send_to_bob_and_self() {
     timeout(Duration::from_secs(TIMEOUT_SECS), async {
-        let address = "127.0.0.1:9186";
-        let mut server = TestServer::start(address, None).await;
+        let address = format!("127.0.0.1:{}", get_next_port());
+        let mut server = TestServer::start(&address, None).await;
         server
             .started_rx()
             .await
             .expect("Should be able to start server");
 
-        let mut alice = client(address, "alice", "alice device").await;
-        let bob = client(address, "bob", "bob device").await;
+        let mut alice = client(&address, "alice", "alice device").await;
+        let bob = client(&address, "bob", "bob device").await;
 
         let token = alice
             .create_provision()
@@ -320,7 +321,7 @@ async fn test_alice_send_to_bob_and_self() {
         let bob_id = bob.account_id().await.expect("Bob can get account id");
 
         let mut alice_device = client_device(
-            address,
+            &address,
             "bob_device",
             alice.identity_key_pair().await.expect("can get id pair"),
             token,
@@ -353,17 +354,17 @@ async fn test_alice_send_to_bob_and_self() {
 }
 
 #[rstest]
-#[case(Some("./cert/rootCA.crt".to_string()), Some(MutualTlsConfig::new("./cert/client.key".to_string(), "./cert/client.crt".to_string())), "9187")]
-#[case(None, None, "9188")]
+#[case(Some("./cert/rootCA.crt".to_string()), Some(MutualTlsConfig::new("./cert/client.key".to_string(), "./cert/client.crt".to_string())), get_next_port())]
+#[case(None, None, get_next_port())]
 #[tokio::test]
 async fn test_alice_send_to_bob_with_tls(
     #[case] ca_cert: Option<String>,
     #[case] mutual_config: Option<MutualTlsConfig>,
-    #[case] port: &str,
+    #[case] port: u16,
 ) {
     timeout(Duration::from_secs(TIMEOUT_SECS), async {
         let _ = rustls::crypto::ring::default_provider().install_default();
-        let address = format!("127.0.0.1:{port}");
+        let address = format!("127.0.0.1:{}", port);
         let server_config = TlsConfig {
             ca_cert_path: ca_cert,
             cert_path: "./cert/server.crt".to_string(),
@@ -432,13 +433,13 @@ async fn send(
 }
 
 #[rstest]
-#[case(vec![Message::Alice("a"), Message::Bob("b"), Message::Alice("aa"), Message::Alice("aaa"), Message::Bob("bb")], "9088")]
-#[case(vec![Message::Alice("a"), Message::Alice("aa"), Message::Alice("aaa"), Message::Bob("b"), Message::Bob("bb")], "9089")]
-#[case(vec![Message::Bob("b"), Message::Alice("a")], "9080")]
+#[case(vec![Message::Alice("a"), Message::Bob("b"), Message::Alice("aa"), Message::Alice("aaa"), Message::Bob("bb")], get_next_port())]
+#[case(vec![Message::Alice("a"), Message::Alice("aa"), Message::Alice("aaa"), Message::Bob("b"), Message::Bob("bb")], get_next_port())]
+#[case(vec![Message::Bob("b"), Message::Alice("a")], get_next_port())]
 #[tokio::test]
-async fn test_ongoing_communication<'a>(#[case] sequence: Vec<Message<'a>>, #[case] port: &str) {
+async fn test_ongoing_communication<'a>(#[case] sequence: Vec<Message<'a>>, #[case] port: u16) {
     timeout(Duration::from_secs(TIMEOUT_SECS), async {
-        let address = format!("127.0.0.1:{port}");
+        let address = format!("127.0.0.1:{}", port);
         let mut server = TestServer::start(&address, None).await;
         server
             .started_rx()
@@ -472,8 +473,8 @@ async fn test_ongoing_communication<'a>(#[case] sequence: Vec<Message<'a>>, #[ca
 #[tokio::test]
 async fn sqlite_stores_alice_send_to_bob() {
     timeout(Duration::from_secs(TIMEOUT_SECS), async {
-        let address = "127.0.0.1:9190";
-        let mut server = TestServer::start(address, None).await;
+        let address = format!("127.0.0.1:{}", get_next_port());
+        let mut server = TestServer::start(&address, None).await;
         server
             .started_rx()
             .await

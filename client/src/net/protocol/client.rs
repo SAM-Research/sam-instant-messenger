@@ -262,6 +262,7 @@ mod test {
             SamMessageType, ServerEnvelope, ServerMessage, ServerMessageType,
         },
     };
+    use test_utils::get_next_port;
     use tokio::{
         net::{TcpListener, TcpStream},
         sync::oneshot::{self, Receiver, Sender},
@@ -455,15 +456,12 @@ mod test {
     }
 
     #[rstest]
-    #[case(vec![ServerAction::Send, ServerAction::Send], "9081")]
-    #[case(vec![ServerAction::Receive, ServerAction::Receive],"9082")]
-    #[case(vec![ServerAction::Receive, ServerAction::Send], "9083")]
-    #[case(vec![ServerAction::Send, ServerAction::Receive], "9084")]
+    #[case(vec![ServerAction::Send, ServerAction::Send], get_next_port())]
+    #[case(vec![ServerAction::Receive, ServerAction::Receive], get_next_port())]
+    #[case(vec![ServerAction::Receive, ServerAction::Send], get_next_port())]
+    #[case(vec![ServerAction::Send, ServerAction::Receive], get_next_port())]
     #[tokio::test]
-    async fn test_send_and_ack_and_envelope(
-        #[case] actions: Vec<ServerAction>,
-        #[case] port: String,
-    ) {
+    async fn test_send_and_ack_and_envelope(#[case] actions: Vec<ServerAction>, #[case] port: u16) {
         let addr = format!("127.0.0.1:{}", port);
         let shutdown = test_server(addr.clone(), actions.clone()).await;
         let client: WebSocketClient = WebSocketClientConfig::builder()
