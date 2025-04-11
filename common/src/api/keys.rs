@@ -1,6 +1,8 @@
+use bincode::error::{DecodeError, EncodeError};
 use libsignal_protocol::{
     GenericSignedPreKey, IdentityKey, KyberPreKeyRecord, PreKeyRecord, SignedPreKeyRecord,
 };
+
 use serde::{Deserialize, Serialize};
 use serde_with::{base64::Base64, serde_as};
 
@@ -9,7 +11,9 @@ use crate::LibError;
 macro_rules! define_key {
     ($name:ident) => {
         #[serde_as]
-        #[derive(Debug, Serialize, Deserialize, Clone, PartialEq, Eq)]
+        #[derive(
+            Debug, Serialize, Deserialize, Clone, PartialEq, Eq, bincode::Encode, bincode::Decode,
+        )]
         #[serde(rename_all = "camelCase")]
         pub struct $name {
             pub key_id: u32,
@@ -31,7 +35,17 @@ macro_rules! define_key {
 macro_rules! define_signed_key {
     ($name:ident) => {
         #[serde_as]
-        #[derive(Debug, Serialize, Deserialize, Clone, Hash, PartialEq, Eq)]
+        #[derive(
+            Debug,
+            Serialize,
+            Deserialize,
+            Clone,
+            Hash,
+            PartialEq,
+            Eq,
+            bincode::Encode,
+            bincode::Decode,
+        )]
         #[serde(rename_all = "camelCase")]
         pub struct $name {
             pub key_id: u32,
@@ -58,6 +72,22 @@ macro_rules! define_signed_key {
     };
 }
 
+macro_rules! define_binary_encoder {
+    ($name:ident) => {
+        impl Encode for $name {
+            fn encode(&self) -> Result<Vec<u8>, EncodeError> {
+                bincode::encode_to_vec(self, bincode::config::standard())
+            }
+        }
+
+        impl Decode for $name {
+            fn decode(data: &[u8]) -> Result<Self, DecodeError> {
+                bincode::decode_from_slice(data, bincode::config::standard()).map(|(x, _)| x)
+            }
+        }
+    };
+}
+
 pub trait Key: Sized + Send {
     fn id(&self) -> u32;
     fn public_key(&self) -> &[u8];
@@ -67,7 +97,16 @@ pub trait SignedKey: Key {
     fn signature(&self) -> &[u8];
 }
 
+pub trait Encode {
+    fn encode(&self) -> Result<Vec<u8>, EncodeError>;
+}
+
+pub trait Decode: Sized {
+    fn decode(data: &[u8]) -> Result<Self, DecodeError>;
+}
+
 define_key!(EcPreKey);
+define_binary_encoder!(EcPreKey);
 
 impl From<PreKeyRecord> for EcPreKey {
     fn from(value: PreKeyRecord) -> Self {
@@ -79,6 +118,7 @@ impl From<PreKeyRecord> for EcPreKey {
 }
 
 define_signed_key!(SignedEcPreKey);
+define_binary_encoder!(SignedEcPreKey);
 
 impl From<SignedPreKeyRecord> for SignedEcPreKey {
     fn from(value: SignedPreKeyRecord) -> Self {
@@ -207,5 +247,50 @@ pub mod id_key {
 
         IdentityKey::decode(&bytes)
             .map_err(|err| Error::custom(format!("Failed to decode IdentityKey: {err}")))
+    }
+}
+
+#[cfg(test)]
+mod test {
+    use libsignal_protocol::{
+        GenericSignedPreKey, IdentityKeyPair, KeyPair, PreKeyRecord, SignedPreKeyRecord, Timestamp,
+    };
+    use rand::rngs::OsRng;
+
+    use crate::api::SignedEcPreKey;
+
+    use super::{Decode, EcPreKey, Encode};
+
+    #[test]
+    fn can_encode_decode_ec() {
+        let key_pair = KeyPair::generate(&mut OsRng);
+        let rec = PreKeyRecord::new(1.into(), &key_pair);
+        let key = EcPreKey::from(rec);
+        let encoded = key.encode().expect("can encode");
+        let decoded = EcPreKey::decode(&encoded).expect("can decode");
+        assert!(key == decoded)
+    }
+
+    #[test]
+    fn can_encode_decode_ec_signed() {
+        let mut csprng = OsRng;
+        let key_pair = IdentityKeyPair::generate(&mut csprng);
+        let signed_pre_key_pair = KeyPair::generate(&mut csprng);
+        let signature = key_pair
+            .private_key()
+            .calculate_signature(&signed_pre_key_pair.public_key.serialize(), &mut csprng)
+            .expect("can sign key");
+
+        let time = Timestamp::from_epoch_millis(
+            18641942
+                .try_into()
+                .expect("4th of august 1970 is over 50 years ago"),
+        );
+        let rec = SignedPreKeyRecord::new(1.into(), time, &signed_pre_key_pair, &signature);
+
+        let key = SignedEcPreKey::from(rec);
+        let encoded = key.encode().expect("can encode");
+        let decoded = SignedEcPreKey::decode(&encoded).expect("can decode");
+        assert!(key == decoded)
     }
 }
