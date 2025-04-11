@@ -36,7 +36,6 @@ pub async fn create_user<T: StateType>(
         .username(username.to_string())
         .build();
     let device = Device::builder()
-        .creation(0)
         .id(1.into())
         .registration_id(1.into())
         .name(device_name.to_string())

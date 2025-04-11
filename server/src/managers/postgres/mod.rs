@@ -5,6 +5,9 @@ mod device;
 mod keys;
 mod message;
 
+#[cfg(test)]
+pub(super) mod test_utils;
+
 use account::PostgresAccountManager;
 use device::PostgresDeviceManager;
 use keys::PostgresKeyManager;

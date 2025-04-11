@@ -116,7 +116,7 @@ mod test {
     #[case(0, StatusCode::FORBIDDEN, false)]
     #[tokio::test]
     async fn test_get_api_v1_devices_link(
-        #[case] expire_time: u64,
+        #[case] expire_time: u32,
         #[case] expected_status: StatusCode,
         #[case] expects_ok_device: bool,
     ) {
@@ -177,7 +177,6 @@ mod test {
             .add_device(
                 account_id,
                 &Device::builder()
-                    .creation(0)
                     .id(2.into())
                     .registration_id(1.into())
                     .name("microwave".to_string())

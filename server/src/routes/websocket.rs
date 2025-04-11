@@ -124,7 +124,6 @@ mod test {
             .add_device(
                 alice_id,
                 &Device::builder()
-                    .creation(0)
                     .id(27.into())
                     .registration_id(43284.into())
                     .name("Device 27".to_string())

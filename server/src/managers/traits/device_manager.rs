@@ -13,7 +13,7 @@ pub trait DeviceManager: Send + Sync + Clone {
         -> Result<Vec<DeviceId>, DeviceManagerError>;
     async fn next_device_id(&self, account_id: AccountId) -> Result<DeviceId, DeviceManagerError>;
     async fn link_secret(&self) -> Result<String, DeviceManagerError>;
-    async fn provision_expire_seconds(&self) -> Result<u64, DeviceManagerError>;
+    async fn provision_expire_seconds(&self) -> Result<u32, DeviceManagerError>;
     async fn add_device(
         &mut self,
         account_id: AccountId,

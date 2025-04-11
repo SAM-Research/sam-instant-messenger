@@ -5,7 +5,6 @@ use sam_common::{
         device::{DeviceActivationInfo, LinkDeviceRequest, LinkDeviceResponse},
         LinkDeviceToken,
     },
-    time_now_millis,
 };
 
 use crate::{
@@ -85,7 +84,6 @@ pub async fn create_device<T: StateType>(
         .id(device_id)
         .registration_id(device_info.registration_id)
         .name(device_info.name)
-        .creation(time_now_millis())
         .password(Password::generate(password)?)
         .build();
 

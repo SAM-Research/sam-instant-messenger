@@ -137,45 +137,21 @@ impl AccountManager for PostgresAccountManager {
 mod test {
     use libsignal_protocol::IdentityKeyPair;
     use rand::rngs::OsRng;
-    use rstest::fixture;
     use sam_common::AccountId;
-    use sqlx::{types::Uuid, Pool, Postgres};
+    use sqlx::types::Uuid;
 
     use crate::managers::{
-        entities::Account, error::AccountManagerError, traits::account_manager::AccountManager,
+        entities::Account,
+        error::AccountManagerError,
+        postgres::test_utils::{accounts, connection_str},
+        traits::account_manager::AccountManager,
     };
-
-    use super::PostgresAccountManager;
-
-    #[fixture]
-    fn connection_str() -> &'static str {
-        "postgres://test:test@127.0.0.1:5432/sam_test_db"
-    }
-
-    #[fixture]
-    async fn accounts(connection_str: &str) -> PostgresAccountManager {
-        let pool = Pool::<Postgres>::connect(connection_str)
-            .await
-            .expect("Can connect to postgres");
-
-        PostgresAccountManager::new(pool)
-    }
 
     #[tokio::test]
     #[ignore = "requires a postgres test database"]
     async fn postgres_account_manager() {
-        let _ = env_logger::try_init();
         let mut manager = accounts(connection_str()).await;
-        let username = Uuid::new_v4();
-        let account = Account::builder()
-            .id(AccountId::generate())
-            .identity(
-                IdentityKeyPair::generate(&mut OsRng)
-                    .identity_key()
-                    .to_owned(),
-            )
-            .username(username.to_string())
-            .build();
+        let account = Account::random();
         assert!(manager.add_account(&account).await.is_ok());
 
         assert_eq!(
@@ -227,16 +203,7 @@ mod test {
     #[ignore = "requires a postgres test database"]
     async fn postgres_account_manager_removed_account_cannot_be_retrieved() {
         let mut manager = accounts(connection_str()).await;
-        let username = Uuid::new_v4();
-        let account = Account::builder()
-            .id(AccountId::generate())
-            .identity(
-                IdentityKeyPair::generate(&mut OsRng)
-                    .identity_key()
-                    .to_owned(),
-            )
-            .username(username.to_string())
-            .build();
+        let account = Account::random();
         assert!(manager.add_account(&account).await.is_ok());
         assert!(manager.remove_account(account.id()).await.is_ok());
         assert!(matches!(
@@ -262,22 +229,12 @@ mod test {
     #[ignore = "requires a postgres test database"]
     async fn postgres_account_manager_cannot_insert_duplicate_ids() {
         let mut manager = accounts(connection_str()).await;
-        let id = AccountId::generate();
-        let username = Uuid::new_v4();
-        let account1 = Account::builder()
-            .id(id)
-            .identity(
-                IdentityKeyPair::generate(&mut OsRng)
-                    .identity_key()
-                    .to_owned(),
-            )
-            .username(username.to_string())
-            .build();
+        let account1 = Account::random();
         assert!(manager.add_account(&account1).await.is_ok());
 
         let new_username = Uuid::new_v4();
         let account2 = Account::builder()
-            .id(id)
+            .id(account1.id())
             .identity(
                 IdentityKeyPair::generate(&mut OsRng)
                     .identity_key()

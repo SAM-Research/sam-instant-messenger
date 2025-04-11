@@ -21,7 +21,7 @@ pub fn create_token(secret: &str, account_id: AccountId) -> LinkDeviceToken {
 
 pub fn verify_token(
     secret: &str,
-    expire_seconds: u64,
+    expire_seconds: u32,
     token: LinkDeviceToken,
 ) -> Result<AccountId, ServerError> {
     let (claims, b64_signature) = token
@@ -50,7 +50,7 @@ pub fn verify_token(
     );
     let time_now = Duration::from_millis(time_now_millis() as u64);
     let elapsed = time_now - time_then;
-    if elapsed.as_secs() > expire_seconds {
+    if elapsed.as_secs() > expire_seconds as u64 {
         return Err(ServerError::from(AuthorizationError::DeviceLinkTooSlow));
     }
     Ok(account_id)

@@ -21,3 +21,20 @@ impl Account {
         &self.identity
     }
 }
+
+#[cfg(test)]
+impl Account {
+    pub fn random() -> Self {
+        use libsignal_protocol::IdentityKeyPair;
+        use rand::rngs::OsRng;
+        use sqlx::types::Uuid;
+
+        let id = Uuid::new_v4();
+        let id_key = IdentityKeyPair::generate(&mut OsRng);
+        Self::builder()
+            .username(id.to_string())
+            .id(id.into())
+            .identity(id_key.identity_key().to_owned())
+            .build()
+    }
+}

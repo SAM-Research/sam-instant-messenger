@@ -291,7 +291,6 @@ mod test {
             .id(1.into())
             .name("Alice Secret Phone".to_string())
             .password(Password::generate("dave<3".to_string()).expect("Alice can create password"))
-            .creation(0)
             .registration_id(1.into())
             .build();
 
@@ -418,7 +417,6 @@ mod test {
             .id(1.into())
             .name("Alice Secret Phone".to_string())
             .password(Password::generate("dave<3".to_string()).expect("Alice can create password"))
-            .creation(0)
             .registration_id(1.into())
             .build();
 

@@ -7,7 +7,12 @@ repository.workspace = true
 license.workspace = true
 authors.workspace = true
 
+[features]
+default = ["postgres"]
+postgres = []
+
 [dependencies]
+time = { workspace = true }
 bon = { workspace = true }
 hkdf = { workspace = true }
 sha2 = { workspace = true }
@@ -29,7 +34,12 @@ env_logger = { workspace = true }
 log = { workspace = true }
 rustls = { workspace = true, features = ["ring"] }
 rustls-pemfile = { workspace = true }
-sqlx = { workspace = true, features = ["postgres", "uuid", "runtime-tokio"] }
+sqlx = { workspace = true, features = [
+  "postgres",
+  "time",
+  "uuid",
+  "runtime-tokio",
+] }
 serde = { workspace = true, features = ["derive"] }
 serde_json = { workspace = true }
 
