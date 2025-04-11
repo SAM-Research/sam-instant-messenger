@@ -7,7 +7,10 @@ pub use account::{RegistrationRequest, RegistrationResponse};
 use base64::{prelude::BASE64_STANDARD, Engine};
 pub use device::{LinkDeviceRequest, LinkDeviceResponse, LinkDeviceToken};
 
-pub use keys::{EcPreKey, Key, PqPreKey, PreKeyBundle, PublishPreKeys, SignedEcPreKey, SignedKey};
+pub use keys::{
+    Decode, EcPreKey, Encode, Key, PqPreKey, PreKeyBundle, PublishPreKeys, SignedEcPreKey,
+    SignedKey,
+};
 
 use crate::address::{AccountId, DeviceId};
 
