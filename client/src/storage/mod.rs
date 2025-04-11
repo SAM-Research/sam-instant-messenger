@@ -18,6 +18,7 @@ pub use inmem::{
     InMemoryAccountStore, InMemoryContactStore, InMemoryMessageStore, InMemoryStore,
     InMemoryStoreConfig, InMemoryStoreType,
 };
+pub use key_generation::into_libsignal_bundle;
 pub use sqlite::{
     SqliteContactStore, SqliteIdentityKeyStore, SqliteKyberPreKeyStore, SqliteMessageStore,
     SqlitePreKeyStore, SqliteSenderKeyStore, SqliteSessionStore, SqliteSignedPreKeyStore,

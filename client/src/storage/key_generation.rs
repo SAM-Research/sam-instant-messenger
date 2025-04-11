@@ -136,7 +136,7 @@ pub async fn generate_pq_pre_keys<G: KyberKeyGenerator>(
     Ok(keys)
 }
 
-pub(crate) fn into_libsignal_bundle(
+pub fn into_libsignal_bundle(
     bundle: sam_common::api::PreKeyBundle,
     identity_key: IdentityKey,
 ) -> Result<PreKeyBundle, ClientError> {
