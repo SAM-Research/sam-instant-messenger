@@ -4,6 +4,7 @@ use sam_client::net::http_client::HttpClientConfig;
 use sam_client::net::protocol::WebSocketProtocolClientConfig;
 use sam_client::storage::sqlite::SqliteStoreConfig;
 use sam_client::Client;
+use test_utils::get_next_port;
 
 mod utils;
 
@@ -13,8 +14,8 @@ mod utils;
 
 #[tokio::test]
 async fn can_link_device() {
-    let address = "127.0.0.1:9380";
-    let mut server = TestServer::start(address, None).await;
+    let address = format!("127.0.0.1:{}", get_next_port());
+    let mut server = TestServer::start(&address, None).await;
 
     server
         .started_rx()
@@ -65,8 +66,8 @@ async fn can_link_device() {
 
 #[tokio::test]
 async fn can_unlink_device() {
-    let address = "127.0.0.1:9381";
-    let mut server = TestServer::start(address, None).await;
+    let address = format!("127.0.0.1:{}", get_next_port());
+    let mut server = TestServer::start(&address, None).await;
 
     server
         .started_rx()
@@ -122,8 +123,8 @@ async fn can_unlink_device() {
 
 #[tokio::test]
 async fn can_delete_device() {
-    let address = "127.0.0.1:9382";
-    let mut server = TestServer::start(address, None).await;
+    let address = format!("127.0.0.1:{}", get_next_port());
+    let mut server = TestServer::start(&address, None).await;
 
     server
         .started_rx()
@@ -176,8 +177,8 @@ async fn can_delete_device() {
 
 #[tokio::test]
 async fn can_delete_account() {
-    let address = "127.0.0.1:9383";
-    let mut server = TestServer::start(address, None).await;
+    let address = format!("127.0.0.1:{}", get_next_port());
+    let mut server = TestServer::start(&address, None).await;
 
     server
         .started_rx()

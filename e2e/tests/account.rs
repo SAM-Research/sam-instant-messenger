@@ -13,6 +13,7 @@ use sam_client::{
 };
 use sam_common::{address::RegistrationId, AccountId};
 use sam_server::create_tls_config as create_server_tls_config;
+use test_utils::get_next_port;
 
 mod utils;
 
@@ -32,7 +33,7 @@ pub async fn register_alice(address: String) -> Result<Client<SqliteClientType>,
 
 #[tokio::test]
 pub async fn one_client_can_register() {
-    let address = "127.0.0.1:9370".to_owned();
+    let address = format!("127.0.0.1:{}", get_next_port());
     let mut server = TestServer::start(&address, None).await;
 
     server
@@ -47,7 +48,7 @@ pub async fn one_client_can_register() {
 
 #[tokio::test]
 pub async fn can_delete_account() {
-    let address = "127.0.0.1:9371".to_owned();
+    let address = format!("127.0.0.1:{}", get_next_port());
     let mut server = TestServer::start(&address, None).await;
 
     server
@@ -62,7 +63,7 @@ pub async fn can_delete_account() {
 
 #[tokio::test]
 pub async fn cannot_create_client_without_valid_account() {
-    let address = "127.0.0.1:9372".to_owned();
+    let address = format!("127.0.0.1:{}", get_next_port());
     let mut server = TestServer::start(&address, None).await;
 
     server
@@ -112,7 +113,7 @@ pub async fn cannot_create_client_without_valid_account() {
 
 #[tokio::test]
 pub async fn can_delete_a_device() {
-    let address = "127.0.0.1:9373".to_owned();
+    let address = format!("127.0.0.1:{}", get_next_port());
     let mut server = TestServer::start(&address, None).await;
 
     server
@@ -132,7 +133,7 @@ pub async fn can_delete_a_device() {
 
 #[tokio::test]
 pub async fn alice_can_find_bobs_account_id() {
-    let address = "127.0.0.1:9374".to_owned();
+    let address = format!("127.0.0.1:{}", get_next_port());
     let mut server = TestServer::start(&address, None).await;
 
     server
@@ -163,7 +164,7 @@ pub async fn alice_can_find_bobs_account_id() {
 #[tokio::test]
 pub async fn one_client_can_register_with_tls() {
     let _ = rustls::crypto::ring::default_provider().install_default();
-    let address = "127.0.0.1:9375".to_owned();
+    let address = format!("127.0.0.1:{}", get_next_port());
     let server_config = create_server_tls_config("./cert/server.crt", "./cert/server.key", None)
         .expect("Can create server config");
     let client_config =
@@ -195,7 +196,8 @@ pub async fn one_client_can_register_with_tls() {
 
 #[tokio::test]
 pub async fn two_clients_cannot_have_the_same_username() {
-    let address = "127.0.0.1:9376".to_owned();
+    let port = get_next_port();
+    let address = format!("127.0.0.1:{}", port);
     let mut server = TestServer::start(&address, None).await;
 
     server
