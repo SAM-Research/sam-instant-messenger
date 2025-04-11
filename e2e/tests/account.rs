@@ -196,8 +196,7 @@ pub async fn one_client_can_register_with_tls() {
 
 #[tokio::test]
 pub async fn two_clients_cannot_have_the_same_username() {
-    let port = get_next_port();
-    let address = format!("127.0.0.1:{}", port);
+    let address = format!("127.0.0.1:{}", get_next_port());
     let mut server = TestServer::start(&address, None).await;
 
     server
