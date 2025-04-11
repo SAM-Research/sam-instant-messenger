@@ -25,29 +25,29 @@ pub async fn process_messages<T: StoreType>(
     }
     while let Some(envelope) = envelope_queue.recv().await {
         // TODO: How should we handle failure to decrypt and/or store message?
-        let envelope = match decrypt(envelope, store).await {
-            Ok(denvelope) => denvelope,
-            Err(e) => {
-                error!("Failed to decrypt message: {e}");
-                break;
-            }
-        };
-
-        store
-            .contact_store
-            .add_device(envelope.source_account_id(), envelope.source_device_id())
-            .await?;
-
-        let _ = store
-            .message_store
-            .store_message(envelope)
+        process_message(envelope, store)
             .await
-            .inspect_err(|e| error!("Failed to store message {e}"));
+            .inspect_err(|e| error!("Failed to store message {e}"))?;
+
         if envelope_queue.is_empty() {
             break;
         }
     }
     Ok(())
+}
+
+pub async fn process_message(
+    envelope: ServerEnvelope,
+    store: &mut Store<impl StoreType>,
+) -> Result<(), ClientError> {
+    let envelope = decrypt(envelope, store).await?;
+
+    store
+        .contact_store
+        .add_device(envelope.source_account_id(), envelope.source_device_id())
+        .await?;
+
+    store.message_store.store_message(envelope).await
 }
 
 pub async fn prepare_message<T: StoreType, R: Rng + CryptoRng>(

@@ -1,6 +1,6 @@
 pub mod encrypt;
 pub mod envelope;
-mod padding;
+pub mod padding;
 pub mod password;
 
 pub use encrypt::{decrypt, encrypt};
