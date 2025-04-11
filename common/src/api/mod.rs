@@ -8,8 +8,8 @@ use base64::{prelude::BASE64_STANDARD, Engine};
 pub use device::{LinkDeviceRequest, LinkDeviceResponse, LinkDeviceToken};
 
 pub use keys::{
-    Decode, EcPreKey, Encode, Key, PqPreKey, PreKeyBundle, PublishPreKeys, SignedEcPreKey,
-    SignedKey,
+    Decode, DecodeError, EcPreKey, Encode, EncodeError, Key, PqPreKey, PreKeyBundle,
+    PublishPreKeys, SignedEcPreKey, SignedKey,
 };
 
 use crate::address::{AccountId, DeviceId};

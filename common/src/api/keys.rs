@@ -1,4 +1,4 @@
-use bincode::error::{DecodeError, EncodeError};
+pub use bincode::error::{DecodeError, EncodeError};
 use libsignal_protocol::{
     GenericSignedPreKey, IdentityKey, KyberPreKeyRecord, PreKeyRecord, SignedPreKeyRecord,
 };
