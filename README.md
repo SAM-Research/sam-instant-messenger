@@ -33,6 +33,14 @@ provide the config in cli arguments with:
 cargo run  --bin sam-server -- --tls-config ./config.json
 ```
 
+# Docker
+
+Building the `sam-server` docker image:
+
+```sh
+docker build -t sam-server .
+```
+
 # End-To-End tests
 
 In order to run the end-to-end tests, you need to generate certificates.
@@ -52,7 +60,6 @@ If you need to edit the database queries, you must first install sqlx-cli:
 cargo install sqlx-cli
 ```
 
-
 ## Changing the Database Queries for SqliteStore.
 
 Create a .env file inside the `client` directory pointing to a Sqlite database file:
@@ -68,7 +75,9 @@ first:
 ```
 cd client
 ```
+
 then:
+
 ```
 sqlx db create
 ```

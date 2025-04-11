@@ -1,8 +1,9 @@
+use async_trait::async_trait;
 use sam_common::address::{AccountId, DeviceId};
 
 use crate::managers::{entities::device::Device, error::DeviceManagerError};
 
-#[async_trait::async_trait]
+#[async_trait]
 pub trait DeviceManager: Send + Sync + Clone {
     async fn get_device(
         &self,

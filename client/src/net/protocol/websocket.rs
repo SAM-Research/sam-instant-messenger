@@ -1,3 +1,4 @@
+use async_trait::async_trait;
 use derive_more::{Display, Error};
 use futures_util::{
     stream::{SplitSink, SplitStream},
@@ -8,10 +9,7 @@ use std::sync::{
     atomic::{AtomicBool, Ordering},
     Arc,
 };
-use tokio::{
-    net::TcpStream,
-    sync::mpsc::{self, Receiver, Sender},
-};
+use tokio::net::TcpStream;
 use tokio_tungstenite::{
     connect_async_tls_with_config,
     tungstenite::{client::IntoClientRequest, http, protocol::WebSocketConfig, Message},
@@ -37,8 +35,6 @@ pub struct WebSocketClientConfig {
     tls: Option<Connector>,
     #[builder(default = vec![])]
     headers: Vec<(http::header::HeaderName, http::header::HeaderValue)>,
-    #[builder(default = 10)]
-    buffer: usize,
 }
 
 pub struct WebSocketClient {
@@ -54,9 +50,9 @@ impl From<WebSocketClientConfig> for WebSocketClient {
     }
 }
 
-#[async_trait::async_trait]
-pub trait WebSocketReceiver<T>: Send + 'static {
-    async fn handler(&mut self, receiver: SplitStream<WebSocket>, enqueue: Sender<T>);
+#[async_trait]
+pub trait WebSocketReceiver: Send + 'static {
+    async fn handler(&mut self, receiver: SplitStream<WebSocket>);
 }
 
 impl WebSocketClient {
@@ -92,28 +88,24 @@ impl WebSocketClient {
         Ok(ws)
     }
 
-    pub async fn connect<T>(
+    pub async fn connect(
         &mut self,
-        mut ws_receiver: impl WebSocketReceiver<T>,
-    ) -> Result<Receiver<T>, WebSocketError>
-    where
-        T: Send + 'static,
-    {
+        mut ws_receiver: impl WebSocketReceiver,
+    ) -> Result<(), WebSocketError> {
         if self.is_connected() {
             return Err(WebSocketError::AlreadyConnected);
         }
         let (sender, receiver) = self._connect().await?.split();
-        let (enqueue, queue) = mpsc::channel(self.config.buffer);
 
         self.sink = Some(sender);
 
         let connected = self.connected.clone();
         tokio::spawn(async move {
             connected.store(true, Ordering::SeqCst);
-            ws_receiver.handler(receiver, enqueue).await;
+            ws_receiver.handler(receiver).await;
             connected.store(false, Ordering::SeqCst);
         });
-        Ok(queue)
+        Ok(())
     }
 
     pub fn is_connected(&self) -> bool {
@@ -142,10 +134,11 @@ impl WebSocketClient {
 
 #[cfg(test)]
 mod test {
+    use async_trait::async_trait;
     use futures_util::stream::SplitStream;
     use futures_util::{SinkExt, StreamExt};
     use tokio::net::TcpListener;
-    use tokio::sync::mpsc::Sender;
+    use tokio::sync::mpsc::{self, Sender};
     use tokio_tungstenite::{accept_async, tungstenite::Message};
 
     use crate::net::protocol::websocket::WebSocketClient;
@@ -166,13 +159,15 @@ mod test {
         });
     }
 
-    struct WSReceiver;
+    struct WSReceiver {
+        enqueue: Sender<String>,
+    }
 
-    #[async_trait::async_trait]
-    impl WebSocketReceiver<String> for WSReceiver {
-        async fn handler(&mut self, mut receiver: SplitStream<WebSocket>, enqueue: Sender<String>) {
+    #[async_trait]
+    impl WebSocketReceiver for WSReceiver {
+        async fn handler(&mut self, mut receiver: SplitStream<WebSocket>) {
             if let Some(Ok(Message::Text(x))) = receiver.next().await {
-                enqueue
+                self.enqueue
                     .send(x.to_string())
                     .await
                     .expect("Can enqueue string")
@@ -190,8 +185,11 @@ mod test {
             .url(format!("ws://{}", addr))
             .build()
             .into();
-
-        let mut receiver = client.connect(WSReceiver {}).await.expect("Can Connect");
+        let (tx, mut receiver) = mpsc::channel(10);
+        client
+            .connect(WSReceiver { enqueue: tx })
+            .await
+            .expect("Can Connect");
 
         client
             .send(Message::Text("Hello".into()))
