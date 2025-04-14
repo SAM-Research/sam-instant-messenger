@@ -8,8 +8,7 @@ pub enum EncryptionError {
     FailedToUnpadMessage,
     SignalProtocol(SignalProtocolError),
     #[display("Failed to parse an invalid AccountId: {_0}")]
-    #[error(ignore)]
-    InvalidAccountId(String),
+    InvalidAccountId(#[error(not(source))] String),
     AccountStore(AccountStoreError),
     ContactStore(ContactStoreError),
 }

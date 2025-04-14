@@ -14,8 +14,7 @@ pub enum AccountStoreError {
     Database(DatabaseError),
     NoAccountId,
     #[display("Failed to parse an invalid AccountId: {_0}")]
-    #[error(ignore)]
-    InvalidAccountId(String),
+    InvalidAccountId(#[error(not(source))] String),
     NoPassword,
     NoUsername,
     NoDeviceId,
