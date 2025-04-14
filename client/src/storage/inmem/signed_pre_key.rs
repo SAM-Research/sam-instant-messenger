@@ -1,11 +1,10 @@
-use crate::storage::ProvidesKeyId;
-use crate::ClientError;
+use crate::storage::{error::StoreError, ProvidesKeyId};
 use async_trait::async_trait;
 use libsignal_protocol::{InMemSignedPreKeyStore, SignedPreKeyId};
 
 #[async_trait(?Send)]
 impl ProvidesKeyId<SignedPreKeyId> for InMemSignedPreKeyStore {
-    async fn next_key_id(&self) -> Result<SignedPreKeyId, ClientError> {
+    async fn next_key_id(&self) -> Result<SignedPreKeyId, StoreError> {
         let max: u32 = self
             .all_signed_pre_key_ids()
             .max()

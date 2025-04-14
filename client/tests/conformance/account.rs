@@ -1,7 +1,7 @@
 use super::{in_mem, sqlite};
 use rstest::rstest;
+use sam_client::storage::error::StoreError;
 use sam_client::storage::AccountStore;
-use sam_client::ClientError;
 use sam_common::address::AccountId;
 use sam_common::DeviceId;
 
@@ -13,7 +13,7 @@ async fn account_id_can_be_stored_and_retrieved(#[case] mut account_store: impl 
     let account_id = AccountId::generate();
     assert!(matches!(
         account_store.get_account_id().await.unwrap_err(),
-        ClientError::NoAccountId
+        StoreError::NoAccountId
     ));
     assert!(account_store
         .set_account_id(account_id.to_owned())
@@ -30,7 +30,7 @@ async fn password_can_be_stored_and_retrieved(#[case] mut account_store: impl Ac
     let password = "MyPassword".to_owned();
     assert!(matches!(
         account_store.get_password().await.unwrap_err(),
-        ClientError::NoPassword
+        StoreError::NoPassword
     ));
     assert!(account_store
         .set_password(password.to_owned())
@@ -47,7 +47,7 @@ async fn username_can_be_stored_and_retrieved(#[case] mut account_store: impl Ac
     let username = "MyUsername".to_owned();
     assert!(matches!(
         account_store.get_username().await.unwrap_err(),
-        ClientError::NoUsername
+        StoreError::NoUsername
     ));
     assert!(account_store
         .set_username(username.to_owned())
@@ -67,7 +67,7 @@ async fn device_id_can_be_stored_and_retrieved(
     let device_id: DeviceId = device_id.into();
     assert!(matches!(
         account_store.get_device_id().await.unwrap_err(),
-        ClientError::NoDeviceId
+        StoreError::NoDeviceId
     ));
     assert!(account_store
         .set_device_id(device_id.to_owned())

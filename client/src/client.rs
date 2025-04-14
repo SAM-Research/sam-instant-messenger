@@ -184,11 +184,15 @@ impl<T: ClientType> Client<T> {
     }
 
     pub async fn account_id(&self) -> Result<AccountId, ClientError> {
-        self.store.account_store.get_account_id().await
+        Ok(self.store.account_store.get_account_id().await?)
     }
 
     pub async fn device_id(&self) -> Result<DeviceId, ClientError> {
-        self.store.account_store.get_device_id().await
+        Ok(self.store.account_store.get_device_id().await?)
+    }
+
+    pub async fn password(&self) -> Result<String, ClientError> {
+        Ok(self.store.account_store.get_password().await?)
     }
 
     pub async fn identity_key_pair(&self) -> Result<IdentityKeyPair, ClientError> {
@@ -204,7 +208,7 @@ impl<T: ClientType> Client<T> {
     pub async fn delete_account(self) -> Result<(), (Self, ClientError)> {
         let account_id = self.account_id().await;
         let device_id = self.device_id().await;
-        let password = self.store.account_store.get_password().await;
+        let password = self.password().await;
 
         let Ok(account_id) = account_id else {
             return Err((self, account_id.unwrap_err()));
@@ -237,7 +241,7 @@ impl<T: ClientType> Client<T> {
     pub async fn delete_device(self) -> Result<(), (Self, ClientError)> {
         let account_id = self.account_id().await;
         let device_id = self.device_id().await;
-        let password = self.store.account_store.get_password().await;
+        let password = self.password().await;
 
         let Ok(account_id) = account_id else {
             return Err((self, account_id.unwrap_err()));
@@ -270,7 +274,7 @@ impl<T: ClientType> Client<T> {
             .delete_device(
                 self.account_id().await?,
                 self.device_id().await?,
-                &self.store.account_store.get_password().await?,
+                &self.password().await?,
                 device_id,
             )
             .await?;
@@ -284,7 +288,7 @@ impl<T: ClientType> Client<T> {
             .get_user_account_id(
                 self.account_id().await?,
                 self.device_id().await?,
-                self.store.account_store.get_password().await?.as_str(),
+                &self.password().await?,
                 username,
             )
             .await?;
@@ -371,7 +375,7 @@ impl<T: ClientType> Client<T> {
             .provision_device(
                 self.account_id().await?,
                 self.device_id().await?,
-                &self.store.account_store.get_password().await?,
+                &self.password().await?,
             )
             .await?)
     }

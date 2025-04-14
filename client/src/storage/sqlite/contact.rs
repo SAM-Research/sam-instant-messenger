@@ -4,7 +4,7 @@ use async_trait::async_trait;
 use sam_common::{AccountId, DeviceId};
 use sqlx::{Pool, Sqlite};
 
-use crate::{storage::ContactStore, ClientError};
+use crate::storage::{error::StoreError, ContactStore};
 
 #[derive(Debug)]
 pub struct SqliteContactStore {
@@ -19,7 +19,7 @@ impl SqliteContactStore {
 
 #[async_trait(?Send)]
 impl ContactStore for SqliteContactStore {
-    async fn contains_contact(&self, account_id: AccountId) -> Result<bool, ClientError> {
+    async fn contains_contact(&self, account_id: AccountId) -> Result<bool, StoreError> {
         let aci_str = account_id.to_string();
         sqlx::query_scalar!(
             r#"
@@ -32,12 +32,12 @@ impl ContactStore for SqliteContactStore {
         .fetch_one(&self.database)
         .await
         .map(|exists| exists == 1)
-        .map_err(|err| ClientError::Database(format!("{err}")))
+        .map_err(|err| StoreError::Database(format!("{err}")))
     }
     async fn get_all_devices(
         &self,
         account_id: AccountId,
-    ) -> Result<HashSet<DeviceId>, ClientError> {
+    ) -> Result<HashSet<DeviceId>, StoreError> {
         let aci_str = account_id.to_string();
         let ids = sqlx::query!(
             r#"
@@ -47,7 +47,7 @@ impl ContactStore for SqliteContactStore {
         )
         .fetch_all(&self.database)
         .await
-        .map_err(|err| ClientError::Database(format!("{err}")))?
+        .map_err(|err| StoreError::Database(format!("{err}")))?
         .into_iter()
         .map(|rec| (rec.device_id as u32).into());
 
@@ -57,7 +57,7 @@ impl ContactStore for SqliteContactStore {
         &mut self,
         account_id: AccountId,
         device_id: DeviceId,
-    ) -> Result<(), ClientError> {
+    ) -> Result<(), StoreError> {
         let aci_str = account_id.to_string();
         let dev_str = device_id.to_string();
         sqlx::query!(
@@ -77,14 +77,14 @@ impl ContactStore for SqliteContactStore {
         .execute(&self.database)
         .await
         .map(|_| ())
-        .map_err(|err| ClientError::Database(format!("{err}")))
+        .map_err(|err| StoreError::Database(format!("{err}")))
     }
 
     async fn remove_device(
         &mut self,
         account_id: AccountId,
         device_id: DeviceId,
-    ) -> Result<(), ClientError> {
+    ) -> Result<(), StoreError> {
         let aci_str = account_id.to_string();
         let dev_str = device_id.to_string();
         sqlx::query!(
@@ -98,6 +98,6 @@ impl ContactStore for SqliteContactStore {
         .execute(&self.database)
         .await
         .map(|_| ())
-        .map_err(|err| ClientError::Database(format!("{err}")))
+        .map_err(|err| StoreError::Database(format!("{err}")))
     }
 }

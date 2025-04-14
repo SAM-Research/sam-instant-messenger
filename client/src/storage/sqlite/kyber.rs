@@ -6,7 +6,7 @@ use libsignal_protocol::{
 };
 use sqlx::{Pool, Sqlite};
 
-use crate::{storage::ProvidesKeyId, ClientError};
+use crate::storage::{error::StoreError, ProvidesKeyId};
 
 #[derive(Debug)]
 pub struct SqliteKyberPreKeyStore {
@@ -21,7 +21,7 @@ impl SqliteKyberPreKeyStore {
 
 #[async_trait(?Send)]
 impl ProvidesKeyId<KyberPreKeyId> for SqliteKyberPreKeyStore {
-    async fn next_key_id(&self) -> Result<KyberPreKeyId, ClientError> {
+    async fn next_key_id(&self) -> Result<KyberPreKeyId, StoreError> {
         sqlx::query!(
             r#"
             SELECT
@@ -33,7 +33,7 @@ impl ProvidesKeyId<KyberPreKeyId> for SqliteKyberPreKeyStore {
         .fetch_one(&self.database)
         .await
         .map(|row| KyberPreKeyId::from(row.pkid.unwrap_or(0) as u32 + 1))
-        .map_err(|err| ClientError::Database(format!("{err}")))
+        .map_err(|err| StoreError::Database(format!("{err}")))
     }
 }
 
@@ -98,7 +98,7 @@ impl KyberPreKeyStore for SqliteKyberPreKeyStore {
         .map_err(|err| {
             SignalProtocolError::ApplicationCallbackError(
                 "save kyber pre key",
-                Box::new(ClientError::Database(format!("{err}"))),
+                Box::new(StoreError::Database(format!("{err}"))),
             )
         })
     }

@@ -1,6 +1,6 @@
 use std::str::FromStr as _;
 
-use crate::{storage::AccountStore, ClientError};
+use crate::storage::{error::StoreError, AccountStore};
 use async_trait::async_trait;
 use log::debug;
 use sam_common::address::AccountId;
@@ -20,7 +20,7 @@ impl SqliteAccountStore {
 
 #[async_trait(?Send)]
 impl AccountStore for SqliteAccountStore {
-    async fn set_account_id(&mut self, id: AccountId) -> Result<(), ClientError> {
+    async fn set_account_id(&mut self, id: AccountId) -> Result<(), StoreError> {
         let aci = id.to_string();
         sqlx::query!(
             r#"
@@ -33,10 +33,10 @@ impl AccountStore for SqliteAccountStore {
         .execute(&self.database)
         .await
         .map(|_| ())
-        .map_err(|err| ClientError::Database(format!("{err}")))
+        .map_err(|err| StoreError::Database(format!("{err}")))
     }
 
-    async fn get_account_id(&self) -> Result<AccountId, ClientError> {
+    async fn get_account_id(&self) -> Result<AccountId, StoreError> {
         match sqlx::query!(
             r#"
             SELECT * FROM AccountId;
@@ -46,15 +46,15 @@ impl AccountStore for SqliteAccountStore {
         .await
         .inspect_err(|e| debug!("{e}"))
         {
-            Err(SqlxError::RowNotFound) => Err(ClientError::NoAccountId),
+            Err(SqlxError::RowNotFound) => Err(StoreError::NoAccountId),
             Ok(rec) => AccountId::from_str(&rec.account_id)
                 .inspect_err(|e| debug!("{e}"))
-                .map_err(|_| ClientError::InvalidAccountId(rec.account_id)),
-            Err(err) => Err(ClientError::Database(format!("{err}"))),
+                .map_err(|_| StoreError::InvalidAccountId(rec.account_id)),
+            Err(err) => Err(StoreError::Database(format!("{err}"))),
         }
     }
 
-    async fn set_password(&mut self, password: String) -> Result<(), ClientError> {
+    async fn set_password(&mut self, password: String) -> Result<(), StoreError> {
         sqlx::query!(
             r#"
             DELETE FROM Password;
@@ -66,10 +66,10 @@ impl AccountStore for SqliteAccountStore {
         .execute(&self.database)
         .await
         .map(|_| ())
-        .map_err(|err| ClientError::Database(format!("{err}")))
+        .map_err(|err| StoreError::Database(format!("{err}")))
     }
 
-    async fn get_password(&self) -> Result<String, ClientError> {
+    async fn get_password(&self) -> Result<String, StoreError> {
         match sqlx::query!(
             r#"
             SELECT * FROM Password;
@@ -78,13 +78,13 @@ impl AccountStore for SqliteAccountStore {
         .fetch_one(&self.database)
         .await
         {
-            Err(SqlxError::RowNotFound) => Err(ClientError::NoPassword),
+            Err(SqlxError::RowNotFound) => Err(StoreError::NoPassword),
             Ok(rec) => Ok(rec.password),
-            Err(err) => Err(ClientError::Database(format!("{err}"))),
+            Err(err) => Err(StoreError::Database(format!("{err}"))),
         }
     }
 
-    async fn set_username(&mut self, username: String) -> Result<(), ClientError> {
+    async fn set_username(&mut self, username: String) -> Result<(), StoreError> {
         sqlx::query!(
             r#"
             DELETE FROM Username;
@@ -96,10 +96,10 @@ impl AccountStore for SqliteAccountStore {
         .execute(&self.database)
         .await
         .map(|_| ())
-        .map_err(|err| ClientError::Database(format!("{err}")))
+        .map_err(|err| StoreError::Database(format!("{err}")))
     }
 
-    async fn get_username(&self) -> Result<String, ClientError> {
+    async fn get_username(&self) -> Result<String, StoreError> {
         match sqlx::query!(
             r#"
             SELECT * FROM Username;
@@ -108,13 +108,13 @@ impl AccountStore for SqliteAccountStore {
         .fetch_one(&self.database)
         .await
         {
-            Err(SqlxError::RowNotFound) => Err(ClientError::NoUsername),
+            Err(SqlxError::RowNotFound) => Err(StoreError::NoUsername),
             Ok(rec) => Ok(rec.username),
-            Err(err) => Err(ClientError::Database(format!("{err}"))),
+            Err(err) => Err(StoreError::Database(format!("{err}"))),
         }
     }
 
-    async fn set_device_id(&mut self, device_id: DeviceId) -> Result<(), ClientError> {
+    async fn set_device_id(&mut self, device_id: DeviceId) -> Result<(), StoreError> {
         let dev_id = Into::<u32>::into(device_id);
         sqlx::query!(
             r#"
@@ -127,10 +127,10 @@ impl AccountStore for SqliteAccountStore {
         .execute(&self.database)
         .await
         .map(|_| ())
-        .map_err(|err| ClientError::Database(format!("{err}")))
+        .map_err(|err| StoreError::Database(format!("{err}")))
     }
 
-    async fn get_device_id(&self) -> Result<DeviceId, ClientError> {
+    async fn get_device_id(&self) -> Result<DeviceId, StoreError> {
         match sqlx::query!(
             r#"
             SELECT * FROM DeviceId;
@@ -139,9 +139,9 @@ impl AccountStore for SqliteAccountStore {
         .fetch_one(&self.database)
         .await
         {
-            Err(SqlxError::RowNotFound) => Err(ClientError::NoDeviceId),
+            Err(SqlxError::RowNotFound) => Err(StoreError::NoDeviceId),
             Ok(rec) => Ok((rec.device_id as u32).into()),
-            Err(err) => Err(ClientError::Database(format!("{err}"))),
+            Err(err) => Err(StoreError::Database(format!("{err}"))),
         }
     }
 }

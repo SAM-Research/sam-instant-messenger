@@ -1,5 +1,6 @@
 use async_trait::async_trait;
 use bon::Builder;
+use error::StoreError;
 use libsignal_protocol::{
     IdentityKeyPair, IdentityKeyStore, KyberPreKeyId, KyberPreKeyStore, PreKeyId, PreKeyStore,
     SenderKeyStore, SessionStore, SignedPreKeyId, SignedPreKeyStore,
@@ -9,6 +10,7 @@ use std::fmt::Debug;
 use crate::storage::key_generation::{KyberKeyGenerator, PreKeyGenerator, SignedPreKeyGenerator};
 use crate::ClientError;
 
+pub mod error;
 pub mod inmem;
 pub mod key_generation;
 pub mod sqlite;
@@ -38,7 +40,7 @@ pub trait StoreConfig {
 
 #[async_trait(?Send)]
 pub trait ProvidesKeyId<T> {
-    async fn next_key_id(&self) -> Result<T, ClientError>;
+    async fn next_key_id(&self) -> Result<T, StoreError>;
 }
 
 pub trait StoreType {

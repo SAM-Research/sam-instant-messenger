@@ -6,7 +6,7 @@ use libsignal_protocol::{
 };
 use sqlx::{Pool, Sqlite};
 
-use crate::{storage::ProvidesKeyId, ClientError};
+use crate::storage::{error::StoreError, ProvidesKeyId};
 
 #[derive(Debug)]
 pub struct SqliteSignedPreKeyStore {
@@ -21,7 +21,7 @@ impl SqliteSignedPreKeyStore {
 
 #[async_trait(?Send)]
 impl ProvidesKeyId<SignedPreKeyId> for SqliteSignedPreKeyStore {
-    async fn next_key_id(&self) -> Result<SignedPreKeyId, ClientError> {
+    async fn next_key_id(&self) -> Result<SignedPreKeyId, StoreError> {
         sqlx::query!(
             r#"
             SELECT
@@ -33,7 +33,7 @@ impl ProvidesKeyId<SignedPreKeyId> for SqliteSignedPreKeyStore {
         .fetch_one(&self.database)
         .await
         .map(|row| SignedPreKeyId::from(row.pkid.unwrap_or(0) as u32 + 1))
-        .map_err(|err| ClientError::Database(format!("{err}")))
+        .map_err(|err| StoreError::Database(format!("{err}")))
     }
 }
 
@@ -78,7 +78,7 @@ impl SignedPreKeyStore for SqliteSignedPreKeyStore {
             }),
             Err(err) => Err(SignalProtocolError::ApplicationCallbackError(
                 "save signed pre key",
-                Box::new(ClientError::Database(format!("{err}"))),
+                Box::new(StoreError::Database(format!("{err}"))),
             )),
         }
     }
@@ -107,7 +107,7 @@ impl SignedPreKeyStore for SqliteSignedPreKeyStore {
         .map_err(|err| {
             SignalProtocolError::ApplicationCallbackError(
                 "save signed pre key",
-                Box::new(ClientError::Database(format!("{err}"))),
+                Box::new(StoreError::Database(format!("{err}"))),
             )
         })
     }

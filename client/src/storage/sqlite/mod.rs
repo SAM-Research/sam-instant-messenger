@@ -11,7 +11,7 @@ pub use session::SqliteSessionStore;
 pub use signed_pre_key::SqliteSignedPreKeyStore;
 use sqlx::sqlite::SqlitePoolOptions;
 
-use super::{Store, StoreConfig, StoreType};
+use super::{error::StoreError, Store, StoreConfig, StoreType};
 use crate::ClientError;
 
 pub mod account;
@@ -70,7 +70,7 @@ impl SqliteStoreConfig {
             .connect(&self.connection_string)
             .await
             .map_err(|err| {
-                ClientError::Database(format!(
+                StoreError::Database(format!(
                     "Could not connect to the database at '{}': {}",
                     self.connection_string, err
                 ))
@@ -104,7 +104,7 @@ impl StoreConfig for SqliteStoreConfig {
             .connect(&self.connection_string)
             .await
             .map_err(|err| {
-                ClientError::Database(format!(
+                StoreError::Database(format!(
                     "Could not connect to the database at '{}': {}",
                     self.connection_string, err
                 ))
@@ -113,7 +113,7 @@ impl StoreConfig for SqliteStoreConfig {
             .run(&database)
             .await
             .map_err(|err| {
-                ClientError::Database(format!(
+                StoreError::Database(format!(
                     "Could not run migrations on database at '{}': {}",
                     self.connection_string, err
                 ))

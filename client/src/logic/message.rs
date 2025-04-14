@@ -47,7 +47,8 @@ pub async fn process_message(
         .add_device(envelope.source_account_id(), envelope.source_device_id())
         .await?;
 
-    store.message_store.store_message(envelope).await
+    store.message_store.store_message(envelope).await?;
+    Ok(())
 }
 
 pub async fn prepare_message<T: StoreType, R: Rng + CryptoRng>(

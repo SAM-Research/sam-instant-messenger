@@ -3,7 +3,7 @@ use base64::{prelude::BASE64_STANDARD, Engine as _};
 use libsignal_protocol::{ProtocolAddress, SessionRecord, SessionStore, SignalProtocolError};
 use sqlx::{Pool, Sqlite};
 
-use crate::ClientError;
+use crate::storage::error::StoreError;
 
 #[derive(Debug)]
 pub struct SqliteSessionStore {
@@ -77,7 +77,7 @@ impl SessionStore for SqliteSessionStore {
         .map_err(|err| {
             SignalProtocolError::ApplicationCallbackError(
                 "store session",
-                Box::new(ClientError::Database(format!("{err}"))),
+                Box::new(StoreError::Database(format!("{err}"))),
             )
         })
     }

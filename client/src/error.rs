@@ -4,6 +4,7 @@ use libsignal_protocol::SignalProtocolError;
 use sam_common::LibError;
 
 use crate::net::{protocol::error::ProtocolError, ApiClientError};
+use crate::storage::error::StoreError;
 
 #[derive(Debug, Display, Error, From)]
 pub enum ClientError {
@@ -12,19 +13,12 @@ pub enum ClientError {
     InvalidAccountId(String),
     SignalProtocol(SignalProtocolError),
     #[from(ignore)]
-    Database(#[error(not(source))] String),
     Lib(LibError),
     Curve(CurveError),
     Api(ApiClientError),
     Protocol(ProtocolError),
+    Store(StoreError),
     MissingDevices,
-    NoAccountId,
-    NoPassword,
-    NoUsername,
-    SendError,
-    NoDeviceId,
-    NoContact,
-    FailedToConvertPreKeyBundle,
     FailedToProcessPrekeyBundle,
     FailedToUnpadMessage,
 }

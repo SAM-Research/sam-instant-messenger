@@ -3,7 +3,7 @@ use std::collections::{HashMap, HashSet};
 use async_trait::async_trait;
 use sam_common::{AccountId, DeviceId};
 
-use crate::{storage::ContactStore, ClientError};
+use crate::storage::{error::StoreError, ContactStore};
 
 #[derive(Debug, Default)]
 pub struct InMemoryContactStore {
@@ -12,21 +12,21 @@ pub struct InMemoryContactStore {
 
 #[async_trait(?Send)]
 impl ContactStore for InMemoryContactStore {
-    async fn contains_contact(&self, account_id: AccountId) -> Result<bool, ClientError> {
+    async fn contains_contact(&self, account_id: AccountId) -> Result<bool, StoreError> {
         Ok(self.contacts.contains_key(&account_id))
     }
 
     async fn get_all_devices(
         &self,
         account_id: AccountId,
-    ) -> Result<HashSet<DeviceId>, ClientError> {
+    ) -> Result<HashSet<DeviceId>, StoreError> {
         Ok(self.contacts.get(&account_id).cloned().unwrap_or_default())
     }
     async fn add_device(
         &mut self,
         account_id: AccountId,
         device_id: DeviceId,
-    ) -> Result<(), ClientError> {
+    ) -> Result<(), StoreError> {
         self.contacts
             .entry(account_id)
             .or_default()
@@ -37,7 +37,7 @@ impl ContactStore for InMemoryContactStore {
         &mut self,
         account_id: AccountId,
         device_id: DeviceId,
-    ) -> Result<(), ClientError> {
+    ) -> Result<(), StoreError> {
         if let Some(devices) = self.contacts.get_mut(&account_id) {
             devices.remove(&device_id);
         }

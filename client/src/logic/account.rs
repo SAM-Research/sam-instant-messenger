@@ -49,5 +49,9 @@ pub async fn register_account<T: StoreType, R: Rng + CryptoRng>(
     store.account_store.set_account_id(account_id).await?;
     store.account_store.set_device_id(device_id).await?;
     store.account_store.set_password(password).await?;
-    store.contact_store.add_device(account_id, device_id).await
+    store
+        .contact_store
+        .add_device(account_id, device_id)
+        .await?;
+    Ok(())
 }

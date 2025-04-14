@@ -4,7 +4,7 @@ use libsignal_protocol::{ProtocolAddress, SenderKeyRecord, SenderKeyStore, Signa
 use sqlx::{Pool, Sqlite};
 use uuid::Uuid;
 
-use crate::ClientError;
+use crate::storage::error::StoreError;
 
 #[derive(Debug)]
 pub struct SqliteSenderKeyStore {
@@ -44,7 +44,7 @@ impl SenderKeyStore for SqliteSenderKeyStore {
         .map_err(|err| {
             SignalProtocolError::ApplicationCallbackError(
                 "store sender key",
-                Box::new(ClientError::Database(format!("{err}"))),
+                Box::new(StoreError::Database(format!("{err}"))),
             )
         })
     }

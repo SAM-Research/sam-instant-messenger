@@ -1,4 +1,5 @@
-use crate::{storage::AccountStore, ClientError};
+use crate::storage::error::StoreError;
+use crate::storage::AccountStore;
 use async_trait::async_trait;
 use sam_common::address::AccountId;
 use sam_common::DeviceId;
@@ -13,34 +14,34 @@ pub struct InMemoryAccountStore {
 
 #[async_trait(?Send)]
 impl AccountStore for InMemoryAccountStore {
-    async fn set_account_id(&mut self, account_id: AccountId) -> Result<(), ClientError> {
+    async fn set_account_id(&mut self, account_id: AccountId) -> Result<(), StoreError> {
         self.account_id = Some(account_id);
         Ok(())
     }
-    async fn get_account_id(&self) -> Result<AccountId, ClientError> {
-        Ok(self.account_id.ok_or(ClientError::NoAccountId)?)
+    async fn get_account_id(&self) -> Result<AccountId, StoreError> {
+        Ok(self.account_id.ok_or(StoreError::NoAccountId)?)
     }
-    async fn set_password(&mut self, password: String) -> Result<(), ClientError> {
+    async fn set_password(&mut self, password: String) -> Result<(), StoreError> {
         self.password = Some(password);
         Ok(())
     }
-    async fn get_password(&self) -> Result<String, ClientError> {
-        Ok(self.password.clone().ok_or(ClientError::NoPassword)?)
+    async fn get_password(&self) -> Result<String, StoreError> {
+        Ok(self.password.clone().ok_or(StoreError::NoPassword)?)
     }
-    async fn set_username(&mut self, username: String) -> Result<(), ClientError> {
+    async fn set_username(&mut self, username: String) -> Result<(), StoreError> {
         self.username = Some(username);
         Ok(())
     }
-    async fn get_username(&self) -> Result<String, ClientError> {
-        Ok(self.username.clone().ok_or(ClientError::NoUsername)?)
+    async fn get_username(&self) -> Result<String, StoreError> {
+        Ok(self.username.clone().ok_or(StoreError::NoUsername)?)
     }
 
-    async fn set_device_id(&mut self, device_id: DeviceId) -> Result<(), ClientError> {
+    async fn set_device_id(&mut self, device_id: DeviceId) -> Result<(), StoreError> {
         self.device_id = Some(device_id);
         Ok(())
     }
 
-    async fn get_device_id(&self) -> Result<DeviceId, ClientError> {
-        Ok(self.device_id.ok_or(ClientError::NoDeviceId)?)
+    async fn get_device_id(&self) -> Result<DeviceId, StoreError> {
+        Ok(self.device_id.ok_or(StoreError::NoDeviceId)?)
     }
 }

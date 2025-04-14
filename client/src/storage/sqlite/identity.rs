@@ -6,7 +6,7 @@ use libsignal_protocol::{
 };
 use sqlx::{Pool, Sqlite};
 
-use crate::ClientError;
+use crate::{storage::error::StoreError, ClientError};
 
 #[derive(Debug)]
 pub struct SqliteIdentityKeyStore {
@@ -18,7 +18,7 @@ impl SqliteIdentityKeyStore {
         &self,
         address: &ProtocolAddress,
         identity: &IdentityKey,
-    ) -> Result<(), ClientError> {
+    ) -> Result<(), StoreError> {
         let addr = format!("{}", address);
         let key = BASE64_STANDARD.encode(identity.serialize());
 
@@ -35,14 +35,14 @@ impl SqliteIdentityKeyStore {
         .execute(&self.database)
         .await
         .map(|_| ())
-        .map_err(|err| ClientError::Database(format!("{err}")))
+        .map_err(|err| StoreError::Database(format!("{err}")))
     }
 
     async fn insert_account_key_information(
         &self,
         key_pair: IdentityKeyPair,
         registration_id: u32,
-    ) -> Result<(), ClientError> {
+    ) -> Result<(), StoreError> {
         let pk = BASE64_STANDARD.encode(key_pair.identity_key().serialize());
         let sk = BASE64_STANDARD.encode(key_pair.private_key().serialize());
 
@@ -58,7 +58,7 @@ impl SqliteIdentityKeyStore {
         .execute(&self.database)
         .await
         .map(|_| ())
-        .map_err(|err| ClientError::Database(format!("{err}")))
+        .map_err(|err| StoreError::Database(format!("{err}")))
     }
 
     pub async fn new(
@@ -122,7 +122,7 @@ impl IdentityKeyStore for SqliteIdentityKeyStore {
             )),
             Err(err) => Err(SignalProtocolError::ApplicationCallbackError(
                 "Could not fetch Identity Key bundle from database",
-                Box::new(ClientError::Database(format!("{err}"))),
+                Box::new(StoreError::Database(format!("{err}"))),
             )),
         }
     }
@@ -142,7 +142,7 @@ impl IdentityKeyStore for SqliteIdentityKeyStore {
         .map_err(|err| {
             SignalProtocolError::ApplicationCallbackError(
                 "Could not Retrieve local registration id",
-                Box::new(ClientError::Database(format!("{err}"))),
+                Box::new(StoreError::Database(format!("{err}"))),
             )
         })
     }

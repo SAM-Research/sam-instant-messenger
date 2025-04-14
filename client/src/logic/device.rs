@@ -50,5 +50,6 @@ pub async fn provision_device<T: StoreType, R: Rng + CryptoRng>(
     store
         .contact_store
         .add_device(response.account_id, response.device_id)
-        .await
+        .await?;
+    Ok(())
 }
