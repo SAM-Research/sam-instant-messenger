@@ -11,7 +11,7 @@ pub enum ClientError {
     SignalProtocol(SignalProtocolError),
     Api(ApiClientError),
     Protocol(ProtocolError),
-    Store(StoreCreationError),
+    StoreCreation(StoreCreationError),
     AccountStore(AccountStoreError),
     Logic(LogicError),
     Encryption(EncryptionError),

@@ -12,8 +12,7 @@ use crate::{
     net::ApiClient,
     storage::{
         key_generation::{
-            generate_ec_pre_keys, generate_pq_pre_keys, KyberKeyGenerator,
-            SignedPreKeyGenerator,
+            generate_ec_pre_keys, generate_pq_pre_keys, KyberKeyGenerator, SignedPreKeyGenerator,
         },
         AccountStore, ContactStore, Store, StoreType,
     },

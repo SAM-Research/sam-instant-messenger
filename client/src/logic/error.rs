@@ -5,16 +5,13 @@ use libsignal_protocol::SignalProtocolError;
 use crate::{
     encryption::error::EncryptionError,
     net::ApiClientError,
-    storage::error::{
-        AccountStoreError, ContactStoreError, KeyStoreError, MessageStoreError, StoreCreationError,
-    },
+    storage::error::{AccountStoreError, ContactStoreError, KeyStoreError, MessageStoreError},
 };
 
 #[derive(Debug, Display, Error, From)]
 pub enum LogicError {
     MissingDevices,
     FailedToProcessPrekeyBundle,
-    Store(StoreCreationError),
     Api(ApiClientError),
     Curve(CurveError),
     SignalProtocol(SignalProtocolError),
