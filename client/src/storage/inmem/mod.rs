@@ -1,5 +1,4 @@
-use super::{Store, StoreConfig, StoreType};
-use crate::ClientError;
+use super::{error::StoreCreationError, Store, StoreConfig, StoreType};
 pub use account::InMemoryAccountStore;
 use async_trait::async_trait;
 pub use contact::InMemoryContactStore;
@@ -51,7 +50,7 @@ impl StoreConfig for InMemoryStoreConfig {
         self,
         key_pair: IdentityKeyPair,
         registration_id: ID,
-    ) -> Result<InMemoryStore, ClientError> {
+    ) -> Result<InMemoryStore, StoreCreationError> {
         Ok(InMemoryStore::builder()
             .identity_key_store(InMemIdentityKeyStore::new(key_pair, registration_id.into()))
             .pre_key_store(InMemPreKeyStore::default())

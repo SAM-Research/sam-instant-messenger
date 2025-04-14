@@ -5,7 +5,10 @@ use tokio::sync::broadcast::{self, Receiver, Sender};
 
 use crate::{
     encryption::envelope::DecryptedEnvelope,
-    storage::{error::StoreError, traits::message::MessageStore},
+    storage::{
+        error::{DatabaseError, MessageStoreError},
+        traits::message::MessageStore,
+    },
 };
 
 pub struct SqliteMessageStore {
@@ -22,7 +25,10 @@ impl SqliteMessageStore {
 
 #[async_trait(?Send)]
 impl MessageStore for SqliteMessageStore {
-    async fn store_message(&mut self, envelope: DecryptedEnvelope) -> Result<(), StoreError> {
+    async fn store_message(
+        &mut self,
+        envelope: DecryptedEnvelope,
+    ) -> Result<(), MessageStoreError> {
         let account_id = envelope.source_account_id().to_string();
         let device_id = envelope.source_device_id().to_string();
         let content = envelope.content_bytes();
@@ -41,15 +47,15 @@ impl MessageStore for SqliteMessageStore {
         .execute(&self.database)
         .await
         .map(|_| ())
-        .map_err(|err| StoreError::Database(format!("{err}")));
+        .map_err(|err| DatabaseError::Database(format!("{err}")));
         match res {
             Ok(()) => self
                 .sender
                 .send(envelope)
                 .inspect_err(|e| debug!("{e}"))
-                .map_err(|_| StoreError::SendError)
+                .map_err(|_| MessageStoreError::SendError)
                 .map(|_| ()),
-            Err(e) => Err(e),
+            Err(e) => Err(e)?,
         }
     }
     fn subscribe(&self) -> Receiver<DecryptedEnvelope> {

@@ -191,7 +191,7 @@ impl<T: ClientType> Client<T> {
         Ok(self.store.account_store.get_device_id().await?)
     }
 
-    pub async fn password(&self) -> Result<String, ClientError> {
+    async fn password(&self) -> Result<String, ClientError> {
         Ok(self.store.account_store.get_password().await?)
     }
 

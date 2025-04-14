@@ -157,14 +157,12 @@ mod test {
     };
 
     use crate::{
-        encryption::encrypt::{decrypt, encrypt},
-        storage::{
+        encryption::encrypt::{decrypt, encrypt}, logic::into_libsignal_bundle, storage::{
             inmem::InMemoryStoreConfig,
-            key_generation::{
-                into_libsignal_bundle, KyberKeyGenerator, PreKeyGenerator, SignedPreKeyGenerator,
+            key_generation::{KyberKeyGenerator, PreKeyGenerator, SignedPreKeyGenerator,
             },
             AccountStore, ContactStore, Store, StoreConfig, StoreType,
-        },
+        }
     };
 
     pub async fn create_pre_key_bundle<R: Rng + CryptoRng>(

@@ -6,7 +6,7 @@ use libsignal_protocol::{
 };
 use sqlx::{Pool, Sqlite};
 
-use crate::{storage::error::StoreError, ClientError};
+use crate::storage::error::{DatabaseError, KeyStoreError, StoreCreationError};
 
 #[derive(Debug)]
 pub struct SqliteIdentityKeyStore {
@@ -18,7 +18,7 @@ impl SqliteIdentityKeyStore {
         &self,
         address: &ProtocolAddress,
         identity: &IdentityKey,
-    ) -> Result<(), StoreError> {
+    ) -> Result<(), KeyStoreError> {
         let addr = format!("{}", address);
         let key = BASE64_STANDARD.encode(identity.serialize());
 
@@ -35,14 +35,14 @@ impl SqliteIdentityKeyStore {
         .execute(&self.database)
         .await
         .map(|_| ())
-        .map_err(|err| StoreError::Database(format!("{err}")))
+        .map_err(|err| DatabaseError::Database(format!("{err}")).into())
     }
 
     async fn insert_account_key_information(
         &self,
         key_pair: IdentityKeyPair,
         registration_id: u32,
-    ) -> Result<(), StoreError> {
+    ) -> Result<(), StoreCreationError> {
         let pk = BASE64_STANDARD.encode(key_pair.identity_key().serialize());
         let sk = BASE64_STANDARD.encode(key_pair.private_key().serialize());
 
@@ -58,14 +58,14 @@ impl SqliteIdentityKeyStore {
         .execute(&self.database)
         .await
         .map(|_| ())
-        .map_err(|err| StoreError::Database(format!("{err}")))
+        .map_err(|err| DatabaseError::Database(format!("{err}")).into())
     }
 
     pub async fn new(
         database: Pool<Sqlite>,
         key_pair: IdentityKeyPair,
         registration_id: u32,
-    ) -> Result<Self, ClientError> {
+    ) -> Result<Self, StoreCreationError> {
         let id_store = Self { database };
         id_store
             .insert_account_key_information(key_pair, registration_id)
@@ -73,7 +73,7 @@ impl SqliteIdentityKeyStore {
         Ok(id_store)
     }
 
-    pub async fn load(database: Pool<Sqlite>) -> Result<Self, ClientError> {
+    pub async fn load(database: Pool<Sqlite>) -> Result<Self, StoreCreationError> {
         Ok(Self { database })
     }
 }
@@ -122,7 +122,7 @@ impl IdentityKeyStore for SqliteIdentityKeyStore {
             )),
             Err(err) => Err(SignalProtocolError::ApplicationCallbackError(
                 "Could not fetch Identity Key bundle from database",
-                Box::new(StoreError::Database(format!("{err}"))),
+                Box::new(DatabaseError::Database(format!("{err}"))),
             )),
         }
     }
@@ -142,7 +142,7 @@ impl IdentityKeyStore for SqliteIdentityKeyStore {
         .map_err(|err| {
             SignalProtocolError::ApplicationCallbackError(
                 "Could not Retrieve local registration id",
-                Box::new(StoreError::Database(format!("{err}"))),
+                Box::new(DatabaseError::Database(format!("{err}"))),
             )
         })
     }

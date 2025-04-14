@@ -1,7 +1,9 @@
 use std::time::SystemTime;
 
 use libsignal_core::ProtocolAddress;
-use libsignal_protocol::{process_prekey_bundle, IdentityKeyStore};
+use libsignal_protocol::{
+    kem, process_prekey_bundle, IdentityKey, IdentityKeyStore, PreKeyBundle, PublicKey,
+};
 use log::debug;
 use rand::{CryptoRng, Rng};
 use sam_common::{api::PublishPreKeys, AccountId, DeviceId};
@@ -10,7 +12,7 @@ use crate::{
     net::ApiClient,
     storage::{
         key_generation::{
-            generate_ec_pre_keys, generate_pq_pre_keys, into_libsignal_bundle, KyberKeyGenerator,
+            generate_ec_pre_keys, generate_pq_pre_keys, KyberKeyGenerator,
             SignedPreKeyGenerator,
         },
         AccountStore, ContactStore, Store, StoreType,
@@ -101,4 +103,27 @@ pub async fn publish_prekeys<T: StoreType, R: Rng + CryptoRng>(
             },
         )
         .await?)
+}
+
+pub fn into_libsignal_bundle(
+    bundle: sam_common::api::PreKeyBundle,
+    identity_key: IdentityKey,
+) -> Result<PreKeyBundle, LogicError> {
+    Ok(PreKeyBundle::new(
+        bundle.registration_id,
+        bundle.device_id.into(),
+        match bundle.pre_key {
+            None => None,
+            Some(key) => Some((key.key_id.into(), PublicKey::deserialize(&key.public_key)?)),
+        },
+        bundle.signed_pre_key.key_id.into(),
+        PublicKey::deserialize(&bundle.signed_pre_key.public_key)?,
+        bundle.signed_pre_key.signature.to_vec(),
+        identity_key,
+    )?
+    .with_kyber_pre_key(
+        bundle.pq_pre_key.key_id.into(),
+        kem::PublicKey::deserialize(&bundle.pq_pre_key.public_key)?,
+        bundle.pq_pre_key.signature.to_vec(),
+    ))
 }
