@@ -17,8 +17,6 @@ Cargo.lock
 **.db*
 .idea/
 
-**/rootCA.crt
-**/server.crt
-**/server.key
-**/client.key
-**/client.crt
+**/*.crt
+**/*.key
+config.json

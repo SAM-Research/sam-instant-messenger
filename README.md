@@ -3,27 +3,51 @@
 [![Rust](https://github.com/SAM-Research/sam-instant-messenger/actions/workflows/rust.yml/badge.svg)](https://github.com/SAM-Research/sam-instant-messenger/actions/workflows/rust.yml)
 [![codecov](https://codecov.io/gh/SAM-Research/sam-instant-messenger/graph/badge.svg?token=QYZJ65M3N1)](https://codecov.io/gh/SAM-Research/sam-instant-messenger)
 
-# Server
+# Usage
 
-Running the server can be done with:
+```
+$ sam-server --help
+Usage: sam-server [OPTIONS]
 
-```sh
-RUST_LOG=info cargo run --bin sam-server
+Options:
+  -s, --server-address <server_address>
+          IP to run server on [default: 127.0.0.1:8080]
+  -l, --link-secret <link_secret>
+          Link secret used to create link signature [default: verysecret]
+  -p, --provision-timeout <provision_timeout>
+          Provision timeout for linking new devices in seconds [default: 600]
+  -m, --message-buffer-size <buffer_size>
+          How many messages can be in a buffer channel before blocking behaviour [default: 10]
+  -c, --config <config>
+          JSON Config path
+  -h, --help
+          Print help
 ```
 
-Omit the `RUST_LOG=info` if you don't want any logging
+prefix the command with `RUST_LOG=info` if you want the server to output info messages
 
-## TLS Configuration
+## JSON Configuration
 
-You can configure the server with tls by providing CLI arguments with the certificates and keys or as a JSON.
+You can configure the proxy with TLS and mTLS for communication with SAM Server and with denim clients by doing:
 
-Example configuration:
+```sh
+sam-server --config ./config.json
+```
+
+where the config looks like this:
 
 ```jsonc
 {
-  "caCertPath": "rootCA.crt", // optional, enables mTLS
-  "certPath": "server.crt",
-  "keyPath": "server.key"
+  "address": "127.0.0.1:8081", // Address to run SAM Server on (optional)
+  "linkSecret": "verysecret", // Secret for provision signature (optional)
+  "provisionTimeout": 600, // Seconds before a provision token becomes invalid (optional)
+  "messageBufferSize": 10, // Internal message communication, might affect performance of server (optional)
+  "tls": {
+    // TLS Configuration (optional)
+    "caCertPath": "./e2e/cert/rootCA.crt", // Cerificate Authority certificate for mTLS configuration (optional)
+    "certPath": "./e2e/cert/server.crt", // Server Certificate
+    "keyPath": "./e2e/cert/server.key" // Server Key
+  }
 }
 ```
 

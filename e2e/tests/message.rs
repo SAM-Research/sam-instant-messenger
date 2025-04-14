@@ -31,7 +31,7 @@ async fn client(address: &str, username: &str, device_name: &str) -> Client<Sqli
         .device_name(device_name)
         .store_config(SqliteStoreConfig::in_memory().await)
         .api_client_config(HttpClientConfig::new(address.to_string()))
-        .protocol_config(WebSocketProtocolClientConfig::new(address.to_string()))
+        .protocol_config(WebSocketProtocolClientConfig::new(address.to_string(), 10))
         .upload_prekey_count(5)
         .call()
         .await
@@ -57,6 +57,7 @@ async fn tls_client(
         .protocol_config(WebSocketProtocolClientConfig::new_with_tls(
             address.to_string(),
             client_config,
+            10,
         ))
         .upload_prekey_count(5)
         .call()
@@ -73,7 +74,7 @@ async fn client_device(
     Client::from_provisioning()
         .store_config(SqliteStoreConfig::in_memory().await)
         .api_client_config(HttpClientConfig::new(address.to_string()))
-        .protocol_config(WebSocketProtocolClientConfig::new(address.to_string()))
+        .protocol_config(WebSocketProtocolClientConfig::new(address.to_string(), 10))
         .device_name(device_name)
         .id_key_pair(id_pair)
         .token(token)
@@ -487,7 +488,7 @@ async fn sqlite_stores_alice_send_to_bob() {
             .username("Alice")
             .device_name("Alice's Device")
             .store_config(SqliteStoreConfig::new(path.clone()))
-            .protocol_config(WebSocketProtocolClientConfig::new(address.to_owned()))
+            .protocol_config(WebSocketProtocolClientConfig::new(address.to_owned(), 10))
             .api_client_config(HttpClientConfig::new(address.to_owned()))
             .call()
             .await
@@ -503,7 +504,7 @@ async fn sqlite_stores_alice_send_to_bob() {
 
         let mut alice: Client<SqliteClientType> = Client::from_store()
             .store(store)
-            .protocol_config(WebSocketProtocolClientConfig::new(address.to_owned()))
+            .protocol_config(WebSocketProtocolClientConfig::new(address.to_owned(), 10))
             .api_client_config(HttpClientConfig::new(address.to_owned()))
             .call()
             .await
@@ -513,7 +514,7 @@ async fn sqlite_stores_alice_send_to_bob() {
             .username("Bob")
             .device_name("Bob's Device")
             .store_config(SqliteStoreConfig::new("sqlite::memory:".to_owned()))
-            .protocol_config(WebSocketProtocolClientConfig::new(address.to_owned()))
+            .protocol_config(WebSocketProtocolClientConfig::new(address.to_owned(), 10))
             .api_client_config(HttpClientConfig::new(address.to_owned()))
             .call()
             .await

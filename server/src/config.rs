@@ -12,17 +12,45 @@ pub struct ServerConfig<T: StateType> {
 
 #[derive(Debug, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
+pub struct ServerCliConfig {
+    pub address: Option<String>,
+    pub link_secret: Option<String>,
+    pub provision_timeout: Option<u64>,
+    pub message_buffer_size: Option<usize>,
+    pub tls: Option<TlsConfig>,
+}
+
+impl ServerCliConfig {
+    pub fn new(
+        address: Option<String>,
+        link_secret: Option<String>,
+        provision_timeout: Option<u64>,
+        message_buffer_size: Option<usize>,
+        tls: Option<TlsConfig>,
+    ) -> Self {
+        Self {
+            address,
+            link_secret,
+            provision_timeout,
+            message_buffer_size,
+            tls,
+        }
+    }
+
+    pub fn load<R: std::io::Read>(reader: R) -> Result<Self, serde_json::Error> {
+        serde_json::from_reader(reader)
+    }
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
 pub struct TlsConfig {
     pub ca_cert_path: Option<String>,
     pub cert_path: String,
     pub key_path: String,
 }
 
-impl TlsConfig {
-    pub fn load<R: std::io::Read>(reader: R) -> Result<Self, serde_json::Error> {
-        serde_json::from_reader(reader)
-    }
-}
+impl TlsConfig {}
 
 impl TryInto<rustls::ServerConfig> for TlsConfig {
     type Error = TlsError;

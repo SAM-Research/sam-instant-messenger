@@ -136,13 +136,15 @@ impl WebSocketReceiver for SamProtocolReceiver {
 pub struct ProtocolClient {
     client: Arc<Mutex<WebSocketClient>>,
     status_messages: Option<Receiver<ServerStatus>>,
+    channel_buffer_size: usize,
 }
 
 impl ProtocolClient {
-    pub fn new(client: WebSocketClient) -> Self {
+    pub fn new(client: WebSocketClient, channel_buffer_size: usize) -> Self {
         Self {
             client: Arc::new(Mutex::new(client)),
             status_messages: None,
+            channel_buffer_size,
         }
     }
 
@@ -193,9 +195,9 @@ impl ProtocolClient {
 #[async_trait]
 impl SamProtocolClient for ProtocolClient {
     async fn connect(&mut self) -> Result<Receiver<ServerEnvelope>, ProtocolError> {
-        let (status_sender, status_receiver) = channel(10);
+        let (status_sender, status_receiver) = channel(self.channel_buffer_size);
 
-        let (tx, rx) = mpsc::channel(10);
+        let (tx, rx) = mpsc::channel(self.channel_buffer_size);
         let handler = SamProtocolReceiver::new(self.client.clone(), status_sender, tx);
 
         self.status_messages = Some(status_receiver);
@@ -469,7 +471,7 @@ mod test {
             .build()
             .into();
 
-        let mut client = ProtocolClient::new(client);
+        let mut client = ProtocolClient::new(client, 10);
         let mut receiver = client.connect().await.expect("Can connect");
 
         let mut results = vec![];
