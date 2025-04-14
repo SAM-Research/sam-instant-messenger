@@ -38,7 +38,7 @@ where the config looks like this:
 
 ```jsonc
 {
-  "address": "127.0.0.1:8081", // Address to run SAM Server on (optional)
+  "address": "127.0.0.1:8080", // Address to run SAM Server on (optional)
   "linkSecret": "verysecret", // Secret for provision signature (optional)
   "provisionTimeout": 600, // Seconds before a provision token becomes invalid (optional)
   "messageBufferSize": 10, // Internal message communication, might affect performance of server (optional)
