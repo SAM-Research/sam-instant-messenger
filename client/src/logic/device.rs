@@ -8,8 +8,9 @@ use crate::{
     storage::{
         key_generation::create_registration_pre_keys, AccountStore, ContactStore, Store, StoreType,
     },
-    ClientError,
 };
+
+use super::LogicError;
 
 pub async fn provision_device<T: StoreType, R: Rng + CryptoRng>(
     api_client: &impl ApiClient,
@@ -19,7 +20,7 @@ pub async fn provision_device<T: StoreType, R: Rng + CryptoRng>(
     upload_prekey_count: usize,
     password_length: usize,
     mut rng: &mut R,
-) -> Result<(), ClientError> {
+) -> Result<(), LogicError> {
     let id_key_pair = store.identity_key_store.get_identity_key_pair().await?;
     let key_bundle =
         create_registration_pre_keys(store, upload_prekey_count, id_key_pair, &mut rng).await?;
@@ -50,5 +51,6 @@ pub async fn provision_device<T: StoreType, R: Rng + CryptoRng>(
     store
         .contact_store
         .add_device(response.account_id, response.device_id)
-        .await
+        .await?;
+    Ok(())
 }

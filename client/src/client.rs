@@ -184,11 +184,15 @@ impl<T: ClientType> Client<T> {
     }
 
     pub async fn account_id(&self) -> Result<AccountId, ClientError> {
-        self.store.account_store.get_account_id().await
+        Ok(self.store.account_store.get_account_id().await?)
     }
 
     pub async fn device_id(&self) -> Result<DeviceId, ClientError> {
-        self.store.account_store.get_device_id().await
+        Ok(self.store.account_store.get_device_id().await?)
+    }
+
+    async fn password(&self) -> Result<String, ClientError> {
+        Ok(self.store.account_store.get_password().await?)
     }
 
     pub async fn identity_key_pair(&self) -> Result<IdentityKeyPair, ClientError> {
@@ -204,7 +208,7 @@ impl<T: ClientType> Client<T> {
     pub async fn delete_account(self) -> Result<(), (Self, ClientError)> {
         let account_id = self.account_id().await;
         let device_id = self.device_id().await;
-        let password = self.store.account_store.get_password().await;
+        let password = self.password().await;
 
         let Ok(account_id) = account_id else {
             return Err((self, account_id.unwrap_err()));
@@ -237,7 +241,7 @@ impl<T: ClientType> Client<T> {
     pub async fn delete_device(self) -> Result<(), (Self, ClientError)> {
         let account_id = self.account_id().await;
         let device_id = self.device_id().await;
-        let password = self.store.account_store.get_password().await;
+        let password = self.password().await;
 
         let Ok(account_id) = account_id else {
             return Err((self, account_id.unwrap_err()));
@@ -270,7 +274,7 @@ impl<T: ClientType> Client<T> {
             .delete_device(
                 self.account_id().await?,
                 self.device_id().await?,
-                &self.store.account_store.get_password().await?,
+                &self.password().await?,
                 device_id,
             )
             .await?;
@@ -284,7 +288,7 @@ impl<T: ClientType> Client<T> {
             .get_user_account_id(
                 self.account_id().await?,
                 self.device_id().await?,
-                self.store.account_store.get_password().await?.as_str(),
+                &self.password().await?,
                 username,
             )
             .await?;
@@ -337,12 +341,12 @@ impl<T: ClientType> Client<T> {
 
     /// Recieve and decrypt messages. Block until at least one message is received.
     pub async fn process_messages_blocking(&mut self) -> Result<(), ClientError> {
-        process_messages(&mut self.store, &mut self.envelope_queue, true).await
+        Ok(process_messages(&mut self.store, &mut self.envelope_queue, true).await?)
     }
 
     /// Recieve and decrypt messages.
     pub async fn process_messages(&mut self) -> Result<(), ClientError> {
-        process_messages(&mut self.store, &mut self.envelope_queue, false).await
+        Ok(process_messages(&mut self.store, &mut self.envelope_queue, false).await?)
     }
 
     /// Publish new prekeys.
@@ -353,7 +357,7 @@ impl<T: ClientType> Client<T> {
         #[builder(default = false)] new_signed_prekey: bool,
         #[builder(default = false)] new_last_resort: bool,
     ) -> Result<(), ClientError> {
-        publish_prekeys(
+        Ok(publish_prekeys(
             &mut self.store,
             &self.api_client,
             onetime_prekeys,
@@ -361,7 +365,7 @@ impl<T: ClientType> Client<T> {
             new_last_resort,
             &mut self.rng,
         )
-        .await
+        .await?)
     }
 
     /// Create a provisioning token for linking a new device to your account.
@@ -371,7 +375,7 @@ impl<T: ClientType> Client<T> {
             .provision_device(
                 self.account_id().await?,
                 self.device_id().await?,
-                &self.store.account_store.get_password().await?,
+                &self.password().await?,
             )
             .await?)
     }

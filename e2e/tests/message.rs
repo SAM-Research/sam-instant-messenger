@@ -7,6 +7,7 @@ use rstest::rstest;
 use sam_client::{
     client::SqliteClientType,
     encryption::envelope::DecryptedEnvelope,
+    logic::LogicError,
     net::{
         http_client::HttpClientConfig,
         protocol::WebSocketProtocolClientConfig,
@@ -218,7 +219,7 @@ async fn test_alice_send_to_bob_missing_devices() {
 
         assert!(matches!(
             alice.send_message(bob_id, "Hello again, Bob").await,
-            Err(ClientError::MissingDevices)
+            Err(ClientError::Logic(LogicError::MissingDevices))
         ));
 
         assert!(alice.send_message(bob_id, "Hello again, Bob").await.is_ok());
@@ -331,7 +332,10 @@ async fn test_alice_send_to_bob_and_self() {
 
         let bob_expected = "Hello bob!";
         let res = alice.send_message(bob_id, bob_expected).await;
-        assert!(matches!(res, Err(ClientError::MissingDevices)));
+        assert!(matches!(
+            res,
+            Err(ClientError::Logic(LogicError::MissingDevices))
+        ));
 
         alice
             .send_message(bob_id, bob_expected)
