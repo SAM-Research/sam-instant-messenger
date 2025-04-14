@@ -1,5 +1,5 @@
+use crate::signal_time_now;
 use crate::storage::{ProvidesKeyId, Store, StoreType};
-use crate::{signal_time_now, ClientError};
 use async_trait::async_trait;
 use libsignal_core::curve::{KeyPair, PrivateKey};
 use libsignal_protocol::kem::{self, KeyType};
@@ -13,12 +13,14 @@ use rand::{CryptoRng, Rng};
 use sam_common::api::keys::RegistrationPreKeys;
 use sam_common::api::{EcPreKey, PqPreKey};
 
+use super::error::StoreError;
+
 #[async_trait(?Send)]
 pub trait PreKeyGenerator {
     async fn generate_key<R: Rng + CryptoRng>(
         &mut self,
         csprng: &mut R,
-    ) -> Result<PreKeyRecord, ClientError>;
+    ) -> Result<PreKeyRecord, StoreError>;
 }
 
 pub async fn generate_ec_pre_key<R: Rng + CryptoRng>(id: PreKeyId, csprng: &mut R) -> PreKeyRecord {
@@ -28,7 +30,7 @@ pub async fn generate_ec_pre_key<R: Rng + CryptoRng>(id: PreKeyId, csprng: &mut 
 
 #[async_trait(?Send)]
 impl<T: PreKeyStore + ProvidesKeyId<PreKeyId>> PreKeyGenerator for T {
-    async fn generate_key<R>(&mut self, csprng: &mut R) -> Result<PreKeyRecord, ClientError>
+    async fn generate_key<R>(&mut self, csprng: &mut R) -> Result<PreKeyRecord, StoreError>
     where
         R: Rng + CryptoRng,
     {
@@ -46,7 +48,7 @@ pub trait SignedPreKeyGenerator {
         &mut self,
         csprng: &mut R,
         private_key: &PrivateKey,
-    ) -> Result<SignedPreKeyRecord, ClientError>;
+    ) -> Result<SignedPreKeyRecord, StoreError>;
 }
 
 pub async fn generate_signed_pre_key<R: Rng + CryptoRng>(
@@ -72,7 +74,7 @@ impl<T: SignedPreKeyStore + ProvidesKeyId<SignedPreKeyId>> SignedPreKeyGenerator
         &mut self,
         csprng: &mut R,
         private_key: &PrivateKey,
-    ) -> Result<SignedPreKeyRecord, ClientError>
+    ) -> Result<SignedPreKeyRecord, StoreError>
     where
         R: Rng + CryptoRng,
     {
@@ -89,7 +91,7 @@ pub trait KyberKeyGenerator {
     async fn generate_key(
         &mut self,
         private_key: &PrivateKey,
-    ) -> Result<KyberPreKeyRecord, ClientError>;
+    ) -> Result<KyberPreKeyRecord, StoreError>;
 }
 
 pub async fn generate_pq_pre_key(
@@ -104,7 +106,7 @@ impl<T: KyberPreKeyStore + ProvidesKeyId<KyberPreKeyId>> KyberKeyGenerator for T
     async fn generate_key(
         &mut self,
         private_key: &PrivateKey,
-    ) -> Result<KyberPreKeyRecord, ClientError> {
+    ) -> Result<KyberPreKeyRecord, StoreError> {
         let id = self.next_key_id().await?;
         let record = generate_pq_pre_key(id, private_key).await?;
         self.save_kyber_pre_key(id, &record).await?;
@@ -116,7 +118,7 @@ pub async fn generate_ec_pre_keys<G: PreKeyGenerator, R: Rng + CryptoRng>(
     generator: &mut G,
     amount: usize,
     mut csprng: &mut R,
-) -> Result<Vec<EcPreKey>, ClientError> {
+) -> Result<Vec<EcPreKey>, StoreError> {
     let mut keys = Vec::with_capacity(amount);
     for _ in 0..amount {
         keys.push(generator.generate_key(&mut csprng).await?.into());
@@ -128,7 +130,7 @@ pub async fn generate_pq_pre_keys<G: KyberKeyGenerator>(
     signing_key: &PrivateKey,
     generator: &mut G,
     amount: usize,
-) -> Result<Vec<PqPreKey>, ClientError> {
+) -> Result<Vec<PqPreKey>, StoreError> {
     let mut keys = Vec::with_capacity(amount);
     for _ in 0..amount {
         keys.push(generator.generate_key(signing_key).await?.into());
@@ -139,7 +141,7 @@ pub async fn generate_pq_pre_keys<G: KyberKeyGenerator>(
 pub fn into_libsignal_bundle(
     bundle: sam_common::api::PreKeyBundle,
     identity_key: IdentityKey,
-) -> Result<PreKeyBundle, ClientError> {
+) -> Result<PreKeyBundle, StoreError> {
     Ok(PreKeyBundle::new(
         bundle.registration_id,
         bundle.device_id.into(),
@@ -164,7 +166,7 @@ pub async fn create_registration_pre_keys<S: StoreType, R: Rng + CryptoRng>(
     prekey_count: usize,
     id_key_pair: IdentityKeyPair,
     mut csprng: &mut R,
-) -> Result<RegistrationPreKeys, ClientError> {
+) -> Result<RegistrationPreKeys, StoreError> {
     Ok(RegistrationPreKeys {
         pre_keys: Some(
             generate_ec_pre_keys(&mut store.pre_key_store, prekey_count, &mut csprng).await?,

@@ -12,13 +12,11 @@ use sam_common::{
     AccountId,
 };
 
-use crate::{
-    storage::{AccountStore, ContactStore, Store, StoreType},
-    ClientError,
-};
+use crate::storage::{AccountStore, ContactStore, Store, StoreType};
 
 use super::{
     envelope::DecryptedEnvelope,
+    error::EncryptionError,
     padding::{pad_message, unpad_message},
 };
 
@@ -41,7 +39,7 @@ pub async fn encrypt(
     message: impl Into<Vec<u8>>,
     recipients: Vec<AccountId>,
     store: &mut Store<impl StoreType>,
-) -> Result<ClientEnvelope, ClientError> {
+) -> Result<ClientEnvelope, EncryptionError> {
     let bytes = pad_message(&message.into());
 
     let mut recipient_addrs = HashMap::new();
@@ -102,7 +100,7 @@ pub async fn encrypt(
 pub async fn decrypt(
     envelope: ServerEnvelope,
     store: &mut Store<impl StoreType>,
-) -> Result<DecryptedEnvelope, ClientError> {
+) -> Result<DecryptedEnvelope, EncryptionError> {
     let message = match envelope.r#type() {
         SamMessageType::SignalMessage => {
             CiphertextMessage::SignalMessage(SignalMessage::try_from(envelope.content.as_slice())?)
@@ -120,7 +118,7 @@ pub async fn decrypt(
 
     let source = AccountId::try_from(envelope.source_account_id)
         .inspect_err(|e| debug!("{e}"))
-        .map_err(|_| ClientError::InvalidAccountId("Could not parse bytes".to_owned()))?;
+        .map_err(|_| EncryptionError::InvalidAccountId("Could not parse bytes".to_owned()))?;
 
     let bytes = unpad_message(
         &message_decrypt(
@@ -135,7 +133,7 @@ pub async fn decrypt(
         )
         .await?,
     )
-    .ok_or(ClientError::FailedToUnpadMessage)?;
+    .ok_or(EncryptionError::FailedToUnpadMessage)?;
 
     Ok(DecryptedEnvelope::builder()
         .source_account_id(source)

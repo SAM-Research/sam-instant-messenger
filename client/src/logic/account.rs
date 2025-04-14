@@ -8,8 +8,9 @@ use crate::{
     storage::{
         key_generation::create_registration_pre_keys, AccountStore, ContactStore, Store, StoreType,
     },
-    ClientError,
 };
+
+use super::LogicError;
 
 pub async fn register_account<T: StoreType, R: Rng + CryptoRng>(
     api_client: &impl ApiClient,
@@ -19,7 +20,7 @@ pub async fn register_account<T: StoreType, R: Rng + CryptoRng>(
     password_length: usize,
     upload_prekey_count: usize,
     mut rng: &mut R,
-) -> Result<(), ClientError> {
+) -> Result<(), LogicError> {
     let password = generate_password(password_length, &mut rng);
     let id_pair = store.identity_key_store.get_identity_key_pair().await?;
     let key_bundle =

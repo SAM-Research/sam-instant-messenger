@@ -341,12 +341,12 @@ impl<T: ClientType> Client<T> {
 
     /// Recieve and decrypt messages. Block until at least one message is received.
     pub async fn process_messages_blocking(&mut self) -> Result<(), ClientError> {
-        process_messages(&mut self.store, &mut self.envelope_queue, true).await
+        Ok(process_messages(&mut self.store, &mut self.envelope_queue, true).await?)
     }
 
     /// Recieve and decrypt messages.
     pub async fn process_messages(&mut self) -> Result<(), ClientError> {
-        process_messages(&mut self.store, &mut self.envelope_queue, false).await
+        Ok(process_messages(&mut self.store, &mut self.envelope_queue, false).await?)
     }
 
     /// Publish new prekeys.
@@ -357,7 +357,7 @@ impl<T: ClientType> Client<T> {
         #[builder(default = false)] new_signed_prekey: bool,
         #[builder(default = false)] new_last_resort: bool,
     ) -> Result<(), ClientError> {
-        publish_prekeys(
+        Ok(publish_prekeys(
             &mut self.store,
             &self.api_client,
             onetime_prekeys,
@@ -365,7 +365,7 @@ impl<T: ClientType> Client<T> {
             new_last_resort,
             &mut self.rng,
         )
-        .await
+        .await?)
     }
 
     /// Create a provisioning token for linking a new device to your account.

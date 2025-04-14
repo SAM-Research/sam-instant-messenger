@@ -15,8 +15,9 @@ use crate::{
         },
         AccountStore, ContactStore, Store, StoreType,
     },
-    ClientError,
 };
+
+use super::LogicError;
 
 pub async fn fetch_prekeys<T: StoreType, R: Rng + CryptoRng>(
     store: &mut Store<T>,
@@ -24,7 +25,7 @@ pub async fn fetch_prekeys<T: StoreType, R: Rng + CryptoRng>(
     account_id: AccountId,
     devices: Option<Vec<DeviceId>>,
     mut rng: &mut R,
-) -> Result<(), ClientError> {
+) -> Result<(), LogicError> {
     let prekey_bundles = api_client
         .get_pre_key_bundles(
             store.account_store.get_account_id().await?,
@@ -52,7 +53,7 @@ pub async fn fetch_prekeys<T: StoreType, R: Rng + CryptoRng>(
         )
         .await
         .inspect_err(|e| debug!("{e}"))
-        .map_err(|_| ClientError::FailedToProcessPrekeyBundle)?;
+        .map_err(|_| LogicError::FailedToProcessPrekeyBundle)?;
     }
     Ok(())
 }
@@ -64,7 +65,7 @@ pub async fn publish_prekeys<T: StoreType, R: Rng + CryptoRng>(
     new_signed_prekey: bool,
     new_last_resort: bool,
     mut rng: &mut R,
-) -> Result<(), ClientError> {
+) -> Result<(), LogicError> {
     let id_pair = store.identity_key_store.get_identity_key_pair().await?;
     let onetime_ec_prekeys =
         generate_ec_pre_keys(&mut store.pre_key_store, onetime_prekeys, &mut rng).await?;
