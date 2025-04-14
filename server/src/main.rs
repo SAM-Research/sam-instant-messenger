@@ -16,11 +16,9 @@ fn welcome(config: &ServerCliConfig) {
     let addr = config.address.clone().unwrap_or(DEFAULT_ADDR.to_string());
     let prov_timeout = config
         .provision_timeout
-        .clone()
         .unwrap_or(DEFAULT_PROVISION_TIMEOUT_SECS);
     let buffer_size = config
         .message_buffer_size
-        .clone()
         .unwrap_or(DEFAULT_MESSAGE_BUFFER_SIZE);
     info!("*********Configuration*********");
     info!("Server Address: {addr}");
