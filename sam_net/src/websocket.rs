@@ -1,5 +1,5 @@
 use async_trait::async_trait;
-use derive_more::{Display, Error};
+
 use futures_util::{
     stream::{SplitSink, SplitStream},
     SinkExt, StreamExt,
@@ -16,13 +16,7 @@ use tokio_tungstenite::{
     Connector, MaybeTlsStream, WebSocketStream,
 };
 
-#[derive(Debug, Display, Error)]
-pub enum WebSocketError {
-    UrlError,
-    ConnectionFailed,
-    Disconnected,
-    AlreadyConnected,
-}
+use crate::error::WebSocketError;
 
 pub type WebSocket = WebSocketStream<MaybeTlsStream<TcpStream>>;
 
@@ -142,7 +136,7 @@ mod test {
     use tokio::sync::mpsc::{self, Sender};
     use tokio_tungstenite::{accept_async, tungstenite::Message};
 
-    use crate::{WebSocketClient, WebSocketClientConfig};
+    use crate::websocket::{WebSocketClient, WebSocketClientConfig};
 
     use super::{WebSocket, WebSocketReceiver};
 
