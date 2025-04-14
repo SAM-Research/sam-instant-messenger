@@ -1,0 +1,20 @@
+[package]
+name = "ws-client"
+version = "0.1.0"
+edition = "2021"
+description = "Simple WebSocket Client"
+repository.workspace = true
+license.workspace = true
+authors.workspace = true
+
+
+[dependencies]
+test-utils = { workspace = true }
+
+bon = { workspace = true }
+log = { workspace = true }
+tokio = { workspace = true, features = ["macros", "rt-multi-thread"] }
+tokio-tungstenite = { workspace = true, features = ["rustls-tls-native-roots"] }
+derive_more = { workspace = true, features = ["display", "error", "from"] }
+futures-util = { workspace = true, features = ["sink"] }
+async-trait = { workspace = true }

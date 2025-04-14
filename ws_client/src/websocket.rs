@@ -142,8 +142,7 @@ mod test {
     use tokio::sync::mpsc::{self, Sender};
     use tokio_tungstenite::{accept_async, tungstenite::Message};
 
-    use crate::net::protocol::websocket::WebSocketClient;
-    use crate::net::protocol::websocket::WebSocketClientConfig;
+    use crate::{WebSocketClient, WebSocketClientConfig};
 
     use super::{WebSocket, WebSocketReceiver};
 

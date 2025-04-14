@@ -1,6 +1,5 @@
 use derive_more::{Display, Error, From};
-
-use super::websocket::WebSocketError;
+use ws_client::WebSocketError;
 
 #[derive(Debug, Error, Display, From)]
 pub enum ProtocolError {
