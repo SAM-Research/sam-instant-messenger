@@ -28,7 +28,7 @@ pub async fn alice_can_upload_keys() {
         .device_name("Alice's Device")
         .store_config(SqliteStoreConfig::in_memory().await)
         .api_client_config(HttpClientConfig::new(address.clone()))
-        .protocol_config(WebSocketProtocolClientConfig::new(address.clone()))
+        .protocol_config(WebSocketProtocolClientConfig::new(address.clone(), 10))
         .call()
         .await
         .unwrap();

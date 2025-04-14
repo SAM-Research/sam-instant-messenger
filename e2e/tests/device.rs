@@ -26,7 +26,7 @@ async fn can_link_device() {
     let device_name = "Alice's Device";
 
     let store_config = SqliteStoreConfig::in_memory().await;
-    let protocol_config = WebSocketProtocolClientConfig::new(address.to_owned());
+    let protocol_config = WebSocketProtocolClientConfig::new(address.to_owned(), 10);
     let api_client_config = HttpClientConfig::new(address.to_owned());
 
     let mut alice: Client<SqliteClientType> = Client::from_registration()
@@ -45,7 +45,7 @@ async fn can_link_device() {
         .expect("Can create a link token");
 
     let store_config = SqliteStoreConfig::in_memory().await;
-    let protocol_config = WebSocketProtocolClientConfig::new(address.to_owned());
+    let protocol_config = WebSocketProtocolClientConfig::new(address.to_owned(), 10);
     let api_client_config = HttpClientConfig::new(address.to_owned());
     let id_key_pair = alice
         .identity_key_pair()
@@ -78,7 +78,7 @@ async fn can_unlink_device() {
     let device_name = "Alice's Device";
 
     let store_config = SqliteStoreConfig::in_memory().await;
-    let protocol_config = WebSocketProtocolClientConfig::new(address.to_owned());
+    let protocol_config = WebSocketProtocolClientConfig::new(address.to_owned(), 10);
     let api_client_config = HttpClientConfig::new(address.to_owned());
 
     let mut alice: Client<SqliteClientType> = Client::from_registration()
@@ -97,7 +97,7 @@ async fn can_unlink_device() {
         .expect("Can create a link token");
 
     let store_config = SqliteStoreConfig::in_memory().await;
-    let protocol_config = WebSocketProtocolClientConfig::new(address.to_owned());
+    let protocol_config = WebSocketProtocolClientConfig::new(address.to_owned(), 10);
     let api_client_config = HttpClientConfig::new(address.to_owned());
     let id_key_pair = alice
         .identity_key_pair()
@@ -135,7 +135,7 @@ async fn can_delete_device() {
     let device_name = "Alice's Device";
 
     let store_config = SqliteStoreConfig::in_memory().await;
-    let protocol_config = WebSocketProtocolClientConfig::new(address.to_owned());
+    let protocol_config = WebSocketProtocolClientConfig::new(address.to_owned(), 10);
     let api_client_config = HttpClientConfig::new(address.to_owned());
 
     let mut alice: Client<SqliteClientType> = Client::from_registration()
@@ -154,7 +154,7 @@ async fn can_delete_device() {
         .expect("Can create a link token");
 
     let store_config = SqliteStoreConfig::in_memory().await;
-    let protocol_config = WebSocketProtocolClientConfig::new(address.to_owned());
+    let protocol_config = WebSocketProtocolClientConfig::new(address.to_owned(), 10);
     let api_client_config = HttpClientConfig::new(address.to_owned());
     let id_key_pair = alice
         .identity_key_pair()
@@ -189,7 +189,7 @@ async fn can_delete_account() {
     let device_name = "Alice's Device";
 
     let store_config = SqliteStoreConfig::in_memory().await;
-    let protocol_config = WebSocketProtocolClientConfig::new(address.to_owned());
+    let protocol_config = WebSocketProtocolClientConfig::new(address.to_owned(), 10);
     let api_client_config = HttpClientConfig::new(address.to_owned());
 
     let alice: Client<SqliteClientType> = Client::from_registration()

@@ -17,16 +17,13 @@ use test_utils::get_next_port;
 
 mod utils;
 
-/*
-   Ports used: 937x
-*/
 pub async fn register_alice(address: String) -> Result<Client<SqliteClientType>, ClientError> {
     Client::from_registration()
         .username("Alice")
         .device_name("Alice's Device")
         .store_config(SqliteStoreConfig::in_memory().await)
         .api_client_config(HttpClientConfig::new(address.clone()))
-        .protocol_config(WebSocketProtocolClientConfig::new(address))
+        .protocol_config(WebSocketProtocolClientConfig::new(address, 10))
         .call()
         .await
 }
@@ -99,7 +96,7 @@ pub async fn cannot_create_client_without_valid_account() {
         .expect("Can set password");
 
     let api_client = HttpClientConfig::new(address.clone());
-    let protocol_client = WebSocketProtocolClientConfig::new(address);
+    let protocol_client = WebSocketProtocolClientConfig::new(address, 10);
 
     let client: Result<Client<SqliteClientType>, _> = Client::from_store()
         .store(store)
@@ -150,7 +147,7 @@ pub async fn alice_can_find_bobs_account_id() {
         .device_name("Bob's Device")
         .store_config(SqliteStoreConfig::in_memory().await)
         .api_client_config(HttpClientConfig::new(address.clone()))
-        .protocol_config(WebSocketProtocolClientConfig::new(address))
+        .protocol_config(WebSocketProtocolClientConfig::new(address, 10))
         .call()
         .await
         .unwrap();
@@ -187,6 +184,7 @@ pub async fn one_client_can_register_with_tls() {
         .protocol_config(WebSocketProtocolClientConfig::new_with_tls(
             address,
             client_config.clone(),
+            10,
         ))
         .call()
         .await;
@@ -209,7 +207,7 @@ pub async fn two_clients_cannot_have_the_same_username() {
         .device_name("Alice's Device")
         .store_config(SqliteStoreConfig::in_memory().await)
         .api_client_config(HttpClientConfig::new(address.clone()))
-        .protocol_config(WebSocketProtocolClientConfig::new(address.clone()))
+        .protocol_config(WebSocketProtocolClientConfig::new(address.clone(), 10))
         .call()
         .await
         .expect("Can make Alice");
@@ -219,7 +217,7 @@ pub async fn two_clients_cannot_have_the_same_username() {
         .device_name("Alice's Device")
         .store_config(SqliteStoreConfig::in_memory().await)
         .api_client_config(HttpClientConfig::new(address.clone()))
-        .protocol_config(WebSocketProtocolClientConfig::new(address))
+        .protocol_config(WebSocketProtocolClientConfig::new(address, 10))
         .call()
         .await;
 

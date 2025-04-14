@@ -165,7 +165,6 @@ mod test {
     #[tokio::test]
     #[ignore = "requires a postgres test database"]
     async fn postgres_account_manager() {
-        let _ = env_logger::try_init();
         let mut manager = accounts(connection_str()).await;
         let username = Uuid::new_v4();
         let account = Account::builder()

@@ -22,20 +22,27 @@ pub use traits::{ProtocolConfig, SamProtocolClient};
 pub struct WebSocketProtocolClientConfig {
     base_url: String,
     config: Option<ClientConfig>,
+    channel_buffer_size: usize,
 }
 
 impl WebSocketProtocolClientConfig {
-    pub fn new(base_url: String) -> Self {
+    pub fn new(base_url: String, channel_buffer_size: usize) -> Self {
         Self {
             base_url,
             config: None,
+            channel_buffer_size,
         }
     }
 
-    pub fn new_with_tls(base_url: String, config: ClientConfig) -> Self {
+    pub fn new_with_tls(
+        base_url: String,
+        config: ClientConfig,
+        channel_buffer_size: usize,
+    ) -> Self {
         Self {
             base_url,
             config: Some(config),
+            channel_buffer_size,
         }
     }
 }
@@ -81,6 +88,6 @@ impl ProtocolConfig for WebSocketProtocolClientConfig {
             )])
             .build()
             .into();
-        Ok(ProtocolClient::new(ws_client))
+        Ok(ProtocolClient::new(ws_client, self.channel_buffer_size))
     }
 }
