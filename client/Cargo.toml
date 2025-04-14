@@ -9,6 +9,7 @@ authors.workspace = true
 
 [dependencies]
 sam-common = { workspace = true }
+ws-client = { workspace = true }
 
 libsignal-protocol = { workspace = true }
 libsignal-core = { workspace = true }

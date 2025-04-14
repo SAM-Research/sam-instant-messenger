@@ -7,13 +7,12 @@ use sam_common::{AccountId, DeviceId};
 use std::sync::Arc;
 use tokio_tungstenite::tungstenite::http;
 use tokio_tungstenite::Connector;
-use websocket::WebSocketClientConfig;
+use ws_client::WebSocketClientConfig;
 
 pub mod client;
 pub mod decode;
 pub mod error;
 pub mod traits;
-pub mod websocket;
 
 pub use client::ProtocolClient;
 pub use decode::{DeviceList, MessageStatus};

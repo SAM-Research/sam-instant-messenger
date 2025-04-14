@@ -15,11 +15,11 @@ use tokio_tungstenite::tungstenite::{
     protocol::{frame::coding::CloseCode, CloseFrame},
     Message,
 };
+use ws_client::{WebSocket, WebSocketClient, WebSocketError, WebSocketReceiver};
 
 use super::{
     decode::{EnvelopeOrStatus, MessageStatus, ServerStatus},
     error::ProtocolError,
-    websocket::{WebSocket, WebSocketClient, WebSocketError, WebSocketReceiver},
     SamProtocolClient,
 };
 
@@ -271,11 +271,7 @@ mod test {
     };
     use tokio_tungstenite::{accept_async, tungstenite::Message, WebSocketStream};
 
-    use crate::net::protocol::{
-        client::ProtocolClient,
-        traits::SamProtocolClient,
-        websocket::{WebSocketClient, WebSocketClientConfig},
-    };
+    use crate::net::protocol::{client::ProtocolClient, traits::SamProtocolClient};
 
     fn server_env(id: MessageId) -> ServerMessage {
         ServerMessage::builder()
@@ -464,6 +460,8 @@ mod test {
     #[case(vec![ServerAction::Send, ServerAction::Receive], get_next_port())]
     #[tokio::test]
     async fn test_send_and_ack_and_envelope(#[case] actions: Vec<ServerAction>, #[case] port: u16) {
+        use ws_client::{WebSocketClient, WebSocketClientConfig};
+
         let addr = format!("127.0.0.1:{}", port);
         let shutdown = test_server(addr.clone(), actions.clone()).await;
         let client: WebSocketClient = WebSocketClientConfig::builder()
