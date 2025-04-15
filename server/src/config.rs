@@ -18,6 +18,7 @@ pub struct ServerCliConfig {
     pub provision_timeout: Option<u64>,
     pub message_buffer_size: Option<usize>,
     pub tls: Option<TlsConfig>,
+    pub logging: Option<String>,
 }
 
 impl ServerCliConfig {
@@ -27,6 +28,7 @@ impl ServerCliConfig {
         provision_timeout: Option<u64>,
         message_buffer_size: Option<usize>,
         tls: Option<TlsConfig>,
+        logging: Option<String>,
     ) -> Self {
         Self {
             address,
@@ -34,6 +36,7 @@ impl ServerCliConfig {
             provision_timeout,
             message_buffer_size,
             tls,
+            logging,
         }
     }
 
