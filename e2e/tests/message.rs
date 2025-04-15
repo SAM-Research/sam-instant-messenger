@@ -8,15 +8,12 @@ use sam_client::{
     client::SqliteClientType,
     encryption::envelope::DecryptedEnvelope,
     logic::LogicError,
-    net::{
-        http_client::HttpClientConfig,
-        protocol::WebSocketProtocolClientConfig,
-        tls::{create_tls_config, MutualTlsConfig},
-    },
+    net::{http_client::HttpClientConfig, protocol::WebSocketProtocolClientConfig},
     storage::sqlite::SqliteStoreConfig,
     Client, ClientError,
 };
 use sam_common::{api::LinkDeviceToken, AccountId};
+use sam_net::tls::{create_tls_client_config, MutualTlsConfig};
 use sam_server::config::TlsConfig;
 use tempfile::NamedTempFile;
 use test_utils::get_next_port;
@@ -45,8 +42,8 @@ async fn tls_client(
     device_name: &str,
     mutual_config: Option<MutualTlsConfig>,
 ) -> Client<SqliteClientType> {
-    let client_config =
-        create_tls_config("./cert/rootCA.crt", mutual_config).expect("Can create client config");
+    let client_config = create_tls_client_config("./cert/rootCA.crt", mutual_config)
+        .expect("Can create client config");
     Client::from_registration()
         .username(username)
         .device_name(device_name)
