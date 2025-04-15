@@ -10,6 +10,7 @@ authors.workspace = true
 [dependencies]
 sam-common = { workspace = true }
 sam-net = { workspace = true }
+sam-security = { workspace = true }
 
 libsignal-protocol = { workspace = true }
 libsignal-core = { workspace = true }
@@ -31,6 +32,6 @@ rustls = { workspace = true }
 rustls-pemfile = { workspace = true }
 
 [dev-dependencies]
-test-utils = { workspace = true }
+sam-test-utils = { workspace = true }
 rstest = { workspace = true }
 tempfile = { workspace = true }

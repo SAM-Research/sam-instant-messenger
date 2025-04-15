@@ -131,7 +131,7 @@ mod test {
     use async_trait::async_trait;
     use futures_util::stream::SplitStream;
     use futures_util::{SinkExt, StreamExt};
-    use test_utils::get_next_port;
+    use sam_test_utils::get_next_port;
     use tokio::net::TcpListener;
     use tokio::sync::mpsc::{self, Sender};
     use tokio_tungstenite::{accept_async, tungstenite::Message};

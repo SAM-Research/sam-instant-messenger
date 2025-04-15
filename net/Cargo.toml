@@ -20,4 +20,4 @@ async-trait = { workspace = true }
 rustls = { workspace = true }
 
 [dev-dependencies]
-test-utils = { workspace = true }
+sam-test-utils = { workspace = true }

@@ -35,7 +35,7 @@ serde = { workspace = true, features = ["derive"] }
 serde_json = { workspace = true }
 
 [dev-dependencies]
-test-utils = { workspace = true }
+sam-test-utils = { workspace = true }
 axum-test = { workspace = true }
 tokio-tungstenite = { workspace = true }
 maplit = { workspace = true }
