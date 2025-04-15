@@ -6,8 +6,8 @@ use libsignal_protocol::{
 use rand::rngs::OsRng;
 use rand::{rngs::StdRng, SeedableRng as _};
 use rstest::rstest;
+use sam_client::storage::Store;
 use sam_client::storage::{key_generation::SignedPreKeyGenerator as _, StoreType};
-use sam_client::{signal_time_now, storage::Store};
 
 #[rstest]
 #[case(in_mem().await.signed_pre_key_store)]
@@ -16,6 +16,8 @@ use sam_client::{signal_time_now, storage::Store};
 async fn signed_pre_key_can_be_saved_and_retrieved(
     #[case] mut signed_pre_key_store: impl SignedPreKeyStore,
 ) {
+    use sam_common::time::signal_time_now;
+
     let mut csprng = OsRng;
     let identity_key = IdentityKeyPair::generate(&mut csprng);
 

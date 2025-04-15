@@ -1,17 +1,15 @@
-use crate::signal_time_now;
 use crate::storage::{ProvidesKeyId, Store, StoreType};
 use async_trait::async_trait;
-use libsignal_core::curve::{KeyPair, PrivateKey};
-use libsignal_protocol::kem::KeyType;
+use libsignal_core::curve::PrivateKey;
 use libsignal_protocol::{
-    GenericSignedPreKey, IdentityKeyPair, KyberPreKeyId, KyberPreKeyRecord, KyberPreKeyStore,
-    PreKeyId, PreKeyRecord, PreKeyStore, SignalProtocolError, SignedPreKeyId, SignedPreKeyRecord,
-    SignedPreKeyStore,
+    IdentityKeyPair, KyberPreKeyId, KyberPreKeyRecord, KyberPreKeyStore, PreKeyId, PreKeyRecord,
+    PreKeyStore, SignedPreKeyId, SignedPreKeyRecord, SignedPreKeyStore,
 };
 
 use rand::{CryptoRng, Rng};
-use sam_common::api::keys::RegistrationPreKeys;
-use sam_common::api::{EcPreKey, PqPreKey};
+use sam_common::api::EcPreKey;
+use sam_common::api::{keys::RegistrationPreKeys, PqPreKey};
+use sam_security::key_gen::{generate_ec_pre_key, generate_pq_pre_key, generate_signed_pre_key};
 
 use super::error::KeyStoreError;
 
@@ -21,11 +19,6 @@ pub trait PreKeyGenerator {
         &mut self,
         csprng: &mut R,
     ) -> Result<PreKeyRecord, KeyStoreError>;
-}
-
-pub async fn generate_ec_pre_key<R: Rng + CryptoRng>(id: PreKeyId, csprng: &mut R) -> PreKeyRecord {
-    let key_pair = KeyPair::generate(csprng);
-    PreKeyRecord::new(id, &key_pair)
 }
 
 #[async_trait(?Send)]
@@ -49,23 +42,6 @@ pub trait SignedPreKeyGenerator {
         csprng: &mut R,
         private_key: &PrivateKey,
     ) -> Result<SignedPreKeyRecord, KeyStoreError>;
-}
-
-pub async fn generate_signed_pre_key<R: Rng + CryptoRng>(
-    id: SignedPreKeyId,
-    private_key: &PrivateKey,
-    csprng: &mut R,
-) -> Result<SignedPreKeyRecord, SignalProtocolError> {
-    let signed_pre_key_pair = KeyPair::generate(csprng);
-    let signature =
-        private_key.calculate_signature(&signed_pre_key_pair.public_key.serialize(), csprng)?;
-
-    Ok(SignedPreKeyRecord::new(
-        id,
-        signal_time_now(),
-        &signed_pre_key_pair,
-        &signature,
-    ))
 }
 
 #[async_trait(?Send)]
@@ -92,13 +68,6 @@ pub trait KyberKeyGenerator {
         &mut self,
         private_key: &PrivateKey,
     ) -> Result<KyberPreKeyRecord, KeyStoreError>;
-}
-
-pub async fn generate_pq_pre_key(
-    id: KyberPreKeyId,
-    private_key: &PrivateKey,
-) -> Result<KyberPreKeyRecord, SignalProtocolError> {
-    KyberPreKeyRecord::generate(KeyType::Kyber1024, id, private_key)
 }
 
 #[async_trait(?Send)]
@@ -173,7 +142,8 @@ pub async fn create_registration_pre_keys<S: StoreType, R: Rng + CryptoRng>(
 pub mod test {
     use super::*;
     use libsignal_protocol::{
-        IdentityKeyPair, InMemKyberPreKeyStore, InMemPreKeyStore, InMemSignedPreKeyStore,
+        GenericSignedPreKey as _, IdentityKeyPair, InMemKyberPreKeyStore, InMemPreKeyStore,
+        InMemSignedPreKeyStore,
     };
     use rand::rngs::OsRng;
 

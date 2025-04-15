@@ -10,6 +10,7 @@ authors.workspace = true
 [dependencies]
 sam-common = { workspace = true }
 sam-net = { workspace = true }
+sam-security = { workspace = true }
 
 libsignal-protocol = { workspace = true }
 libsignal-core = { workspace = true }
