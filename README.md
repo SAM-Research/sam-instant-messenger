@@ -42,6 +42,8 @@ where the config looks like this:
   "linkSecret": "verysecret", // Secret for provision signature (optional)
   "provisionTimeout": 600, // Seconds before a provision token becomes invalid (optional)
   "messageBufferSize": 10, // Internal message communication, might affect performance of server (optional)
+  "logging": "info", // enable logging, uses the same syntax as RUST_LOG (optional)
+
   "tls": {
     // TLS Configuration (optional)
     "caCertPath": "./e2e/cert/rootCA.crt", // Cerificate Authority certificate for mTLS configuration (optional)

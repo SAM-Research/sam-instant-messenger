@@ -4,15 +4,13 @@ use libsignal_protocol::IdentityKeyPair;
 use rand::rngs::OsRng;
 use sam_client::{
     client::SqliteClientType,
-    net::{
-        http_client::HttpClientConfig, protocol::WebSocketProtocolClientConfig,
-        tls::create_tls_config,
-    },
+    net::{http_client::HttpClientConfig, protocol::WebSocketProtocolClientConfig},
     storage::{sqlite::SqliteStoreConfig, AccountStore, StoreConfig},
     Client, ClientError,
 };
 use sam_common::{address::RegistrationId, AccountId};
-use sam_server::create_tls_config as create_server_tls_config;
+use sam_net::tls::{create_tls_client_config, create_tls_server_config};
+
 use test_utils::get_next_port;
 
 mod utils;
@@ -162,10 +160,10 @@ pub async fn alice_can_find_bobs_account_id() {
 pub async fn one_client_can_register_with_tls() {
     let _ = rustls::crypto::ring::default_provider().install_default();
     let address = format!("127.0.0.1:{}", get_next_port());
-    let server_config = create_server_tls_config("./cert/server.crt", "./cert/server.key", None)
+    let server_config = create_tls_server_config("./cert/server.crt", "./cert/server.key", None)
         .expect("Can create server config");
     let client_config =
-        create_tls_config("./cert/rootCA.crt", None).expect("Can create client config");
+        create_tls_client_config("./cert/rootCA.crt", None).expect("Can create client config");
     let mut server = TestServer::start(&address, Some(server_config)).await;
 
     server

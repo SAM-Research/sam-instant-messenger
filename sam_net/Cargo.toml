@@ -1,0 +1,23 @@
+[package]
+name = "sam-net"
+version = "0.1.0"
+edition = "2021"
+description = "networking utils"
+repository.workspace = true
+license.workspace = true
+authors.workspace = true
+
+
+[dependencies]
+sam-common = { workspace = true }
+bon = { workspace = true }
+log = { workspace = true }
+tokio = { workspace = true, features = ["macros", "rt-multi-thread"] }
+tokio-tungstenite = { workspace = true, features = ["rustls-tls-native-roots"] }
+derive_more = { workspace = true, features = ["display", "error", "from"] }
+futures-util = { workspace = true, features = ["sink"] }
+async-trait = { workspace = true }
+rustls = { workspace = true }
+
+[dev-dependencies]
+test-utils = { workspace = true }

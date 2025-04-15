@@ -4,16 +4,15 @@ use error::ProtocolError;
 use log::debug;
 use rustls::ClientConfig;
 use sam_common::{AccountId, DeviceId};
+use sam_net::websocket::WebSocketClientConfig;
 use std::sync::Arc;
 use tokio_tungstenite::tungstenite::http;
 use tokio_tungstenite::Connector;
-use websocket::WebSocketClientConfig;
 
 pub mod client;
 pub mod decode;
 pub mod error;
 pub mod traits;
-pub mod websocket;
 
 pub use client::ProtocolClient;
 pub use decode::{DeviceList, MessageStatus};

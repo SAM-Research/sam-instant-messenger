@@ -10,6 +10,10 @@ use sam_common::{
         ClientEnvelope, ClientMessage, ClientMessageType, ServerEnvelope, ServerMessage,
     },
 };
+use sam_net::{
+    error::WebSocketError,
+    websocket::{WebSocket, WebSocketClient, WebSocketReceiver},
+};
 use tokio::sync::mpsc::{self, channel, Receiver, Sender};
 use tokio_tungstenite::tungstenite::{
     protocol::{frame::coding::CloseCode, CloseFrame},
@@ -19,7 +23,6 @@ use tokio_tungstenite::tungstenite::{
 use super::{
     decode::{EnvelopeOrStatus, MessageStatus, ServerStatus},
     error::ProtocolError,
-    websocket::{WebSocket, WebSocketClient, WebSocketError, WebSocketReceiver},
     SamProtocolClient,
 };
 
@@ -271,11 +274,8 @@ mod test {
     };
     use tokio_tungstenite::{accept_async, tungstenite::Message, WebSocketStream};
 
-    use crate::net::protocol::{
-        client::ProtocolClient,
-        traits::SamProtocolClient,
-        websocket::{WebSocketClient, WebSocketClientConfig},
-    };
+    use crate::net::protocol::{client::ProtocolClient, traits::SamProtocolClient};
+    use sam_net::websocket::{WebSocketClient, WebSocketClientConfig};
 
     fn server_env(id: MessageId) -> ServerMessage {
         ServerMessage::builder()

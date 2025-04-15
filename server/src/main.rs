@@ -113,8 +113,15 @@ async fn cli() -> Result<(), CliError> {
             Some(prov_timeout),
             Some(buffer_size),
             None,
+            None,
         )
     };
+
+    if let Some(filter) = &config.logging {
+        env_logger::builder().parse_filters(filter).init();
+    } else {
+        env_logger::init();
+    }
 
     welcome(&config);
 
@@ -152,9 +159,10 @@ async fn cli() -> Result<(), CliError> {
 
 #[tokio::main]
 pub async fn main() {
-    env_logger::init();
-    match cli().await {
+    let res = cli().await;
+    let _ = env_logger::try_init();
+    match res {
         Ok(_) => info!("Goodbye!"),
-        Err(e) => error!("Fatal CLI Error: {}", e),
-    };
+        Err(e) => error!("Fatal Proxy Error: {}", e),
+    }
 }

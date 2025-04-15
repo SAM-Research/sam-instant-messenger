@@ -1,8 +1,9 @@
 use std::net::SocketAddr;
 
+use sam_net::{error::ServerTlsError, tls::create_tls_server_config};
 use serde::{Deserialize, Serialize};
 
-use crate::{create_tls_config, error::TlsError, ServerState, StateType};
+use crate::{ServerState, StateType};
 
 pub struct ServerConfig<T: StateType> {
     pub state: ServerState<T>,
@@ -18,6 +19,7 @@ pub struct ServerCliConfig {
     pub provision_timeout: Option<u64>,
     pub message_buffer_size: Option<usize>,
     pub tls: Option<TlsConfig>,
+    pub logging: Option<String>,
 }
 
 impl ServerCliConfig {
@@ -27,6 +29,7 @@ impl ServerCliConfig {
         provision_timeout: Option<u64>,
         message_buffer_size: Option<usize>,
         tls: Option<TlsConfig>,
+        logging: Option<String>,
     ) -> Self {
         Self {
             address,
@@ -34,6 +37,7 @@ impl ServerCliConfig {
             provision_timeout,
             message_buffer_size,
             tls,
+            logging,
         }
     }
 
@@ -53,10 +57,10 @@ pub struct TlsConfig {
 impl TlsConfig {}
 
 impl TryInto<rustls::ServerConfig> for TlsConfig {
-    type Error = TlsError;
+    type Error = ServerTlsError;
 
     fn try_into(self) -> Result<rustls::ServerConfig, Self::Error> {
-        create_tls_config(
+        create_tls_server_config(
             &self.cert_path,
             &self.key_path,
             self.ca_cert_path.as_deref(),
