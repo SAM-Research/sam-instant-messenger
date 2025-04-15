@@ -4,7 +4,7 @@ use sam_client::net::http_client::HttpClientConfig;
 use sam_client::net::protocol::WebSocketProtocolClientConfig;
 use sam_client::storage::sqlite::SqliteStoreConfig;
 use sam_client::Client;
-use test_utils::get_next_port;
+use sam_test_utils::get_next_port;
 
 mod utils;
 

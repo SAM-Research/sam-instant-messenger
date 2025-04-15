@@ -20,6 +20,3 @@ async-trait = { workspace = true }
 rustls = { workspace = true }
 libsignal-protocol = { workspace = true }
 rand = { workspace = true }
-
-[dev-dependencies]
-test-utils = { workspace = true }

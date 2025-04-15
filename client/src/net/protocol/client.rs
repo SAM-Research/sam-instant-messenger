@@ -267,7 +267,7 @@ mod test {
             SamMessageType, ServerEnvelope, ServerMessage, ServerMessageType,
         },
     };
-    use test_utils::get_next_port;
+    use sam_test_utils::get_next_port;
     use tokio::{
         net::{TcpListener, TcpStream},
         sync::oneshot::{self, Receiver, Sender},

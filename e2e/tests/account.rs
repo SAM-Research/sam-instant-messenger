@@ -11,7 +11,7 @@ use sam_client::{
 use sam_common::{address::RegistrationId, AccountId};
 use sam_net::tls::{create_tls_client_config, create_tls_server_config};
 
-use test_utils::get_next_port;
+use sam_test_utils::get_next_port;
 
 mod utils;
 
