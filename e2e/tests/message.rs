@@ -27,7 +27,7 @@ async fn client(address: &str, username: &str, device_name: &str) -> Client<Sqli
     Client::from_registration()
         .username(username)
         .device_name(device_name)
-        .store_config(SqliteStoreConfig::in_memory().await)
+        .store_config(SqliteStoreConfig::in_memory(10).await)
         .api_client_config(HttpClientConfig::new(address.to_string()))
         .protocol_config(WebSocketProtocolClientConfig::new(address.to_string(), 10))
         .upload_prekey_count(5)
@@ -47,7 +47,7 @@ async fn tls_client(
     Client::from_registration()
         .username(username)
         .device_name(device_name)
-        .store_config(SqliteStoreConfig::in_memory().await)
+        .store_config(SqliteStoreConfig::in_memory(10).await)
         .api_client_config(HttpClientConfig::new_with_tls(
             address.to_string(),
             client_config.clone(),
@@ -70,7 +70,7 @@ async fn client_device(
     token: LinkDeviceToken,
 ) -> Client<SqliteClientType> {
     Client::from_provisioning()
-        .store_config(SqliteStoreConfig::in_memory().await)
+        .store_config(SqliteStoreConfig::in_memory(10).await)
         .api_client_config(HttpClientConfig::new(address.to_string()))
         .protocol_config(WebSocketProtocolClientConfig::new(address.to_string(), 10))
         .device_name(device_name)
@@ -488,7 +488,7 @@ async fn sqlite_stores_alice_send_to_bob() {
         let mut alice: Client<SqliteClientType> = Client::from_registration()
             .username("Alice")
             .device_name("Alice's Device")
-            .store_config(SqliteStoreConfig::new(path.clone()))
+            .store_config(SqliteStoreConfig::new(path.clone(), 10))
             .protocol_config(WebSocketProtocolClientConfig::new(address.to_owned(), 10))
             .api_client_config(HttpClientConfig::new(address.to_owned()))
             .call()
@@ -498,7 +498,7 @@ async fn sqlite_stores_alice_send_to_bob() {
         alice.disconnect().await.expect("can disconnect alice");
         drop(alice);
 
-        let store = SqliteStoreConfig::new(path)
+        let store = SqliteStoreConfig::new(path, 10)
             .load()
             .await
             .expect("can create a store");
@@ -514,7 +514,7 @@ async fn sqlite_stores_alice_send_to_bob() {
         let bob: Client<SqliteClientType> = Client::from_registration()
             .username("Bob")
             .device_name("Bob's Device")
-            .store_config(SqliteStoreConfig::new("sqlite::memory:".to_owned()))
+            .store_config(SqliteStoreConfig::new("sqlite::memory:".to_owned(), 10))
             .protocol_config(WebSocketProtocolClientConfig::new(address.to_owned(), 10))
             .api_client_config(HttpClientConfig::new(address.to_owned()))
             .call()
