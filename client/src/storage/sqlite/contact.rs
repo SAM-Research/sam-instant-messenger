@@ -1,6 +1,7 @@
 use std::collections::HashSet;
 
 use async_trait::async_trait;
+use log::debug;
 use sam_common::{AccountId, DeviceId};
 use sqlx::{Pool, Sqlite};
 
@@ -35,6 +36,7 @@ impl ContactStore for SqliteContactStore {
         .fetch_one(&self.database)
         .await
         .map(|exists| exists == 1)
+        .inspect_err(|e| debug!("{e}"))
         .map_err(|err| DatabaseError::Database(format!("{err}")).into())
     }
     async fn get_all_devices(
@@ -50,6 +52,7 @@ impl ContactStore for SqliteContactStore {
         )
         .fetch_all(&self.database)
         .await
+        .inspect_err(|e| debug!("{e}"))
         .map_err(|err| DatabaseError::Database(format!("{err}")))?
         .into_iter()
         .map(|rec| (rec.device_id as u32).into());
@@ -80,6 +83,7 @@ impl ContactStore for SqliteContactStore {
         .execute(&self.database)
         .await
         .map(|_| ())
+        .inspect_err(|e| debug!("{e}"))
         .map_err(|err| DatabaseError::Database(format!("{err}")).into())
     }
 
@@ -101,6 +105,7 @@ impl ContactStore for SqliteContactStore {
         .execute(&self.database)
         .await
         .map(|_| ())
+        .inspect_err(|e| debug!("{e}"))
         .map_err(|err| DatabaseError::Database(format!("{err}")).into())
     }
 }

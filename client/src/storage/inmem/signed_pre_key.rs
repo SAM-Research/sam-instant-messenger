@@ -1,6 +1,7 @@
 use crate::storage::{error::KeyStoreError, ProvidesKeyId};
 use async_trait::async_trait;
 use libsignal_protocol::{InMemSignedPreKeyStore, SignedPreKeyId};
+use log::debug;
 
 #[async_trait(?Send)]
 impl ProvidesKeyId<SignedPreKeyId> for InMemSignedPreKeyStore {
@@ -11,6 +12,8 @@ impl ProvidesKeyId<SignedPreKeyId> for InMemSignedPreKeyStore {
             .cloned()
             .map(|id| id.into())
             .unwrap_or_default();
-        Ok((max + 1).into())
+        let next = max + 1;
+        debug!("Next Signed Pre Key ID: {next}");
+        Ok(next.into())
     }
 }

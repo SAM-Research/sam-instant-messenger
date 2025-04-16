@@ -55,6 +55,7 @@ pub async fn fetch_prekeys<T: StoreType, R: Rng + CryptoRng>(
         .await
         .inspect_err(|e| debug!("{e}"))
         .map_err(|_| LogicError::FailedToProcessPrekeyBundle)?;
+        debug!("Fetched and processed bundle for account '{account_id}' device '{device_id}'");
     }
     Ok(())
 }
@@ -77,7 +78,7 @@ pub async fn publish_prekeys<T: StoreType, R: Rng + CryptoRng>(
     )
     .await?;
 
-    Ok(api_client
+    api_client
         .publish_pre_keys(
             store.account_store.get_account_id().await?,
             store.account_store.get_device_id().await?,
@@ -101,7 +102,9 @@ pub async fn publish_prekeys<T: StoreType, R: Rng + CryptoRng>(
                 ),
             },
         )
-        .await?)
+        .await?;
+    debug!("Published '{onetime_prekeys}' one time keys, new signed pre key '{new_signed_prekey}', new last resort key '{new_last_resort}'");
+    Ok(())
 }
 
 pub fn into_libsignal_bundle(

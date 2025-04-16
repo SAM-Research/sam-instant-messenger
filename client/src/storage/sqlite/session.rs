@@ -1,6 +1,7 @@
 use async_trait::async_trait;
 use base64::{prelude::BASE64_STANDARD, Engine as _};
 use libsignal_protocol::{ProtocolAddress, SessionRecord, SessionStore, SignalProtocolError};
+use log::debug;
 use sqlx::{Pool, Sqlite};
 
 use crate::storage::error::DatabaseError;
@@ -37,6 +38,7 @@ impl SessionStore for SqliteSessionStore {
         )
         .fetch_one(&self.database)
         .await
+        .inspect_err(|e| debug!("{e}"))
         {
             Ok(row) => SessionRecord::deserialize(
                 BASE64_STANDARD

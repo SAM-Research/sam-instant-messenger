@@ -1,4 +1,5 @@
 use libsignal_protocol::IdentityKeyStore;
+use log::debug;
 use rand::{CryptoRng, Rng};
 use sam_common::api::{device::DeviceActivationInfo, RegistrationRequest};
 
@@ -42,6 +43,7 @@ pub async fn register_account<T: StoreType, R: Rng + CryptoRng>(
         .register_account(username, &password, registration_request)
         .await?
         .account_id;
+    debug!("Registered '{username}' with account id '{account_id}'");
     store
         .account_store
         .set_username(username.to_owned())
