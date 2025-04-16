@@ -41,4 +41,6 @@ pub enum KeyStoreError {
 pub enum DatabaseError {
     #[from(ignore)]
     Database(#[error(not(source))] String),
+    FailedToConnect,
+    FailedToMigrate,
 }

@@ -81,7 +81,7 @@ mod test {
     #[tokio::test]
     async fn test_store_and_send_to_subscriber() {
         let mut csprng = OsRng;
-        let mut store = SqliteStoreConfig::in_memory()
+        let mut store = SqliteStoreConfig::in_memory(10)
             .await
             .create_store(
                 IdentityKeyPair::generate(&mut csprng),
