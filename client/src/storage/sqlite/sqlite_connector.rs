@@ -30,9 +30,9 @@ impl SqliteConnector {
     }
 }
 
-impl Into<Pool<Sqlite>> for SqliteConnector {
-    fn into(self) -> Pool<Sqlite> {
-        self.pool
+impl From<SqliteConnector> for Pool<Sqlite> {
+    fn from(val: SqliteConnector) -> Self {
+        val.pool
     }
 }
 
