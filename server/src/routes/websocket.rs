@@ -55,6 +55,7 @@ mod test {
         },
     };
 
+    use sqlx::types::Uuid;
     use tokio::{sync::oneshot, task::JoinHandle};
     use tokio_tungstenite::{
         connect_async, tungstenite::client::IntoClientRequest, MaybeTlsStream, WebSocketStream,
@@ -115,9 +116,22 @@ mod test {
     async fn alice_send_to_bob_does_not_need_sync() {
         // TODO: Move this to the E2E when client supports sending to self in the same message as two recipient
         let mut state = ServerState::in_memory_test();
-        let (_, alice_id, _) = create_user(&mut state, "alice", "phone", "bob", OsRng).await;
-        let (_, bob_id, bob_device) =
-            create_user(&mut state, "bob", "laptop", "cheeseburger", OsRng).await;
+        let (_, alice_id, _) = create_user(
+            &mut state,
+            &Uuid::new_v4().to_string(),
+            "phone",
+            "bob",
+            OsRng,
+        )
+        .await;
+        let (_, bob_id, bob_device) = create_user(
+            &mut state,
+            &Uuid::new_v4().to_string(),
+            "laptop",
+            "cheeseburger",
+            OsRng,
+        )
+        .await;
 
         state
             .devices

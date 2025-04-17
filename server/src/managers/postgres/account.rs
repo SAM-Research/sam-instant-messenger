@@ -35,7 +35,9 @@ impl AccountManager for PostgresAccountManager {
         {
             Ok(row) => {
                 let identity = IdentityKey::decode(row.identity_key.as_slice())
-                    .inspect_err(|err| error!("Error loading account UUID from database: {err}"))
+                    .inspect_err(|err| {
+                        error!("Error loading account IdentityKey from database: {err}")
+                    })
                     .map_err(|_| AccountManagerError::MalformedData)?;
                 Ok(Account::builder()
                     .id(row.account_id.into())
@@ -68,7 +70,7 @@ impl AccountManager for PostgresAccountManager {
             Ok(row) => Ok(row.account_id.into()),
             Err(sqlx::Error::RowNotFound) => Err(AccountManagerError::AccountDoesNotExist),
             Err(err) => {
-                error!("Could not fetch username from database: {err}");
+                error!("Could not fetch account_id from database: {err}");
                 Err(AccountManagerError::ServiceUnavailable)
             }
         }
@@ -101,7 +103,7 @@ impl AccountManager for PostgresAccountManager {
                     }
                 }
 
-                error!("Could not save account in database: {err}");
+                error!("Unexpected database error while inserting account: {err}");
                 return Err(AccountManagerError::ServiceUnavailable);
             }
             Err(err) => {

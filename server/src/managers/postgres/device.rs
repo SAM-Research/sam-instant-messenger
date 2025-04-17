@@ -19,6 +19,96 @@ impl PostgresDeviceManager {
     pub fn new(pool: Pool<Postgres>) -> Self {
         Self { pool }
     }
+
+    pub async fn create(
+        pool: Pool<Postgres>,
+        link_secret: &str,
+        provision_expire_seconds: u32,
+    ) -> Result<Self, DeviceManagerError> {
+        match sqlx::query!(
+            r#"
+            INSERT INTO device_link_info (id, link_secret, provision_expire_seconds)
+            VALUES (1, $1, $2)
+            ON CONFLICT (id)
+            DO UPDATE SET
+                link_secret = excluded.link_secret,
+                provision_expire_seconds = excluded.provision_expire_seconds
+            "#,
+            link_secret,
+            provision_expire_seconds as i64
+        )
+        .execute(&pool)
+        .await
+        {
+            Ok(res) => {
+                if res.rows_affected() != 1 {
+                    error!("The database did not insert the link secret");
+                    return Err(DeviceManagerError::ServiceUnavailable);
+                }
+                let manager = Self::new(pool);
+                Ok(manager)
+            }
+            Err(err) => {
+                error!("Could not store link secret in database: {err}");
+                Err(DeviceManagerError::ServiceUnavailable)
+            }
+        }
+    }
+
+    pub async fn set_link_secret(&self, link_secret: &str) -> Result<(), DeviceManagerError> {
+        match sqlx::query!(
+            r#"
+            UPDATE device_link_info
+            SET link_secret = $1
+            WHERE id = 1
+            "#,
+            link_secret
+        )
+        .execute(&self.pool)
+        .await
+        {
+            Ok(res) => {
+                if res.rows_affected() != 1 {
+                    error!("The database did not insert the link secret");
+                    return Err(DeviceManagerError::ServiceUnavailable);
+                }
+                Ok(())
+            }
+            Err(err) => {
+                error!("Could not store link secret in database: {err}");
+                Err(DeviceManagerError::ServiceUnavailable)
+            }
+        }
+    }
+
+    pub async fn set_provision_expire_seconds(
+        &self,
+        provision_expire_seconds: u32,
+    ) -> Result<(), DeviceManagerError> {
+        match sqlx::query!(
+            r#"
+            UPDATE device_link_info
+            SET provision_expire_seconds = $1
+            WHERE id = 1
+            "#,
+            provision_expire_seconds as i64
+        )
+        .execute(&self.pool)
+        .await
+        {
+            Ok(res) => {
+                if res.rows_affected() != 1 {
+                    error!("The database did not insert the provision expire time");
+                    return Err(DeviceManagerError::ServiceUnavailable);
+                }
+                Ok(())
+            }
+            Err(err) => {
+                error!("Could not store link secret in database: {err}");
+                Err(DeviceManagerError::ServiceUnavailable)
+            }
+        }
+    }
 }
 
 #[async_trait]
@@ -29,7 +119,7 @@ impl DeviceManager for PostgresDeviceManager {
         device_id: DeviceId,
     ) -> Result<Device, DeviceManagerError> {
         let aci = account_id.uuid();
-        sqlx::query!(
+        match sqlx::query!(
             r#"
             SELECT device_id,
                    name,
@@ -48,20 +138,22 @@ impl DeviceManager for PostgresDeviceManager {
         )
         .fetch_one(&self.pool)
         .await
-        .map(|row| {
-            let password = Password::builder().hash(row.hash).salt(row.salt).build();
-            Device::builder()
-                .name(row.name)
-                .id((row.device_id as u32).into())
-                .registration_id((row.registration_id as u32).into())
-                .password(password)
-                .build()
-        })
-        .map_err(|err| match err {
-            //TODO: WE DON'T KNOW WHY WE COULD NOT FIND A ROW
-            sqlx::Error::RowNotFound => DeviceManagerError::DeviceDoesNotExist,
-            _ => todo!(),
-        })
+        {
+            Ok(row) => {
+                let password = Password::builder().hash(row.hash).salt(row.salt).build();
+                Ok(Device::builder()
+                    .name(row.name)
+                    .id((row.device_id as u32).into())
+                    .registration_id((row.registration_id as u32).into())
+                    .password(password)
+                    .build())
+            }
+            Err(sqlx::Error::RowNotFound) => Err(DeviceManagerError::DeviceDoesNotExist),
+            Err(err) => {
+                error!("Could not device with id {device_id} for account {account_id}: {err}");
+                Err(DeviceManagerError::ServiceUnavailable)
+            }
+        }
     }
 
     async fn get_devices(
@@ -101,7 +193,7 @@ impl DeviceManager for PostgresDeviceManager {
 
     async fn next_device_id(&self, account_id: AccountId) -> Result<DeviceId, DeviceManagerError> {
         let aci = account_id.uuid();
-        sqlx::query!(
+        match sqlx::query!(
             r#"
             SELECT MAX(device_id)
             FROM devices
@@ -114,15 +206,35 @@ impl DeviceManager for PostgresDeviceManager {
         )
         .fetch_one(&self.pool)
         .await
-        .map(|row| (row.max.map(|id| id + 1).unwrap_or_default() as u32).into())
-        .map_err(|err| match err {
-            sqlx::Error::RowNotFound => DeviceManagerError::DeviceDoesNotExist,
-            _ => todo!(),
-        })
+        {
+            Ok(row) => {
+                let previous_max = row.max.map(u32::try_from);
+                match previous_max {
+                    None => {
+                        error!("next Device ID query returned a record but it contained NULL");
+                        Ok(1.into())
+                    }
+
+                    Some(Err(err)) => {
+                        error!("Could not generate next ID: {err}");
+                        Err(DeviceManagerError::ServiceUnavailable)
+                    }
+
+                    Some(Ok(id)) => Ok((id + 1).into()),
+                }
+            }
+            Err(sqlx::Error::RowNotFound) => Ok(1.into()),
+            Err(err) => {
+                error!(
+                    "Could not get previous IDs while trying to generate the next device ID: {err}"
+                );
+                Err(DeviceManagerError::ServiceUnavailable)
+            }
+        }
     }
 
     async fn link_secret(&self) -> Result<String, DeviceManagerError> {
-        sqlx::query!(
+        match sqlx::query!(
             r#"
             SELECT link_secret
             FROM device_link_info
@@ -130,27 +242,36 @@ impl DeviceManager for PostgresDeviceManager {
         )
         .fetch_one(&self.pool)
         .await
-        .map(|row| row.link_secret)
-        .map_err(|err| match err {
-            sqlx::Error::RowNotFound => DeviceManagerError::ServiceUnavailable,
-            _ => todo!(),
-        })
+        {
+            Ok(row) => Ok(row.link_secret),
+            Err(err) => {
+                error!("Could not fetch link secret from database: {err}");
+                Err(DeviceManagerError::ServiceUnavailable)
+            }
+        }
     }
 
     async fn provision_expire_seconds(&self) -> Result<u32, DeviceManagerError> {
-        sqlx::query!(
+        match sqlx::query!(
             r#"
             SELECT provision_expire_seconds 
             FROM device_link_info
             "#,
         )
         .fetch_one(&self.pool)
-        .await
-        .map(|row| (row.provision_expire_seconds as u32).into())
-        .map_err(|err| match err {
-            sqlx::Error::RowNotFound => DeviceManagerError::ServiceUnavailable,
-            _ => todo!(),
-        })
+        .await {
+            Ok(row) => {
+                u32::try_from(row.provision_expire_seconds).map_err(|_| {
+                    error!("provision_expire_seconds is set too high in the database and cannot be converted to u32");
+                    DeviceManagerError::ServiceUnavailable
+                })
+            }
+            Err(err) => {
+                error!("Could not fetch provision_expire_seconds from database: {err}");
+                Err(DeviceManagerError::ServiceUnavailable)
+            }
+
+        }
     }
 
     async fn add_device(
@@ -196,7 +317,7 @@ impl DeviceManager for PostgresDeviceManager {
                         return Err(DeviceManagerError::DeviceAlreadyExists);
                     }
                 }
-                error!("{err}");
+                error!("Unexpected database error while trying to insert a device: {err}");
                 Err(DeviceManagerError::ServiceUnavailable)
             }
             Err(err) => {

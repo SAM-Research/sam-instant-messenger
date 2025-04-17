@@ -10,11 +10,13 @@ use sam_server::{
             message::InMemoryMessageManager,
             InMemStateType,
         },
+        postgres::{PostgresAccountManager, PostgresDeviceManager, PostgresStateType},
         KeyManager,
     },
     start_server, ServerConfig, ServerState,
 };
 
+use sqlx::postgres::PgPoolOptions;
 use tokio::{
     sync::oneshot::{self, Receiver},
     task::JoinHandle,
@@ -34,7 +36,7 @@ impl Drop for TestServer {
 impl TestServer {
     pub async fn start(address: &str, tls_config: Option<rustls::ServerConfig>) -> Self {
         let config = ServerConfig {
-            state: in_memory_server_state(),
+            state: postgres_server_state().await,
             addr: address.parse().expect("Unable to parse socket address"),
             tls_config,
         };
@@ -64,5 +66,27 @@ pub fn in_memory_server_state() -> ServerState<InMemStateType> {
             InMemorySignedPreKeyManager::default(),
             InMemoryLastResortPqPreKeyManager::default(),
         ),
+    )
+}
+
+pub async fn postgres_server_state() -> ServerState<PostgresStateType> {
+    let connection_str = "postgres://test:test@127.0.0.1:5432/sam_test_db";
+    let pool = PgPoolOptions::new()
+        .connect(connection_str)
+        .await
+        .expect("Can connect to the database");
+
+    ServerState::<PostgresStateType>::new(
+        PostgresAccountManager::new(pool.clone()),
+        PostgresDeviceManager::create(pool, "TEST_LINK_SECRET", 30)
+            .await
+            .expect("Can save device manager configuration"),
+        InMemoryMessageManager::default(),
+        KeyManager {
+            pre_keys: InMemoryEcPreKeyManager::default(),
+            pq_pre_keys: InMemoryPqPreKeyManager::default(),
+            signed_pre_keys: InMemorySignedPreKeyManager::default(),
+            last_resort_keys: InMemoryLastResortPqPreKeyManager::default(),
+        },
     )
 }

@@ -13,15 +13,17 @@ use sam_client::{
 };
 use sam_common::{address::RegistrationId, AccountId};
 use sam_server::create_tls_config as create_server_tls_config;
+use uuid::Uuid;
 
 mod utils;
 
 /*
    Ports used: 937x
 */
-pub async fn register_alice(address: String) -> Result<Client<SqliteClientType>, ClientError> {
+pub async fn register_someone(address: String) -> Result<Client<SqliteClientType>, ClientError> {
+    let name = Uuid::new_v4().to_string();
     Client::from_registration()
-        .username("Alice")
+        .username(&name)
         .device_name("Alice's Device")
         .store_config(SqliteStoreConfig::in_memory().await)
         .api_client_config(HttpClientConfig::new(address.clone()))
@@ -32,6 +34,7 @@ pub async fn register_alice(address: String) -> Result<Client<SqliteClientType>,
 
 #[tokio::test]
 pub async fn one_client_can_register() {
+    _ = env_logger::try_init();
     let address = "127.0.0.1:9370".to_owned();
     let mut server = TestServer::start(&address, None).await;
 
@@ -40,7 +43,7 @@ pub async fn one_client_can_register() {
         .await
         .expect("Should be able to start server");
 
-    let client = register_alice(address).await;
+    let client = register_someone(address).await;
 
     assert!(client.is_ok());
 }
@@ -55,7 +58,9 @@ pub async fn can_delete_account() {
         .await
         .expect("Should be able to start server");
 
-    let client = register_alice(address).await.expect("Can register account");
+    let client = register_someone(address)
+        .await
+        .expect("Can register account");
 
     assert!(client.delete_account().await.is_ok());
 }
@@ -120,7 +125,9 @@ pub async fn can_delete_a_device() {
         .await
         .expect("Should be able to start server");
 
-    let client = register_alice(address).await.expect("Can register account");
+    let client = register_someone(address)
+        .await
+        .expect("Can register account");
 
     let result = client.delete_account().await;
     assert!(
@@ -140,12 +147,13 @@ pub async fn alice_can_find_bobs_account_id() {
         .await
         .expect("Should be able to start server");
 
-    let alice = register_alice(address.clone())
+    let alice = register_someone(address.clone())
         .await
         .expect("Can create account");
 
+    let bob_username = Uuid::new_v4().to_string();
     let bob: Client<SqliteClientType> = Client::from_registration()
-        .username("Bob")
+        .username(&bob_username)
         .device_name("Bob's Device")
         .store_config(SqliteStoreConfig::in_memory().await)
         .api_client_config(HttpClientConfig::new(address.clone()))
@@ -154,7 +162,7 @@ pub async fn alice_can_find_bobs_account_id() {
         .await
         .unwrap();
 
-    let result = alice.get_account_id_for("Bob").await;
+    let result = alice.get_account_id_for(&bob_username).await;
 
     assert!(result.is_ok());
     assert_eq!(bob.account_id().await.unwrap(), result.unwrap())
@@ -176,7 +184,7 @@ pub async fn one_client_can_register_with_tls() {
         .expect("Should be able to start server");
 
     let client: Result<Client<SqliteClientType>, _> = Client::from_registration()
-        .username("Alice")
+        .username(&Uuid::new_v4().to_string())
         .device_name("Alice's Device")
         .store_config(SqliteStoreConfig::in_memory().await)
         .api_client_config(HttpClientConfig::new_with_tls(
@@ -198,24 +206,26 @@ pub async fn two_clients_cannot_have_the_same_username() {
     let address = "127.0.0.1:9376".to_owned();
     let mut server = TestServer::start(&address, None).await;
 
+    let username = Uuid::new_v4().to_string();
+
     server
         .started_rx()
         .await
         .expect("Should be able to start server");
 
     let _alice: Client<SqliteClientType> = Client::from_registration()
-        .username("Alice")
-        .device_name("Alice's Device")
+        .username(&username)
+        .device_name("Device")
         .store_config(SqliteStoreConfig::in_memory().await)
         .api_client_config(HttpClientConfig::new(address.clone()))
         .protocol_config(WebSocketProtocolClientConfig::new(address.clone()))
         .call()
         .await
-        .expect("Can make Alice");
+        .expect("Can make the first client");
 
     let alice_2: Result<Client<SqliteClientType>, _> = Client::from_registration()
-        .username("Alice")
-        .device_name("Alice's Device")
+        .username(&username)
+        .device_name("Device")
         .store_config(SqliteStoreConfig::in_memory().await)
         .api_client_config(HttpClientConfig::new(address.clone()))
         .protocol_config(WebSocketProtocolClientConfig::new(address))

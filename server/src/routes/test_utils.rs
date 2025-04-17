@@ -24,11 +24,11 @@ pub fn test_server<T: StateType>(
 
 pub async fn create_user<T: StateType>(
     state: &mut ServerState<T>,
-    username: &str,
     device_name: &str,
     password: &str,
     mut rng: OsRng,
 ) -> (IdentityKeyPair, AccountId, DeviceId) {
+    let username = Uuid::new_v4().to_string();
     let id_pair = IdentityKeyPair::generate(&mut rng);
     let account = Account::builder()
         .id(AccountId::generate())

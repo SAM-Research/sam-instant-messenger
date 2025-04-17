@@ -4,6 +4,7 @@ use sam_client::net::http_client::HttpClientConfig;
 use sam_client::net::protocol::WebSocketProtocolClientConfig;
 use sam_client::storage::sqlite::SqliteStoreConfig;
 use sam_client::Client;
+use uuid::Uuid;
 
 mod utils;
 
@@ -21,7 +22,7 @@ async fn can_link_device() {
         .await
         .expect("Should be able to start server");
 
-    let username = "Alice";
+    let username = Uuid::new_v4().to_string();
     let device_name = "Alice's Device";
 
     let store_config = SqliteStoreConfig::in_memory().await;
@@ -32,7 +33,7 @@ async fn can_link_device() {
         .store_config(store_config)
         .protocol_config(protocol_config)
         .api_client_config(api_client_config)
-        .username(username)
+        .username(&username)
         .device_name(device_name)
         .call()
         .await
@@ -73,7 +74,7 @@ async fn can_unlink_device() {
         .await
         .expect("Should be able to start server");
 
-    let username = "Alice";
+    let username = Uuid::new_v4().to_string();
     let device_name = "Alice's Device";
 
     let store_config = SqliteStoreConfig::in_memory().await;
@@ -84,7 +85,7 @@ async fn can_unlink_device() {
         .store_config(store_config)
         .protocol_config(protocol_config)
         .api_client_config(api_client_config)
-        .username(username)
+        .username(&username)
         .device_name(device_name)
         .call()
         .await
@@ -130,7 +131,7 @@ async fn can_delete_device() {
         .await
         .expect("Should be able to start server");
 
-    let username = "Alice";
+    let username = Uuid::new_v4().to_string();
     let device_name = "Alice's Device";
 
     let store_config = SqliteStoreConfig::in_memory().await;
@@ -141,7 +142,7 @@ async fn can_delete_device() {
         .store_config(store_config)
         .protocol_config(protocol_config)
         .api_client_config(api_client_config)
-        .username(username)
+        .username(&username)
         .device_name(device_name)
         .call()
         .await
@@ -184,7 +185,7 @@ async fn can_delete_account() {
         .await
         .expect("Should be able to start server");
 
-    let username = "Alice";
+    let username = Uuid::new_v4().to_string();
     let device_name = "Alice's Device";
 
     let store_config = SqliteStoreConfig::in_memory().await;
@@ -195,7 +196,7 @@ async fn can_delete_account() {
         .store_config(store_config)
         .protocol_config(protocol_config)
         .api_client_config(api_client_config)
-        .username(username)
+        .username(&username)
         .device_name(device_name)
         .call()
         .await
