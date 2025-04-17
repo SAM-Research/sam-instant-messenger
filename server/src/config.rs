@@ -1,13 +1,49 @@
 use std::net::SocketAddr;
 
+use sam_net::{error::ServerTlsError, tls::create_tls_server_config};
 use serde::{Deserialize, Serialize};
 
-use crate::{create_tls_config, error::TlsError, ServerState, StateType};
+use crate::{ServerState, StateType};
 
 pub struct ServerConfig<T: StateType> {
     pub state: ServerState<T>,
     pub addr: SocketAddr,
     pub tls_config: Option<rustls::ServerConfig>,
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct ServerCliConfig {
+    pub address: Option<String>,
+    pub link_secret: Option<String>,
+    pub provision_timeout: Option<u32>,
+    pub message_buffer_size: Option<usize>,
+    pub tls: Option<TlsConfig>,
+    pub logging: Option<String>,
+}
+
+impl ServerCliConfig {
+    pub fn new(
+        address: Option<String>,
+        link_secret: Option<String>,
+        provision_timeout: Option<u32>,
+        message_buffer_size: Option<usize>,
+        tls: Option<TlsConfig>,
+        logging: Option<String>,
+    ) -> Self {
+        Self {
+            address,
+            link_secret,
+            provision_timeout,
+            message_buffer_size,
+            tls,
+            logging,
+        }
+    }
+
+    pub fn load<R: std::io::Read>(reader: R) -> Result<Self, serde_json::Error> {
+        serde_json::from_reader(reader)
+    }
 }
 
 #[derive(Debug, Serialize, Deserialize)]
@@ -18,17 +54,13 @@ pub struct TlsConfig {
     pub key_path: String,
 }
 
-impl TlsConfig {
-    pub fn load<R: std::io::Read>(reader: R) -> Result<Self, serde_json::Error> {
-        serde_json::from_reader(reader)
-    }
-}
+impl TlsConfig {}
 
 impl TryInto<rustls::ServerConfig> for TlsConfig {
-    type Error = TlsError;
+    type Error = ServerTlsError;
 
     fn try_into(self) -> Result<rustls::ServerConfig, Self::Error> {
-        create_tls_config(
+        create_tls_server_config(
             &self.cert_path,
             &self.key_path,
             self.ca_cert_path.as_deref(),

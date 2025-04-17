@@ -3,7 +3,10 @@ use base64::{prelude::BASE64_STANDARD, Engine};
 use libsignal_protocol::{PreKeyId, PreKeyRecord, PreKeyStore, SignalProtocolError};
 use sqlx::{Pool, Sqlite};
 
-use crate::{storage::ProvidesKeyId, ClientError};
+use crate::storage::{
+    error::{DatabaseError, KeyStoreError},
+    ProvidesKeyId,
+};
 
 #[derive(Debug)]
 pub struct SqlitePreKeyStore {
@@ -18,7 +21,7 @@ impl SqlitePreKeyStore {
 
 #[async_trait(?Send)]
 impl ProvidesKeyId<PreKeyId> for SqlitePreKeyStore {
-    async fn next_key_id(&self) -> Result<PreKeyId, ClientError> {
+    async fn next_key_id(&self) -> Result<PreKeyId, KeyStoreError> {
         sqlx::query!(
             r#"
             SELECT
@@ -30,7 +33,7 @@ impl ProvidesKeyId<PreKeyId> for SqlitePreKeyStore {
         .fetch_one(&self.database)
         .await
         .map(|row| PreKeyId::from(row.pkid.unwrap_or(0) as u32 + 1))
-        .map_err(|err| ClientError::Database(format!("{err}")))
+        .map_err(|err| DatabaseError::Database(format!("{err}")).into())
     }
 }
 
@@ -73,7 +76,7 @@ impl PreKeyStore for SqlitePreKeyStore {
 
             Err(err) => Err(SignalProtocolError::ApplicationCallbackError(
                 "save pre key",
-                Box::new(ClientError::Database(format!("{err}"))),
+                Box::new(DatabaseError::Database(format!("{err}"))),
             )),
         }
     }
@@ -102,7 +105,7 @@ impl PreKeyStore for SqlitePreKeyStore {
         .map_err(|err| {
             SignalProtocolError::ApplicationCallbackError(
                 "save pre key",
-                Box::new(ClientError::Database(format!("{err}"))),
+                Box::new(DatabaseError::Database(format!("{err}"))),
             )
         })
     }
@@ -125,7 +128,7 @@ impl PreKeyStore for SqlitePreKeyStore {
         .map_err(|err| {
             SignalProtocolError::ApplicationCallbackError(
                 "remove pre key",
-                Box::new(ClientError::Database(format!("{err}"))),
+                Box::new(DatabaseError::Database(format!("{err}"))),
             )
         })
     }

@@ -4,6 +4,7 @@ use libsignal_protocol::IdentityKeyPair;
 
 use rand::rngs::OsRng;
 use sam_common::address::{AccountId, DeviceId};
+use uuid::Uuid;
 
 use crate::{
     auth::password::Password,

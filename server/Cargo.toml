@@ -12,17 +12,17 @@ default = ["postgres"]
 postgres = []
 
 [dependencies]
-time = { workspace = true }
 bon = { workspace = true }
 hkdf = { workspace = true }
 sha2 = { workspace = true }
 rand = { workspace = true }
 base64 = { workspace = true }
 argon2 = { workspace = true }
-clap = { workspace = true }
+clap = { workspace = true, features = ["string"] }
 libsignal-protocol = { workspace = true }
 derive_more = { workspace = true, features = ["display", "error", "from"] }
 sam-common = { workspace = true }
+sam-net = { workspace = true }
 tokio = { workspace = true, features = ["full"] }
 futures-util = { workspace = true, features = ["sink"] }
 async-trait = { workspace = true }
@@ -34,17 +34,14 @@ env_logger = { workspace = true }
 log = { workspace = true }
 rustls = { workspace = true, features = ["ring"] }
 rustls-pemfile = { workspace = true }
-sqlx = { workspace = true, features = [
-  "postgres",
-  "time",
-  "uuid",
-  "runtime-tokio",
-] }
+sqlx = { workspace = true, features = ["postgres", "uuid", "runtime-tokio"] }
 serde = { workspace = true, features = ["derive"] }
 serde_json = { workspace = true }
 
 [dev-dependencies]
+sam-test-utils = { workspace = true }
 axum-test = { workspace = true }
 tokio-tungstenite = { workspace = true }
 maplit = { workspace = true }
 rstest = { workspace = true }
+uuid = { workspace = true }

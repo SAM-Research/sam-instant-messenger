@@ -16,7 +16,7 @@ mod signed_pre_key;
 async fn sqlite() -> SqliteStore {
     let key_pair = IdentityKeyPair::generate(&mut OsRng);
     let registration_id = 0u32;
-    SqliteStoreConfig::in_memory()
+    SqliteStoreConfig::in_memory(10)
         .await
         .create_store(key_pair, registration_id)
         .await

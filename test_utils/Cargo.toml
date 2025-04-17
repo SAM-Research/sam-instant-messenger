@@ -1,0 +1,9 @@
+[package]
+name = "sam-test-utils"
+version = "0.1.0"
+edition = "2021"
+description = "Test utilities"
+repository.workspace = true
+license.workspace = true
+authors.workspace = true
+

@@ -10,6 +10,10 @@ use sam_common::{
         ClientEnvelope, ClientMessage, ClientMessageType, ServerEnvelope, ServerMessage,
     },
 };
+use sam_net::{
+    error::WebSocketError,
+    websocket::{WebSocket, WebSocketClient, WebSocketReceiver},
+};
 use tokio::sync::mpsc::{self, channel, Receiver, Sender};
 use tokio_tungstenite::tungstenite::{
     protocol::{frame::coding::CloseCode, CloseFrame},
@@ -19,7 +23,6 @@ use tokio_tungstenite::tungstenite::{
 use super::{
     decode::{EnvelopeOrStatus, MessageStatus, ServerStatus},
     error::ProtocolError,
-    websocket::{WebSocket, WebSocketClient, WebSocketError, WebSocketReceiver},
     SamProtocolClient,
 };
 
@@ -136,13 +139,15 @@ impl WebSocketReceiver for SamProtocolReceiver {
 pub struct ProtocolClient {
     client: Arc<Mutex<WebSocketClient>>,
     status_messages: Option<Receiver<ServerStatus>>,
+    channel_buffer_size: usize,
 }
 
 impl ProtocolClient {
-    pub fn new(client: WebSocketClient) -> Self {
+    pub fn new(client: WebSocketClient, channel_buffer_size: usize) -> Self {
         Self {
             client: Arc::new(Mutex::new(client)),
             status_messages: None,
+            channel_buffer_size,
         }
     }
 
@@ -193,9 +198,9 @@ impl ProtocolClient {
 #[async_trait]
 impl SamProtocolClient for ProtocolClient {
     async fn connect(&mut self) -> Result<Receiver<ServerEnvelope>, ProtocolError> {
-        let (status_sender, status_receiver) = channel(10);
+        let (status_sender, status_receiver) = channel(self.channel_buffer_size);
 
-        let (tx, rx) = mpsc::channel(10);
+        let (tx, rx) = mpsc::channel(self.channel_buffer_size);
         let handler = SamProtocolReceiver::new(self.client.clone(), status_sender, tx);
 
         self.status_messages = Some(status_receiver);
@@ -262,17 +267,15 @@ mod test {
             SamMessageType, ServerEnvelope, ServerMessage, ServerMessageType,
         },
     };
+    use sam_test_utils::get_next_port;
     use tokio::{
         net::{TcpListener, TcpStream},
         sync::oneshot::{self, Receiver, Sender},
     };
     use tokio_tungstenite::{accept_async, tungstenite::Message, WebSocketStream};
 
-    use crate::net::protocol::{
-        client::ProtocolClient,
-        traits::SamProtocolClient,
-        websocket::{WebSocketClient, WebSocketClientConfig},
-    };
+    use crate::net::protocol::{client::ProtocolClient, traits::SamProtocolClient};
+    use sam_net::websocket::{WebSocketClient, WebSocketClientConfig};
 
     fn server_env(id: MessageId) -> ServerMessage {
         ServerMessage::builder()
@@ -455,15 +458,12 @@ mod test {
     }
 
     #[rstest]
-    #[case(vec![ServerAction::Send, ServerAction::Send], "9081")]
-    #[case(vec![ServerAction::Receive, ServerAction::Receive],"9082")]
-    #[case(vec![ServerAction::Receive, ServerAction::Send], "9083")]
-    #[case(vec![ServerAction::Send, ServerAction::Receive], "9084")]
+    #[case(vec![ServerAction::Send, ServerAction::Send], get_next_port())]
+    #[case(vec![ServerAction::Receive, ServerAction::Receive], get_next_port())]
+    #[case(vec![ServerAction::Receive, ServerAction::Send], get_next_port())]
+    #[case(vec![ServerAction::Send, ServerAction::Receive], get_next_port())]
     #[tokio::test]
-    async fn test_send_and_ack_and_envelope(
-        #[case] actions: Vec<ServerAction>,
-        #[case] port: String,
-    ) {
+    async fn test_send_and_ack_and_envelope(#[case] actions: Vec<ServerAction>, #[case] port: u16) {
         let addr = format!("127.0.0.1:{}", port);
         let shutdown = test_server(addr.clone(), actions.clone()).await;
         let client: WebSocketClient = WebSocketClientConfig::builder()
@@ -471,7 +471,7 @@ mod test {
             .build()
             .into();
 
-        let mut client = ProtocolClient::new(client);
+        let mut client = ProtocolClient::new(client, 10);
         let mut receiver = client.connect().await.expect("Can connect");
 
         let mut results = vec![];

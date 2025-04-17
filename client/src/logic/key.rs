@@ -1,7 +1,9 @@
 use std::time::SystemTime;
 
 use libsignal_core::ProtocolAddress;
-use libsignal_protocol::{process_prekey_bundle, IdentityKeyStore};
+use libsignal_protocol::{
+    kem, process_prekey_bundle, IdentityKey, IdentityKeyStore, PreKeyBundle, PublicKey,
+};
 use log::debug;
 use rand::{CryptoRng, Rng};
 use sam_common::{api::PublishPreKeys, AccountId, DeviceId};
@@ -10,13 +12,13 @@ use crate::{
     net::ApiClient,
     storage::{
         key_generation::{
-            generate_ec_pre_keys, generate_pq_pre_keys, into_libsignal_bundle, KyberKeyGenerator,
-            SignedPreKeyGenerator,
+            generate_ec_pre_keys, generate_pq_pre_keys, KyberKeyGenerator, SignedPreKeyGenerator,
         },
         AccountStore, ContactStore, Store, StoreType,
     },
-    ClientError,
 };
+
+use super::LogicError;
 
 pub async fn fetch_prekeys<T: StoreType, R: Rng + CryptoRng>(
     store: &mut Store<T>,
@@ -24,7 +26,7 @@ pub async fn fetch_prekeys<T: StoreType, R: Rng + CryptoRng>(
     account_id: AccountId,
     devices: Option<Vec<DeviceId>>,
     mut rng: &mut R,
-) -> Result<(), ClientError> {
+) -> Result<(), LogicError> {
     let prekey_bundles = api_client
         .get_pre_key_bundles(
             store.account_store.get_account_id().await?,
@@ -52,7 +54,7 @@ pub async fn fetch_prekeys<T: StoreType, R: Rng + CryptoRng>(
         )
         .await
         .inspect_err(|e| debug!("{e}"))
-        .map_err(|_| ClientError::FailedToProcessPrekeyBundle)?;
+        .map_err(|_| LogicError::FailedToProcessPrekeyBundle)?;
     }
     Ok(())
 }
@@ -64,7 +66,7 @@ pub async fn publish_prekeys<T: StoreType, R: Rng + CryptoRng>(
     new_signed_prekey: bool,
     new_last_resort: bool,
     mut rng: &mut R,
-) -> Result<(), ClientError> {
+) -> Result<(), LogicError> {
     let id_pair = store.identity_key_store.get_identity_key_pair().await?;
     let onetime_ec_prekeys =
         generate_ec_pre_keys(&mut store.pre_key_store, onetime_prekeys, &mut rng).await?;
@@ -100,4 +102,27 @@ pub async fn publish_prekeys<T: StoreType, R: Rng + CryptoRng>(
             },
         )
         .await?)
+}
+
+pub fn into_libsignal_bundle(
+    bundle: sam_common::api::PreKeyBundle,
+    identity_key: IdentityKey,
+) -> Result<PreKeyBundle, LogicError> {
+    Ok(PreKeyBundle::new(
+        bundle.registration_id,
+        bundle.device_id.into(),
+        match bundle.pre_key {
+            None => None,
+            Some(key) => Some((key.key_id.into(), PublicKey::deserialize(&key.public_key)?)),
+        },
+        bundle.signed_pre_key.key_id.into(),
+        PublicKey::deserialize(&bundle.signed_pre_key.public_key)?,
+        bundle.signed_pre_key.signature.to_vec(),
+        identity_key,
+    )?
+    .with_kyber_pre_key(
+        bundle.pq_pre_key.key_id.into(),
+        kem::PublicKey::deserialize(&bundle.pq_pre_key.public_key)?,
+        bundle.pq_pre_key.signature.to_vec(),
+    ))
 }

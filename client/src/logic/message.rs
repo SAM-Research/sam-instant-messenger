@@ -10,43 +10,43 @@ use crate::{
     encryption::{decrypt, encrypt},
     net::{protocol::MessageStatus, ApiClient},
     storage::{AccountStore, ContactStore, MessageStore, Store, StoreType},
-    ClientError,
 };
 
-use super::key::fetch_prekeys;
+use super::{key::fetch_prekeys, LogicError};
 
 pub async fn process_messages<T: StoreType>(
     store: &mut Store<T>,
     envelope_queue: &mut Receiver<ServerEnvelope>,
     block: bool,
-) -> Result<(), ClientError> {
+) -> Result<(), LogicError> {
     if !block && envelope_queue.is_empty() {
         return Ok(());
     }
     while let Some(envelope) = envelope_queue.recv().await {
         // TODO: How should we handle failure to decrypt and/or store message?
-        let envelope = match decrypt(envelope, store).await {
-            Ok(denvelope) => denvelope,
-            Err(e) => {
-                error!("Failed to decrypt message: {e}");
-                break;
-            }
-        };
-
-        store
-            .contact_store
-            .add_device(envelope.source_account_id(), envelope.source_device_id())
-            .await?;
-
-        let _ = store
-            .message_store
-            .store_message(envelope)
+        process_message(envelope, store)
             .await
-            .inspect_err(|e| error!("Failed to store message {e}"));
+            .inspect_err(|e| error!("Failed to store message {e}"))?;
+
         if envelope_queue.is_empty() {
             break;
         }
     }
+    Ok(())
+}
+
+pub async fn process_message(
+    envelope: ServerEnvelope,
+    store: &mut Store<impl StoreType>,
+) -> Result<(), LogicError> {
+    let envelope = decrypt(envelope, store).await?;
+
+    store
+        .contact_store
+        .add_device(envelope.source_account_id(), envelope.source_device_id())
+        .await?;
+
+    store.message_store.store_message(envelope).await?;
     Ok(())
 }
 
@@ -56,7 +56,7 @@ pub async fn prepare_message<T: StoreType, R: Rng + CryptoRng>(
     recipient: AccountId,
     msg: impl Into<Vec<u8>>,
     mut rng: &mut R,
-) -> Result<ClientEnvelope, ClientError> {
+) -> Result<ClientEnvelope, LogicError> {
     if !store.contact_store.contains_contact(recipient).await? {
         fetch_prekeys(store, api_client, recipient, None, &mut rng).await?;
     }
@@ -74,7 +74,7 @@ pub async fn handle_message_response<T: StoreType, R: Rng + CryptoRng>(
     api_client: &impl ApiClient,
     mut rng: &mut R,
     status: MessageStatus,
-) -> Result<(), ClientError> {
+) -> Result<(), LogicError> {
     match status {
         MessageStatus::ExtraDevices(device_lists) => {
             for list in device_lists {
@@ -98,7 +98,7 @@ pub async fn handle_message_response<T: StoreType, R: Rng + CryptoRng>(
                 )
                 .await?;
             }
-            Err(ClientError::MissingDevices)
+            Err(LogicError::MissingDevices)
         }
         MessageStatus::Ok => Ok(()),
     }

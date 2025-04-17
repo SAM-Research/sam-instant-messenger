@@ -3,7 +3,8 @@ use log::debug;
 use tokio::sync::broadcast::{self, Receiver, Sender};
 
 use crate::{
-    encryption::envelope::DecryptedEnvelope, storage::traits::message::MessageStore, ClientError,
+    encryption::envelope::DecryptedEnvelope,
+    storage::{error::MessageStoreError, traits::message::MessageStore},
 };
 
 pub struct InMemoryMessageStore {
@@ -23,12 +24,15 @@ impl InMemoryMessageStore {
 
 #[async_trait(?Send)]
 impl MessageStore for InMemoryMessageStore {
-    async fn store_message(&mut self, envelope: DecryptedEnvelope) -> Result<(), ClientError> {
+    async fn store_message(
+        &mut self,
+        envelope: DecryptedEnvelope,
+    ) -> Result<(), MessageStoreError> {
         self.messages.push(envelope.clone());
         self.sender
             .send(envelope)
             .inspect_err(|e| debug!("{e}"))
-            .map_err(|_| ClientError::SendError)
+            .map_err(|_| MessageStoreError::SendError)
             .map(|_| ())
     }
     fn subscribe(&self) -> Receiver<DecryptedEnvelope> {

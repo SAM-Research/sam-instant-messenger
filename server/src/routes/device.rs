@@ -96,7 +96,7 @@ mod test {
     async fn test_get_api_v1_devices_provision() {
         let mut state = ServerState::in_memory_test();
 
-        let (_, account_id, _) = create_user(&mut state, "alice", "phone", "password", OsRng).await;
+        let (_, account_id, _) = create_user(&mut state, "phone", "password", OsRng).await;
 
         let server = test_server(state.clone(), device_routes);
         let basic = format!(
@@ -122,8 +122,7 @@ mod test {
     ) {
         let mut state = ServerState::in_memory(LINK_SECRET.to_string(), expire_time, 10);
 
-        let (pair, account_id, _) =
-            create_user(&mut state, "alice", "phone", "password", OsRng).await;
+        let (pair, account_id, _) = create_user(&mut state, "phone", "password", OsRng).await;
 
         let server = test_server(state.clone(), device_routes);
         let basic = format!(
@@ -171,7 +170,7 @@ mod test {
     async fn test_delete_api_v1_device_id() {
         let mut state = ServerState::in_memory_test();
 
-        let (_, account_id, _) = create_user(&mut state, "alice", "phone", "password", OsRng).await;
+        let (_, account_id, _) = create_user(&mut state, "phone", "password", OsRng).await;
         state
             .devices
             .add_device(

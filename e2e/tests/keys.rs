@@ -3,6 +3,7 @@ use sam_client::net::http_client::HttpClientConfig;
 use sam_client::net::protocol::WebSocketProtocolClientConfig;
 use sam_client::storage::sqlite::SqliteStoreConfig;
 use sam_client::Client;
+use sam_test_utils::get_next_port;
 use uuid::Uuid;
 
 mod utils;
@@ -15,7 +16,7 @@ use crate::utils::server::TestServer;
 
 #[tokio::test]
 pub async fn alice_can_upload_keys() {
-    let address = "127.0.0.1:9390".to_owned();
+    let address = format!("127.0.0.1:{}", get_next_port());
     let mut server = TestServer::start(&address, None).await;
 
     server
@@ -26,9 +27,9 @@ pub async fn alice_can_upload_keys() {
     let mut alice: Client<SqliteClientType> = Client::from_registration()
         .username(&Uuid::new_v4().to_string())
         .device_name("Alice's Device")
-        .store_config(SqliteStoreConfig::in_memory().await)
+        .store_config(SqliteStoreConfig::in_memory(10).await)
         .api_client_config(HttpClientConfig::new(address.clone()))
-        .protocol_config(WebSocketProtocolClientConfig::new(address.clone()))
+        .protocol_config(WebSocketProtocolClientConfig::new(address.clone(), 10))
         .call()
         .await
         .unwrap();

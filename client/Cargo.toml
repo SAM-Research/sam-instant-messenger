@@ -8,7 +8,9 @@ license.workspace = true
 authors.workspace = true
 
 [dependencies]
-sam-common = { path = "../common" }
+sam-common = { workspace = true }
+sam-net = { workspace = true }
+sam-security = { workspace = true }
 
 libsignal-protocol = { workspace = true }
 libsignal-core = { workspace = true }
@@ -30,5 +32,6 @@ rustls = { workspace = true }
 rustls-pemfile = { workspace = true }
 
 [dev-dependencies]
+sam-test-utils = { workspace = true }
 rstest = { workspace = true }
 tempfile = { workspace = true }

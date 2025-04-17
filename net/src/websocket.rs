@@ -1,5 +1,5 @@
 use async_trait::async_trait;
-use derive_more::{Display, Error};
+
 use futures_util::{
     stream::{SplitSink, SplitStream},
     SinkExt, StreamExt,
@@ -16,13 +16,7 @@ use tokio_tungstenite::{
     Connector, MaybeTlsStream, WebSocketStream,
 };
 
-#[derive(Debug, Display, Error)]
-pub enum WebSocketError {
-    UrlError,
-    ConnectionFailed,
-    Disconnected,
-    AlreadyConnected,
-}
+use crate::error::WebSocketError;
 
 pub type WebSocket = WebSocketStream<MaybeTlsStream<TcpStream>>;
 
@@ -137,12 +131,12 @@ mod test {
     use async_trait::async_trait;
     use futures_util::stream::SplitStream;
     use futures_util::{SinkExt, StreamExt};
+    use sam_test_utils::get_next_port;
     use tokio::net::TcpListener;
     use tokio::sync::mpsc::{self, Sender};
     use tokio_tungstenite::{accept_async, tungstenite::Message};
 
-    use crate::net::protocol::websocket::WebSocketClient;
-    use crate::net::protocol::websocket::WebSocketClientConfig;
+    use crate::websocket::{WebSocketClient, WebSocketClientConfig};
 
     use super::{WebSocket, WebSocketReceiver};
 
@@ -177,7 +171,7 @@ mod test {
 
     #[tokio::test]
     async fn test_echo_send() {
-        let addr = "127.0.0.1:9080".to_string();
+        let addr = format!("127.0.0.1:{}", get_next_port());
 
         test_server(addr.clone()).await;
 

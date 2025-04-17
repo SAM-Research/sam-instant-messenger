@@ -1,34 +1,29 @@
 use crate::storage::{ProvidesKeyId, Store, StoreType};
-use crate::{signal_time_now, ClientError};
 use async_trait::async_trait;
-use libsignal_core::curve::{KeyPair, PrivateKey};
-use libsignal_protocol::kem::{self, KeyType};
+use libsignal_core::curve::PrivateKey;
 use libsignal_protocol::{
-    GenericSignedPreKey, IdentityKey, IdentityKeyPair, KyberPreKeyId, KyberPreKeyRecord,
-    KyberPreKeyStore, PreKeyBundle, PreKeyId, PreKeyRecord, PreKeyStore, PublicKey,
-    SignalProtocolError, SignedPreKeyId, SignedPreKeyRecord, SignedPreKeyStore,
+    IdentityKeyPair, KyberPreKeyId, KyberPreKeyRecord, KyberPreKeyStore, PreKeyId, PreKeyRecord,
+    PreKeyStore, SignedPreKeyId, SignedPreKeyRecord, SignedPreKeyStore,
 };
 
 use rand::{CryptoRng, Rng};
-use sam_common::api::keys::RegistrationPreKeys;
-use sam_common::api::{EcPreKey, PqPreKey};
+use sam_common::api::EcPreKey;
+use sam_common::api::{keys::RegistrationPreKeys, PqPreKey};
+use sam_security::key_gen::{generate_ec_pre_key, generate_pq_pre_key, generate_signed_pre_key};
+
+use super::error::KeyStoreError;
 
 #[async_trait(?Send)]
 pub trait PreKeyGenerator {
     async fn generate_key<R: Rng + CryptoRng>(
         &mut self,
         csprng: &mut R,
-    ) -> Result<PreKeyRecord, ClientError>;
-}
-
-pub async fn generate_ec_pre_key<R: Rng + CryptoRng>(id: PreKeyId, csprng: &mut R) -> PreKeyRecord {
-    let key_pair = KeyPair::generate(csprng);
-    PreKeyRecord::new(id, &key_pair)
+    ) -> Result<PreKeyRecord, KeyStoreError>;
 }
 
 #[async_trait(?Send)]
 impl<T: PreKeyStore + ProvidesKeyId<PreKeyId>> PreKeyGenerator for T {
-    async fn generate_key<R>(&mut self, csprng: &mut R) -> Result<PreKeyRecord, ClientError>
+    async fn generate_key<R>(&mut self, csprng: &mut R) -> Result<PreKeyRecord, KeyStoreError>
     where
         R: Rng + CryptoRng,
     {
@@ -46,24 +41,7 @@ pub trait SignedPreKeyGenerator {
         &mut self,
         csprng: &mut R,
         private_key: &PrivateKey,
-    ) -> Result<SignedPreKeyRecord, ClientError>;
-}
-
-pub async fn generate_signed_pre_key<R: Rng + CryptoRng>(
-    id: SignedPreKeyId,
-    private_key: &PrivateKey,
-    csprng: &mut R,
-) -> Result<SignedPreKeyRecord, SignalProtocolError> {
-    let signed_pre_key_pair = KeyPair::generate(csprng);
-    let signature =
-        private_key.calculate_signature(&signed_pre_key_pair.public_key.serialize(), csprng)?;
-
-    Ok(SignedPreKeyRecord::new(
-        id,
-        signal_time_now(),
-        &signed_pre_key_pair,
-        &signature,
-    ))
+    ) -> Result<SignedPreKeyRecord, KeyStoreError>;
 }
 
 #[async_trait(?Send)]
@@ -72,7 +50,7 @@ impl<T: SignedPreKeyStore + ProvidesKeyId<SignedPreKeyId>> SignedPreKeyGenerator
         &mut self,
         csprng: &mut R,
         private_key: &PrivateKey,
-    ) -> Result<SignedPreKeyRecord, ClientError>
+    ) -> Result<SignedPreKeyRecord, KeyStoreError>
     where
         R: Rng + CryptoRng,
     {
@@ -89,14 +67,7 @@ pub trait KyberKeyGenerator {
     async fn generate_key(
         &mut self,
         private_key: &PrivateKey,
-    ) -> Result<KyberPreKeyRecord, ClientError>;
-}
-
-pub async fn generate_pq_pre_key(
-    id: KyberPreKeyId,
-    private_key: &PrivateKey,
-) -> Result<KyberPreKeyRecord, SignalProtocolError> {
-    KyberPreKeyRecord::generate(KeyType::Kyber1024, id, private_key)
+    ) -> Result<KyberPreKeyRecord, KeyStoreError>;
 }
 
 #[async_trait(?Send)]
@@ -104,7 +75,7 @@ impl<T: KyberPreKeyStore + ProvidesKeyId<KyberPreKeyId>> KyberKeyGenerator for T
     async fn generate_key(
         &mut self,
         private_key: &PrivateKey,
-    ) -> Result<KyberPreKeyRecord, ClientError> {
+    ) -> Result<KyberPreKeyRecord, KeyStoreError> {
         let id = self.next_key_id().await?;
         let record = generate_pq_pre_key(id, private_key).await?;
         self.save_kyber_pre_key(id, &record).await?;
@@ -116,7 +87,7 @@ pub async fn generate_ec_pre_keys<G: PreKeyGenerator, R: Rng + CryptoRng>(
     generator: &mut G,
     amount: usize,
     mut csprng: &mut R,
-) -> Result<Vec<EcPreKey>, ClientError> {
+) -> Result<Vec<EcPreKey>, KeyStoreError> {
     let mut keys = Vec::with_capacity(amount);
     for _ in 0..amount {
         keys.push(generator.generate_key(&mut csprng).await?.into());
@@ -128,7 +99,7 @@ pub async fn generate_pq_pre_keys<G: KyberKeyGenerator>(
     signing_key: &PrivateKey,
     generator: &mut G,
     amount: usize,
-) -> Result<Vec<PqPreKey>, ClientError> {
+) -> Result<Vec<PqPreKey>, KeyStoreError> {
     let mut keys = Vec::with_capacity(amount);
     for _ in 0..amount {
         keys.push(generator.generate_key(signing_key).await?.into());
@@ -136,35 +107,12 @@ pub async fn generate_pq_pre_keys<G: KyberKeyGenerator>(
     Ok(keys)
 }
 
-pub(crate) fn into_libsignal_bundle(
-    bundle: sam_common::api::PreKeyBundle,
-    identity_key: IdentityKey,
-) -> Result<PreKeyBundle, ClientError> {
-    Ok(PreKeyBundle::new(
-        bundle.registration_id,
-        bundle.device_id.into(),
-        match bundle.pre_key {
-            None => None,
-            Some(key) => Some((key.key_id.into(), PublicKey::deserialize(&key.public_key)?)),
-        },
-        bundle.signed_pre_key.key_id.into(),
-        PublicKey::deserialize(&bundle.signed_pre_key.public_key)?,
-        bundle.signed_pre_key.signature.to_vec(),
-        identity_key,
-    )?
-    .with_kyber_pre_key(
-        bundle.pq_pre_key.key_id.into(),
-        kem::PublicKey::deserialize(&bundle.pq_pre_key.public_key)?,
-        bundle.pq_pre_key.signature.to_vec(),
-    ))
-}
-
 pub async fn create_registration_pre_keys<S: StoreType, R: Rng + CryptoRng>(
     store: &mut Store<S>,
     prekey_count: usize,
     id_key_pair: IdentityKeyPair,
     mut csprng: &mut R,
-) -> Result<RegistrationPreKeys, ClientError> {
+) -> Result<RegistrationPreKeys, KeyStoreError> {
     Ok(RegistrationPreKeys {
         pre_keys: Some(
             generate_ec_pre_keys(&mut store.pre_key_store, prekey_count, &mut csprng).await?,
@@ -194,7 +142,8 @@ pub async fn create_registration_pre_keys<S: StoreType, R: Rng + CryptoRng>(
 pub mod test {
     use super::*;
     use libsignal_protocol::{
-        IdentityKeyPair, InMemKyberPreKeyStore, InMemPreKeyStore, InMemSignedPreKeyStore,
+        GenericSignedPreKey as _, IdentityKeyPair, InMemKyberPreKeyStore, InMemPreKeyStore,
+        InMemSignedPreKeyStore,
     };
     use rand::rngs::OsRng;
 
