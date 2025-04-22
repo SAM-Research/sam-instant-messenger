@@ -88,7 +88,7 @@ impl SenderKeyStore for SqliteSenderKeyStore {
             Err(err) => Err(SignalProtocolError::ApplicationCallbackError(
                 "store sender key",
                 Box::new(DatabaseError::Database(format!("{err}"))),
-            )), // TODO: Mistake?
+            )),
         }
     }
 }
