@@ -96,7 +96,7 @@ mod test {
     async fn test_get_api_v1_devices_provision() {
         let mut state = ServerState::in_memory_test();
 
-        let (_, account_id, _) = create_user(&mut state, "alice", "phone", "password", OsRng).await;
+        let (_, account_id, _) = create_user(&mut state, "phone", "password", OsRng).await;
 
         let server = test_server(state.clone(), device_routes);
         let basic = format!(
@@ -116,14 +116,13 @@ mod test {
     #[case(0, StatusCode::FORBIDDEN, false)]
     #[tokio::test]
     async fn test_get_api_v1_devices_link(
-        #[case] expire_time: u64,
+        #[case] expire_time: u32,
         #[case] expected_status: StatusCode,
         #[case] expects_ok_device: bool,
     ) {
         let mut state = ServerState::in_memory(LINK_SECRET.to_string(), expire_time, 10);
 
-        let (pair, account_id, _) =
-            create_user(&mut state, "alice", "phone", "password", OsRng).await;
+        let (pair, account_id, _) = create_user(&mut state, "phone", "password", OsRng).await;
 
         let server = test_server(state.clone(), device_routes);
         let basic = format!(
@@ -171,13 +170,12 @@ mod test {
     async fn test_delete_api_v1_device_id() {
         let mut state = ServerState::in_memory_test();
 
-        let (_, account_id, _) = create_user(&mut state, "alice", "phone", "password", OsRng).await;
+        let (_, account_id, _) = create_user(&mut state, "phone", "password", OsRng).await;
         state
             .devices
             .add_device(
                 account_id,
                 &Device::builder()
-                    .creation(0)
                     .id(2.into())
                     .registration_id(1.into())
                     .name("microwave".to_string())

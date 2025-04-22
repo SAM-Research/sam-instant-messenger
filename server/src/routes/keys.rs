@@ -107,7 +107,7 @@ mod test {
     #[tokio::test]
     async fn test_post_api_v1_keys() {
         let mut state = ServerState::in_memory_test();
-        let (pair, account_id, _) = create_user(&mut state, "alice", "phone", "bob", OsRng).await;
+        let (pair, account_id, _) = create_user(&mut state, "phone", "bob", OsRng).await;
 
         let server = test_server(state, key_routes);
         let basic = format!(
@@ -133,9 +133,8 @@ mod test {
     #[tokio::test]
     async fn test_get_api_v1_keys_account() {
         let mut state = ServerState::in_memory_test();
-        let (pair, account_id, device_id) =
-            create_user(&mut state, "alice", "phone", "bob", OsRng).await;
-        let (_, bob_id, _) = create_user(&mut state, "bob", "phone", "password", OsRng).await;
+        let (pair, account_id, device_id) = create_user(&mut state, "phone", "bob", OsRng).await;
+        let (_, bob_id, _) = create_user(&mut state, "phone", "password", OsRng).await;
 
         let keys = create_publish_pre_keys(
             Some(vec![1]),
@@ -190,9 +189,8 @@ mod test {
         #[case] expected_err: u16,
     ) {
         let mut state = ServerState::in_memory_test();
-        let (pair, account_id, device_id) =
-            create_user(&mut state, "alice", "phone", "bob", OsRng).await;
-        let (_, bob_id, _) = create_user(&mut state, "bob", "phone", "password", OsRng).await;
+        let (pair, account_id, device_id) = create_user(&mut state, "phone", "bob", OsRng).await;
+        let (_, bob_id, _) = create_user(&mut state, "phone", "password", OsRng).await;
 
         let keys = create_publish_pre_keys(
             Some(vec![1]),
@@ -230,9 +228,8 @@ mod test {
     #[tokio::test]
     async fn test_get_api_v1_keys_account_device() {
         let mut state = ServerState::in_memory_test();
-        let (pair, account_id, device_id) =
-            create_user(&mut state, "alice", "phone", "bob", OsRng).await;
-        let (_, bob_id, _) = create_user(&mut state, "bob", "phone", "password", OsRng).await;
+        let (pair, account_id, device_id) = create_user(&mut state, "phone", "bob", OsRng).await;
+        let (_, bob_id, _) = create_user(&mut state, "phone", "password", OsRng).await;
         let keys = create_publish_pre_keys(
             Some(vec![1]),
             Some(3),

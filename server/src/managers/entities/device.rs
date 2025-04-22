@@ -7,7 +7,6 @@ pub struct Device {
     registration_id: RegistrationId,
     id: DeviceId,
     name: String,
-    creation: u128,
     password: Password,
 }
 
@@ -22,10 +21,6 @@ impl Device {
 
     pub fn name(&self) -> &str {
         &self.name
-    }
-
-    pub fn creation(&self) -> u128 {
-        self.creation
     }
 
     pub fn password(&self) -> &Password {

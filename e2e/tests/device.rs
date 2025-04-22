@@ -1,22 +1,35 @@
+use rstest::rstest;
 use sam_client::client::SqliteClientType;
 use sam_client::net::http_client::HttpClientConfig;
 use sam_client::net::protocol::WebSocketProtocolClientConfig;
 use sam_client::storage::sqlite::SqliteStoreConfig;
 use sam_client::Client;
-use sam_test_utils::e2e::TestServer;
-use sam_test_utils::get_next_port;
+use sam_server::{ServerState, StateType};
+use sam_test_utils::{
+    e2e::{in_memory_server_state, postgres_server_state, TestServer},
+    get_next_port,
+};
+use uuid::Uuid;
 
 #[tokio::test]
-async fn can_link_device() {
+#[rstest]
+#[ignore = "requires a postgres test database"]
+#[case::postgres(postgres_server_state())]
+#[case::in_memory(in_memory_server_state())]
+async fn can_link_device(
+    #[future]
+    #[case]
+    state: ServerState<impl StateType>,
+) {
     let address = format!("127.0.0.1:{}", get_next_port());
-    let mut server = TestServer::start(&address, None).await;
+    let mut server = TestServer::start(&address, None, state.await).await;
 
     server
         .started_rx()
         .await
         .expect("Should be able to start server");
 
-    let username = "Alice";
+    let username = Uuid::new_v4().to_string();
     let device_name = "Alice's Device";
 
     let store_config = SqliteStoreConfig::in_memory(10).await;
@@ -27,7 +40,7 @@ async fn can_link_device() {
         .store_config(store_config)
         .protocol_config(protocol_config)
         .api_client_config(api_client_config)
-        .username(username)
+        .username(&username)
         .device_name(device_name)
         .call()
         .await
@@ -59,16 +72,24 @@ async fn can_link_device() {
 }
 
 #[tokio::test]
-async fn can_unlink_device() {
+#[rstest]
+#[ignore = "requires a postgres test database"]
+#[case::postgres(postgres_server_state())]
+#[case::in_memory(in_memory_server_state())]
+async fn can_unlink_device(
+    #[future]
+    #[case]
+    state: ServerState<impl StateType>,
+) {
     let address = format!("127.0.0.1:{}", get_next_port());
-    let mut server = TestServer::start(&address, None).await;
+    let mut server = TestServer::start(&address, None, state.await).await;
 
     server
         .started_rx()
         .await
         .expect("Should be able to start server");
 
-    let username = "Alice";
+    let username = Uuid::new_v4().to_string();
     let device_name = "Alice's Device";
 
     let store_config = SqliteStoreConfig::in_memory(10).await;
@@ -79,7 +100,7 @@ async fn can_unlink_device() {
         .store_config(store_config)
         .protocol_config(protocol_config)
         .api_client_config(api_client_config)
-        .username(username)
+        .username(&username)
         .device_name(device_name)
         .call()
         .await
@@ -116,16 +137,24 @@ async fn can_unlink_device() {
 }
 
 #[tokio::test]
-async fn can_delete_device() {
+#[rstest]
+#[ignore = "requires a postgres test database"]
+#[case::postgres(postgres_server_state())]
+#[case::in_memory(in_memory_server_state())]
+async fn can_delete_device(
+    #[future]
+    #[case]
+    state: ServerState<impl StateType>,
+) {
     let address = format!("127.0.0.1:{}", get_next_port());
-    let mut server = TestServer::start(&address, None).await;
+    let mut server = TestServer::start(&address, None, state.await).await;
 
     server
         .started_rx()
         .await
         .expect("Should be able to start server");
 
-    let username = "Alice";
+    let username = Uuid::new_v4().to_string();
     let device_name = "Alice's Device";
 
     let store_config = SqliteStoreConfig::in_memory(10).await;
@@ -136,7 +165,7 @@ async fn can_delete_device() {
         .store_config(store_config)
         .protocol_config(protocol_config)
         .api_client_config(api_client_config)
-        .username(username)
+        .username(&username)
         .device_name(device_name)
         .call()
         .await
@@ -170,16 +199,24 @@ async fn can_delete_device() {
 }
 
 #[tokio::test]
-async fn can_delete_account() {
+#[rstest]
+#[ignore = "requires a postgres test database"]
+#[case::postgres(postgres_server_state())]
+#[case::in_memory(in_memory_server_state())]
+async fn can_delete_account(
+    #[future]
+    #[case]
+    state: ServerState<impl StateType>,
+) {
     let address = format!("127.0.0.1:{}", get_next_port());
-    let mut server = TestServer::start(&address, None).await;
+    let mut server = TestServer::start(&address, None, state.await).await;
 
     server
         .started_rx()
         .await
         .expect("Should be able to start server");
 
-    let username = "Alice";
+    let username = Uuid::new_v4().to_string();
     let device_name = "Alice's Device";
 
     let store_config = SqliteStoreConfig::in_memory(10).await;
@@ -190,7 +227,7 @@ async fn can_delete_account() {
         .store_config(store_config)
         .protocol_config(protocol_config)
         .api_client_config(api_client_config)
-        .username(username)
+        .username(&username)
         .device_name(device_name)
         .call()
         .await

@@ -34,7 +34,7 @@ impl StateType for InMemStateType {
 impl ServerState<InMemStateType> {
     pub fn in_memory(
         link_secret: String,
-        provision_expire_seconds: u64, // signal uses 600 seconds
+        provision_expire_seconds: u32, // signal uses 600 seconds
         message_buffer: usize,
     ) -> Self {
         ServerState::new(

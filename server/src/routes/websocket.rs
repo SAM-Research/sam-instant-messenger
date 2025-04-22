@@ -116,16 +116,15 @@ mod test {
     async fn alice_send_to_bob_does_not_need_sync() {
         // TODO: Move this to the E2E when client supports sending to self in the same message as two recipient
         let mut state = ServerState::in_memory_test();
-        let (_, alice_id, _) = create_user(&mut state, "alice", "phone", "bob", OsRng).await;
+        let (_, alice_id, _) = create_user(&mut state, "phone", "bob", OsRng).await;
         let (_, bob_id, bob_device) =
-            create_user(&mut state, "bob", "laptop", "cheeseburger", OsRng).await;
+            create_user(&mut state, "laptop", "cheeseburger", OsRng).await;
 
         state
             .devices
             .add_device(
                 alice_id,
                 &Device::builder()
-                    .creation(0)
                     .id(27.into())
                     .registration_id(43284.into())
                     .name("Device 27".to_string())

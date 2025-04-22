@@ -15,11 +15,11 @@ pub struct InMemoryDeviceManager {
     devices: Arc<Mutex<HashMap<DeviceAddress, Device>>>,
     account_devices: Arc<Mutex<HashMap<AccountId, HashSet<DeviceAddress>>>>,
     link_secret: String,
-    provision_expire_seconds: u64,
+    provision_expire_seconds: u32,
 }
 
 impl InMemoryDeviceManager {
-    pub fn new(link_secret: String, provision_expire_seconds: u64) -> Self {
+    pub fn new(link_secret: String, provision_expire_seconds: u32) -> Self {
         InMemoryDeviceManager {
             devices: Arc::new(Mutex::new(HashMap::new())),
             account_devices: Arc::new(Mutex::new(HashMap::new())),
@@ -62,7 +62,7 @@ impl DeviceManager for InMemoryDeviceManager {
                 devices.push(id);
             }
         } else {
-            return Err(DeviceManagerError::AccountDoesNotExist);
+            return Err(DeviceManagerError::NoDevicesFound);
         }
         Ok(devices)
     }
@@ -82,7 +82,7 @@ impl DeviceManager for InMemoryDeviceManager {
         Ok(self.link_secret.clone())
     }
 
-    async fn provision_expire_seconds(&self) -> Result<u64, DeviceManagerError> {
+    async fn provision_expire_seconds(&self) -> Result<u32, DeviceManagerError> {
         Ok(self.provision_expire_seconds)
     }
 

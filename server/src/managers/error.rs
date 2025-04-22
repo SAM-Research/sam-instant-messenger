@@ -41,7 +41,9 @@ impl IntoResponse for AccountManagerError {
 pub enum DeviceManagerError {
     DeviceDoesNotExist,
     AccountDoesNotExist,
+    NoDevicesFound,
     DeviceAlreadyExists,
+    ServiceUnavailable,
 }
 
 impl IntoResponse for DeviceManagerError {
@@ -56,6 +58,10 @@ impl IntoResponse for DeviceManagerError {
             }
             DeviceManagerError::DeviceAlreadyExists => {
                 (StatusCode::BAD_REQUEST, "Device already exists")
+            }
+            DeviceManagerError::ServiceUnavailable => (StatusCode::SERVICE_UNAVAILABLE, ""),
+            DeviceManagerError::NoDevicesFound => {
+                (StatusCode::NOT_FOUND, "Account has no devices.")
             }
         }
         .into_response()

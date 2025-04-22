@@ -294,7 +294,6 @@ mod test {
                 Password::generate("dave<3".to_string(), &mut rng)
                     .expect("Alice can create password"),
             )
-            .creation(0)
             .registration_id(1.into())
             .build();
 
@@ -424,7 +423,6 @@ mod test {
                 Password::generate("dave<3".to_string(), &mut rng)
                     .expect("Alice can create password"),
             )
-            .creation(0)
             .registration_id(1.into())
             .build();
 

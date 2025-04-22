@@ -40,3 +40,4 @@ axum-test = { workspace = true }
 tokio-tungstenite = { workspace = true }
 maplit = { workspace = true }
 rstest = { workspace = true }
+uuid = { workspace = true }

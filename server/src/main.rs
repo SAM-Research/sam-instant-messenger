@@ -9,7 +9,7 @@ use sam_server::{
 
 const DEFAULT_ADDR: &str = "127.0.0.1:8080";
 const DEFAULT_LINK_SECRET: &str = "verysecret";
-const DEFAULT_PROVISION_TIMEOUT_SECS: u64 = 600;
+const DEFAULT_PROVISION_TIMEOUT_SECS: u32 = 600;
 const DEFAULT_MESSAGE_BUFFER_SIZE: usize = 10;
 
 fn welcome(config: &ServerCliConfig) {

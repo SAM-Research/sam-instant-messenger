@@ -1,0 +1,22 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\n            INSERT INTO device_link_info (id, link_secret, provision_expire_seconds)\n            VALUES (1, $1, $2)\n            ON CONFLICT (id)\n            DO UPDATE SET\n                link_secret = excluded.link_secret,\n                provision_expire_seconds = excluded.provision_expire_seconds\n            ",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Text",
+        {
+          "Custom": {
+            "name": "uint32",
+            "kind": {
+              "Domain": "Int8"
+            }
+          }
+        }
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "e19b4f53891951e08395b7abe9bf0c0d0f31e30343ecc8e63d9d3872af555142"
+}

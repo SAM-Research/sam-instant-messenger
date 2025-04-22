@@ -11,16 +11,22 @@ use sam_client::{
 use sam_common::{api::LinkDeviceToken, AccountId};
 use sam_net::tls::{create_tls_client_config, MutualTlsConfig};
 use sam_server::config::TlsConfig;
-use sam_test_utils::{e2e::TestServer, get_next_port};
+use sam_server::{ServerState, StateType};
+use sam_test_utils::{
+    e2e::{in_memory_server_state, postgres_server_state, TestServer},
+    get_next_port,
+};
 use std::time::Duration;
 use tempfile::NamedTempFile;
 use tokio::{sync::broadcast::Receiver, time::timeout};
+use uuid::Uuid;
 
 const TIMEOUT_SECS: u64 = 120;
 
-async fn client(address: &str, username: &str, device_name: &str) -> Client<SqliteClientType> {
+async fn client(address: &str, device_name: &str) -> Client<SqliteClientType> {
+    let username = Uuid::new_v4().to_string();
     Client::from_registration()
-        .username(username)
+        .username(&username)
         .device_name(device_name)
         .store_config(SqliteStoreConfig::in_memory(10).await)
         .api_client_config(HttpClientConfig::new(address.to_string()))
@@ -33,14 +39,14 @@ async fn client(address: &str, username: &str, device_name: &str) -> Client<Sqli
 
 async fn tls_client(
     address: &str,
-    username: &str,
     device_name: &str,
     mutual_config: Option<MutualTlsConfig>,
 ) -> Client<SqliteClientType> {
     let client_config = create_tls_client_config("./cert/rootCA.crt", mutual_config)
         .expect("Can create client config");
+    let username = Uuid::new_v4().to_string();
     Client::from_registration()
-        .username(username)
+        .username(&username)
         .device_name(device_name)
         .store_config(SqliteStoreConfig::in_memory(10).await)
         .api_client_config(HttpClientConfig::new_with_tls(
@@ -78,17 +84,25 @@ async fn client_device(
 }
 
 #[tokio::test]
-async fn test_alice_send_to_bob_offline() {
+#[rstest]
+#[ignore = "requires a postgres test database"]
+#[case::postgres(postgres_server_state())]
+#[case::in_memory(in_memory_server_state())]
+async fn test_alice_send_to_bob_offline(
+    #[future]
+    #[case]
+    state: ServerState<impl StateType>,
+) {
     timeout(Duration::from_secs(TIMEOUT_SECS), async {
         let address = format!("127.0.0.1:{}", get_next_port());
-        let mut server = TestServer::start(&address, None).await;
+        let mut server = TestServer::start(&address, None, state.await).await;
         server
             .started_rx()
             .await
             .expect("Should be able to start server");
 
-        let mut alice = client(&address, "alice", "alice device").await;
-        let mut bob = client(&address, "bob", "bob device").await;
+        let mut alice = client(&address, "alice device").await;
+        let mut bob = client(&address, "bob device").await;
 
         let bob_id = bob.account_id().await.expect("Bob can get his id");
 
@@ -118,17 +132,25 @@ async fn test_alice_send_to_bob_offline() {
 }
 
 #[tokio::test]
-async fn test_alice_send_to_bob_two_devices() {
+#[rstest]
+#[ignore = "requires a postgres test database"]
+#[case::postgres(postgres_server_state())]
+#[case::in_memory(in_memory_server_state())]
+async fn test_alice_send_to_bob_two_devices(
+    #[future]
+    #[case]
+    state: ServerState<impl StateType>,
+) {
     timeout(Duration::from_secs(TIMEOUT_SECS), async {
         let address = format!("127.0.0.1:{}", get_next_port());
-        let mut server = TestServer::start(&address, None).await;
+        let mut server = TestServer::start(&address, None, state.await).await;
         server
             .started_rx()
             .await
             .expect("Should be able to start server");
 
-        let mut alice = client(&address, "alice", "alice device").await;
-        let mut bob = client(&address, "bob", "bob device").await;
+        let mut alice = client(&address, "alice device").await;
+        let mut bob = client(&address, "bob device").await;
 
         let token = bob
             .create_provision()
@@ -174,17 +196,25 @@ async fn test_alice_send_to_bob_two_devices() {
 }
 
 #[tokio::test]
-async fn test_alice_send_to_bob_missing_devices() {
+#[rstest]
+#[ignore = "requires a postgres test database"]
+#[case::postgres(postgres_server_state())]
+#[case::in_memory(in_memory_server_state())]
+async fn test_alice_send_to_bob_missing_devices(
+    #[future]
+    #[case]
+    state: ServerState<impl StateType>,
+) {
     timeout(Duration::from_secs(TIMEOUT_SECS), async {
         let address = format!("127.0.0.1:{}", get_next_port());
-        let mut server = TestServer::start(&address, None).await;
+        let mut server = TestServer::start(&address, None, state.await).await;
         server
             .started_rx()
             .await
             .expect("Should be able to start server");
 
-        let mut alice = client(&address, "alice", "alice device").await;
-        let mut bob = client(&address, "bob", "bob device").await;
+        let mut alice = client(&address, "alice device").await;
+        let mut bob = client(&address, "bob device").await;
 
         let token = bob
             .create_provision()
@@ -217,17 +247,25 @@ async fn test_alice_send_to_bob_missing_devices() {
 }
 
 #[tokio::test]
-async fn test_alice_send_to_bob_extra_devices() {
+#[rstest]
+#[ignore = "requires a postgres test database"]
+#[case::postgres(postgres_server_state())]
+#[case::in_memory(in_memory_server_state())]
+async fn test_alice_send_to_bob_extra_devices(
+    #[future]
+    #[case]
+    state: ServerState<impl StateType>,
+) {
     timeout(Duration::from_secs(TIMEOUT_SECS), async {
         let address = format!("127.0.0.1:{}", get_next_port());
-        let mut server = TestServer::start(&address, None).await;
+        let mut server = TestServer::start(&address, None, state.await).await;
         server
             .started_rx()
             .await
             .expect("Should be able to start server");
 
-        let mut alice = client(&address, "alice", "alice device").await;
-        let mut bob = client(&address, "bob", "bob device").await;
+        let mut alice = client(&address, "alice device").await;
+        let mut bob = client(&address, "bob device").await;
 
         let token = bob
             .create_provision()
@@ -291,18 +329,26 @@ async fn test_alice_send_to_bob_extra_devices() {
     .expect("Test took to long to complete")
 }
 
+#[rstest]
+#[ignore = "requires a postgres test database"]
+#[case::postgres(postgres_server_state())]
+#[case::in_memory(in_memory_server_state())]
 #[tokio::test]
-async fn test_alice_send_to_bob_and_self() {
+async fn test_alice_send_to_bob_and_self(
+    #[future]
+    #[case]
+    state: ServerState<impl StateType>,
+) {
     timeout(Duration::from_secs(TIMEOUT_SECS), async {
         let address = format!("127.0.0.1:{}", get_next_port());
-        let mut server = TestServer::start(&address, None).await;
+        let mut server = TestServer::start(&address, None, state.await).await;
         server
             .started_rx()
             .await
             .expect("Should be able to start server");
 
-        let mut alice = client(&address, "alice", "alice device").await;
-        let bob = client(&address, "bob", "bob device").await;
+        let mut alice = client(&address, "alice device").await;
+        let bob = client(&address, "bob device").await;
 
         let token = alice
             .create_provision()
@@ -347,13 +393,20 @@ async fn test_alice_send_to_bob_and_self() {
 }
 
 #[rstest]
-#[case(Some("./cert/rootCA.crt".to_string()), Some(MutualTlsConfig::new("./cert/client.key".to_string(), "./cert/client.crt".to_string())), get_next_port())]
-#[case(None, None, get_next_port())]
+#[ignore = "requires a postgres test database"]
+#[case(Some("./cert/rootCA.crt".to_string()), Some(MutualTlsConfig::new("./cert/client.key".to_string(), "./cert/client.crt".to_string())), get_next_port(), postgres_server_state())]
+#[ignore = "requires a postgres test database"]
+#[case(None, None, get_next_port(), postgres_server_state())]
+#[case(Some("./cert/rootCA.crt".to_string()), Some(MutualTlsConfig::new("./cert/client.key".to_string(), "./cert/client.crt".to_string())), get_next_port(), in_memory_server_state())]
+#[case(None, None, get_next_port(), in_memory_server_state())]
 #[tokio::test]
 async fn test_alice_send_to_bob_with_tls(
     #[case] ca_cert: Option<String>,
     #[case] mutual_config: Option<MutualTlsConfig>,
     #[case] port: u16,
+    #[future(awt)]
+    #[case]
+    state: ServerState<impl StateType>,
 ) {
     timeout(Duration::from_secs(TIMEOUT_SECS), async {
         let _ = rustls::crypto::ring::default_provider().install_default();
@@ -365,14 +418,14 @@ async fn test_alice_send_to_bob_with_tls(
         }
         .try_into()
         .expect("Can create server config");
-        let mut server = TestServer::start(&address, Some(server_config)).await;
+        let mut server = TestServer::start(&address, Some(server_config), state).await;
         server
             .started_rx()
             .await
             .expect("Should be able to start server");
 
-        let mut alice = tls_client(&address, "alice", "alice device", mutual_config.clone()).await;
-        let mut bob = tls_client(&address, "bob", "bob device", mutual_config).await;
+        let mut alice = tls_client(&address, "alice device", mutual_config.clone()).await;
+        let mut bob = tls_client(&address, "bob device", mutual_config).await;
 
         let bob_id = bob.account_id().await.expect("Bob can get his id");
 
@@ -426,21 +479,33 @@ async fn send(
 }
 
 #[rstest]
-#[case(vec![Message::Alice("a"), Message::Bob("b"), Message::Alice("aa"), Message::Alice("aaa"), Message::Bob("bb")], get_next_port())]
-#[case(vec![Message::Alice("a"), Message::Alice("aa"), Message::Alice("aaa"), Message::Bob("b"), Message::Bob("bb")], get_next_port())]
-#[case(vec![Message::Bob("b"), Message::Alice("a")], get_next_port())]
+#[case(vec![Message::Alice("a"), Message::Bob("b"), Message::Alice("aa"), Message::Alice("aaa"), Message::Bob("bb")], get_next_port(), in_memory_server_state())]
+#[case(vec![Message::Alice("a"), Message::Alice("aa"), Message::Alice("aaa"), Message::Bob("b"), Message::Bob("bb")], get_next_port(), in_memory_server_state())]
+#[case(vec![Message::Bob("b"), Message::Alice("a")], get_next_port(), in_memory_server_state())]
+#[ignore = "requires a postgres test database"]
+#[case(vec![Message::Alice("a"), Message::Bob("b"), Message::Alice("aa"), Message::Alice("aaa"), Message::Bob("bb")], get_next_port(), postgres_server_state())]
+#[ignore = "requires a postgres test database"]
+#[case(vec![Message::Alice("a"), Message::Alice("aa"), Message::Alice("aaa"), Message::Bob("b"), Message::Bob("bb")], get_next_port(), postgres_server_state())]
+#[ignore = "requires a postgres test database"]
+#[case(vec![Message::Bob("b"), Message::Alice("a")], get_next_port(), postgres_server_state())]
 #[tokio::test]
-async fn test_ongoing_communication<'a>(#[case] sequence: Vec<Message<'a>>, #[case] port: u16) {
+async fn test_ongoing_communication<'a>(
+    #[case] sequence: Vec<Message<'a>>,
+    #[case] port: u16,
+    #[future(awt)]
+    #[case]
+    state: ServerState<impl StateType>,
+) {
     timeout(Duration::from_secs(TIMEOUT_SECS), async {
         let address = format!("127.0.0.1:{}", port);
-        let mut server = TestServer::start(&address, None).await;
+        let mut server = TestServer::start(&address, None, state).await;
         server
             .started_rx()
             .await
             .expect("Should be able to start server");
 
-        let mut alice = client(&address, "alice", "alice device").await;
-        let mut bob = client(&address, "bob", "bob device").await;
+        let mut alice = client(&address, "alice device").await;
+        let mut bob = client(&address, "bob device").await;
 
         let alice_id = alice.account_id().await.expect("Alice can get id");
         let bob_id = bob.account_id().await.expect("Bob can get id");
@@ -463,11 +528,19 @@ async fn test_ongoing_communication<'a>(#[case] sequence: Vec<Message<'a>>, #[ca
     .expect("Test took to long to complete")
 }
 
+#[rstest]
+#[ignore = "requires a postgres test database"]
+#[case::postgres(postgres_server_state())]
+#[case::in_memory(in_memory_server_state())]
 #[tokio::test]
-async fn sqlite_stores_alice_send_to_bob() {
+async fn sqlite_stores_alice_send_to_bob(
+    #[future(awt)]
+    #[case]
+    state: ServerState<impl StateType>,
+) {
     timeout(Duration::from_secs(TIMEOUT_SECS), async {
         let address = format!("127.0.0.1:{}", get_next_port());
-        let mut server = TestServer::start(&address, None).await;
+        let mut server = TestServer::start(&address, None, state).await;
         server
             .started_rx()
             .await
@@ -477,7 +550,7 @@ async fn sqlite_stores_alice_send_to_bob() {
         let path = format!("sqlite://{}?mode=rwc", temp.path().to_string_lossy());
 
         let mut alice: Client<SqliteClientType> = Client::from_registration()
-            .username("Alice")
+            .username(&Uuid::new_v4().to_string())
             .device_name("Alice's Device")
             .store_config(SqliteStoreConfig::new(path.clone(), 10))
             .protocol_config(WebSocketProtocolClientConfig::new(address.to_owned(), 10))
@@ -503,7 +576,7 @@ async fn sqlite_stores_alice_send_to_bob() {
             .unwrap();
 
         let bob: Client<SqliteClientType> = Client::from_registration()
-            .username("Bob")
+            .username(&Uuid::new_v4().to_string())
             .device_name("Bob's Device")
             .store_config(SqliteStoreConfig::new("sqlite::memory:".to_owned(), 10))
             .protocol_config(WebSocketProtocolClientConfig::new(address.to_owned(), 10))

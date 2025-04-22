@@ -11,9 +11,12 @@ use sam_server::{
             message::InMemoryMessageManager,
             InMemStateType,
         },
+        postgres::{
+            PostgresAccountManager, PostgresConnector, PostgresDeviceManager, PostgresStateType,
+        },
         KeyManager,
     },
-    start_server, ServerConfig, ServerState,
+    start_server, ServerConfig, ServerState, StateType,
 };
 
 use tokio::{
@@ -33,9 +36,13 @@ impl Drop for TestServer {
 }
 
 impl TestServer {
-    pub async fn start(address: &str, tls_config: Option<rustls::ServerConfig>) -> Self {
+    pub async fn start<T: StateType>(
+        address: &str,
+        tls_config: Option<rustls::ServerConfig>,
+        server_state: ServerState<T>,
+    ) -> Self {
         let config = ServerConfig {
-            state: in_memory_server_state(),
+            state: server_state,
             addr: address.parse().expect("Unable to parse socket address"),
             tls_config,
         };
@@ -54,7 +61,7 @@ impl TestServer {
     }
 }
 
-pub fn in_memory_server_state() -> ServerState<InMemStateType> {
+pub async fn in_memory_server_state() -> ServerState<InMemStateType> {
     ServerState::new(
         OsRng,
         InMemoryAccountManager::default(),
@@ -66,5 +73,28 @@ pub fn in_memory_server_state() -> ServerState<InMemStateType> {
             InMemorySignedPreKeyManager::default(),
             InMemoryLastResortPqPreKeyManager::default(),
         ),
+    )
+}
+
+pub async fn postgres_server_state() -> ServerState<PostgresStateType> {
+    let connection_str = "postgres://test:test@127.0.0.1:5432/sam_test_db";
+    let pool = PostgresConnector::connect(connection_str)
+        .await
+        .expect("can connect to the postgres test server")
+        .pool();
+
+    ServerState::<PostgresStateType>::new(
+        OsRng,
+        PostgresAccountManager::new(pool.clone()),
+        PostgresDeviceManager::create(pool, "TEST_LINK_SECRET", 30)
+            .await
+            .expect("Can save device manager configuration"),
+        InMemoryMessageManager::default(),
+        KeyManager {
+            pre_keys: InMemoryEcPreKeyManager::default(),
+            pq_pre_keys: InMemoryPqPreKeyManager::default(),
+            signed_pre_keys: InMemorySignedPreKeyManager::default(),
+            last_resort_keys: InMemoryLastResortPqPreKeyManager::default(),
+        },
     )
 }

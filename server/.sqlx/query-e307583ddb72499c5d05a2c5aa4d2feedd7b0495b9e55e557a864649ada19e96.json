@@ -1,0 +1,32 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\n            INSERT INTO devices (owner, device_id, registration_id, name, hash) \n            SELECT id,\n                   $2,\n                   $3,\n                   $4,\n                   $5\n            FROM accounts\n            WHERE account_id = $1\n            ",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Uuid",
+        {
+          "Custom": {
+            "name": "uint32",
+            "kind": {
+              "Domain": "Int8"
+            }
+          }
+        },
+        {
+          "Custom": {
+            "name": "uint32",
+            "kind": {
+              "Domain": "Int8"
+            }
+          }
+        },
+        "Text",
+        "Text"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "e307583ddb72499c5d05a2c5aa4d2feedd7b0495b9e55e557a864649ada19e96"
+}

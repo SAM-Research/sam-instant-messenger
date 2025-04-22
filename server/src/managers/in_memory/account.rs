@@ -27,25 +27,6 @@ impl InMemoryAccountManager {
 
 #[async_trait]
 impl AccountManager for InMemoryAccountManager {
-    async fn add_account(&mut self, account: &Account) -> Result<(), AccountManagerError> {
-        if self.accounts.lock().await.contains_key(&account.id()) {
-            return Err(AccountManagerError::AccountAlreadyExists)?;
-        } else if self
-            .accounts
-            .lock()
-            .await
-            .values()
-            .any(|acc| acc.username() == account.username())
-        {
-            return Err(AccountManagerError::UsernameAlreadyExists)?;
-        }
-        self.accounts
-            .lock()
-            .await
-            .insert(account.id(), account.clone());
-        Ok(())
-    }
-
     async fn get_account(&self, id: AccountId) -> Result<Account, AccountManagerError> {
         Ok(self
             .accounts
@@ -70,6 +51,25 @@ impl AccountManager for InMemoryAccountManager {
             .ok_or(AccountManagerError::AccountDoesNotExist)?;
 
         Ok(account.id())
+    }
+
+    async fn add_account(&mut self, account: &Account) -> Result<(), AccountManagerError> {
+        if self.accounts.lock().await.contains_key(&account.id()) {
+            return Err(AccountManagerError::AccountAlreadyExists)?;
+        } else if self
+            .accounts
+            .lock()
+            .await
+            .values()
+            .any(|acc| acc.username() == account.username())
+        {
+            return Err(AccountManagerError::UsernameAlreadyExists)?;
+        }
+        self.accounts
+            .lock()
+            .await
+            .insert(account.id(), account.clone());
+        Ok(())
     }
 
     async fn remove_account(&mut self, account_id: AccountId) -> Result<(), AccountManagerError> {

@@ -133,7 +133,7 @@ mod test {
     async fn test_delete_api_v1_account() {
         let mut state = ServerState::in_memory_test();
         let (pair, account_id, device_id) =
-            create_user(&mut state, "alice", "phone", "password", OsRng).await;
+            create_user(&mut state, "phone", "password", OsRng).await;
 
         state
             .keys

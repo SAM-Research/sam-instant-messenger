@@ -1,0 +1,14 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\n            UPDATE device_link_info\n            SET link_secret = $1\n            WHERE id = 1\n            ",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Text"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "178035c30745ca8cfe89cf56f5f378e2169ea91b512b85fff88812a2df25c76a"
+}

@@ -9,10 +9,12 @@ use rand::{CryptoRng, Rng};
 #[derive(Clone, bon::Builder, PartialEq, Eq)]
 pub struct Password {
     hash: String,
-    salt: SaltString,
 }
 
 impl Password {
+    pub fn hash(&self) -> &String {
+        &self.hash
+    }
     pub fn generate<T: Rng + CryptoRng + Default>(
         password: String,
         rng: &mut T,
@@ -24,7 +26,7 @@ impl Password {
             .inspect_err(|e| debug!("{e}"))
             .map_err(|_| AuthorizationError::PasswordHashError)?
             .to_string();
-        Ok(Self { hash, salt })
+        Ok(Self { hash })
     }
 
     pub fn verify(&self, password: String) -> Result<(), AuthorizationError> {

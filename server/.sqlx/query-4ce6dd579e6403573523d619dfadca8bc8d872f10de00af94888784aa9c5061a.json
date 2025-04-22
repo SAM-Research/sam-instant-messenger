@@ -1,0 +1,23 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\n            DELETE FROM devices \n            WHERE owner =\n                    (SELECT id\n                     FROM accounts\n                     WHERE account_id = $1)\n            AND device_id = $2\n            RETURNING (device_id)\n            ",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "device_id",
+        "type_info": "Int8"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Uuid",
+        "Int8"
+      ]
+    },
+    "nullable": [
+      false
+    ]
+  },
+  "hash": "4ce6dd579e6403573523d619dfadca8bc8d872f10de00af94888784aa9c5061a"
+}
