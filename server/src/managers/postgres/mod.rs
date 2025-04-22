@@ -1,4 +1,4 @@
-use crate::{ServerState, StateType};
+use crate::StateType;
 
 mod account;
 mod device;
@@ -8,13 +8,9 @@ pub(super) mod test_utils;
 
 pub use account::PostgresAccountManager;
 pub use device::PostgresDeviceManager;
-use sqlx::postgres::PgPoolOptions;
 
 use super::in_memory::{
-    keys::{
-        InMemoryEcPreKeyManager, InMemoryKeyManager, InMemoryLastResortPqPreKeyManager,
-        InMemoryPqPreKeyManager, InMemorySignedPreKeyManager,
-    },
+    keys::InMemoryKeyManager,
     message::InMemoryMessageManager,
 };
 

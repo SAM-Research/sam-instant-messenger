@@ -1,8 +1,4 @@
-use rand::rngs::OsRng;
-use sam_common::{
-    address::{DeviceId, RegistrationId},
-    AccountId,
-};
+use sam_common::address::{DeviceId, RegistrationId};
 
 use crate::auth::password::Password;
 

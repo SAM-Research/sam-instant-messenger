@@ -12,11 +12,11 @@ use log::debug;
 #[derive(Debug, Clone, PartialEq, Eq, From, Into, Deref)]
 pub struct Salt(String);
 
-impl<'a> TryFrom<Salt> for SaltString {
+impl TryFrom<Salt> for SaltString {
     type Error = Argon2HashError;
 
     fn try_from(value: Salt) -> Result<Self, Self::Error> {
-        SaltString::from_b64(&*value)
+        SaltString::from_b64(&value)
     }
 }
 
