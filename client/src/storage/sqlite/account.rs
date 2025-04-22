@@ -36,6 +36,7 @@ impl AccountStore for SqliteAccountStore {
         .execute(&self.database)
         .await
         .map(|_| ())
+        .inspect_err(|e| debug!("{e}"))
         .map_err(|err| DatabaseError::Database(format!("{err}")).into())
     }
 
@@ -69,6 +70,7 @@ impl AccountStore for SqliteAccountStore {
         .execute(&self.database)
         .await
         .map(|_| ())
+        .inspect_err(|e| debug!("{e}"))
         .map_err(|err| DatabaseError::Database(format!("{err}")).into())
     }
 
@@ -83,7 +85,10 @@ impl AccountStore for SqliteAccountStore {
         {
             Err(SqlxError::RowNotFound) => Err(AccountStoreError::NoPassword),
             Ok(rec) => Ok(rec.password),
-            Err(err) => Err(DatabaseError::Database(format!("{err}")))?,
+            Err(err) => {
+                debug!("{err}");
+                Err(DatabaseError::Database(format!("{err}")))?
+            }
         }
     }
 
@@ -99,6 +104,7 @@ impl AccountStore for SqliteAccountStore {
         .execute(&self.database)
         .await
         .map(|_| ())
+        .inspect_err(|e| debug!("{e}"))
         .map_err(|err| DatabaseError::Database(format!("{err}")).into())
     }
 
@@ -113,7 +119,10 @@ impl AccountStore for SqliteAccountStore {
         {
             Err(SqlxError::RowNotFound) => Err(AccountStoreError::NoUsername),
             Ok(rec) => Ok(rec.username),
-            Err(err) => Err(DatabaseError::Database(format!("{err}")))?,
+            Err(err) => {
+                debug!("{err}");
+                Err(DatabaseError::Database(format!("{err}")))?
+            }
         }
     }
 
@@ -130,6 +139,7 @@ impl AccountStore for SqliteAccountStore {
         .execute(&self.database)
         .await
         .map(|_| ())
+        .inspect_err(|e| debug!("{e}"))
         .map_err(|err| DatabaseError::Database(format!("{err}")).into())
     }
 
@@ -144,7 +154,10 @@ impl AccountStore for SqliteAccountStore {
         {
             Err(SqlxError::RowNotFound) => Err(AccountStoreError::NoDeviceId),
             Ok(rec) => Ok((rec.device_id as u32).into()),
-            Err(err) => Err(DatabaseError::Database(format!("{err}")))?,
+            Err(err) => {
+                debug!("{err}");
+                Err(DatabaseError::Database(format!("{err}")))?
+            }
         }
     }
 }

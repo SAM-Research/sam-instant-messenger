@@ -1,3 +1,4 @@
+use rand::rngs::OsRng;
 use sam_server::{
     managers::{
         in_memory::{
@@ -62,6 +63,7 @@ impl TestServer {
 
 pub async fn in_memory_server_state() -> ServerState<InMemStateType> {
     ServerState::new(
+        OsRng,
         InMemoryAccountManager::default(),
         InMemoryDeviceManager::new("test".to_string(), 600),
         InMemoryMessageManager::default(),
@@ -82,6 +84,7 @@ pub async fn postgres_server_state() -> ServerState<PostgresStateType> {
         .pool();
 
     ServerState::<PostgresStateType>::new(
+        OsRng,
         PostgresAccountManager::new(pool.clone()),
         PostgresDeviceManager::create(pool, "TEST_LINK_SECRET", 30)
             .await

@@ -1,4 +1,5 @@
 use libsignal_protocol::IdentityKeyStore;
+use log::debug;
 use rand::{CryptoRng, Rng};
 use sam_common::api::{device::DeviceActivationInfo, LinkDeviceRequest, LinkDeviceToken};
 
@@ -38,6 +39,7 @@ pub async fn provision_device<T: StoreType, R: Rng + CryptoRng>(
     };
     let password = generate_password(password_length, &mut rng);
     let response = api_client.link_device(&password, request).await?;
+    debug!("Provisioned Device '{device_name}'");
     store.account_store.set_username(response.username).await?;
     store
         .account_store

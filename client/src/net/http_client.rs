@@ -22,6 +22,7 @@ pub struct HttpClientConfig {
 
 impl HttpClientConfig {
     pub fn new(base_url: String) -> Self {
+        debug!("Using HTTP");
         Self {
             base_url: format!("http://{}", base_url),
             client_builder: ReqwestClient::builder(),
@@ -29,6 +30,7 @@ impl HttpClientConfig {
     }
 
     pub fn new_with_tls(base_url: String, config: ClientConfig) -> Self {
+        debug!("Using HTTPS");
         Self {
             base_url: format!("https://{}", base_url),
             client_builder: ReqwestClient::builder().use_preconfigured_tls(config),
@@ -67,6 +69,11 @@ impl HttpClient {
     }
 
     async fn make_request(&self, request: Request) -> Result<Response, ApiClientError> {
+        debug!(
+            "Sending HTTP Request: {} {}",
+            request.method(),
+            request.url()
+        );
         let response = self
             .http_client
             .execute(request)
@@ -74,7 +81,11 @@ impl HttpClient {
             .inspect_err(|e| debug!("{e}"))
             .map_err(|_| ApiClientError::CouldNotSendRequest)?;
         let status = response.status();
-
+        debug!(
+            "Received HTTP Response: {} {:?}",
+            status.as_u16(),
+            status.canonical_reason()
+        );
         if !status.is_success() {
             return Err(ApiClientError::ErrorResponse(
                 status.as_u16(),

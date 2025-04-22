@@ -1,6 +1,7 @@
 use async_trait::async_trait;
 use base64::{prelude::BASE64_STANDARD, Engine};
 use libsignal_protocol::{PreKeyId, PreKeyRecord, PreKeyStore, SignalProtocolError};
+use log::debug;
 use sqlx::{Pool, Sqlite};
 
 use crate::storage::{
@@ -34,6 +35,7 @@ impl ProvidesKeyId<PreKeyId> for SqlitePreKeyStore {
         .await
         .map(|row| PreKeyId::from(row.pkid.unwrap_or(0) as u32 + 1))
         .map_err(|err| DatabaseError::Database(format!("{err}")).into())
+        .inspect_err(|e| debug!("{e}"))
     }
 }
 
@@ -67,6 +69,7 @@ impl PreKeyStore for SqlitePreKeyStore {
                     })?
                     .as_slice(),
             )
+            .inspect_err(|e| debug!("{e}"))
             .map_err(|err| {
                 SignalProtocolError::ApplicationCallbackError(
                     "deserialize pre key from bytes",
@@ -102,6 +105,7 @@ impl PreKeyStore for SqlitePreKeyStore {
         .execute(&self.database)
         .await
         .map(|_| ())
+        .inspect_err(|e| debug!("{e}"))
         .map_err(|err| {
             SignalProtocolError::ApplicationCallbackError(
                 "save pre key",
@@ -125,6 +129,7 @@ impl PreKeyStore for SqlitePreKeyStore {
         .execute(&self.database)
         .await
         .map(|_| ())
+        .inspect_err(|e| debug!("{e}"))
         .map_err(|err| {
             SignalProtocolError::ApplicationCallbackError(
                 "remove pre key",

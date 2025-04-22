@@ -6,7 +6,7 @@ use libsignal_protocol::{
     SenderKeyMessage, SignalMessage,
 };
 use log::debug;
-use rand::rngs::OsRng;
+use rand::{CryptoRng, Rng};
 use sam_common::{
     sam_message::{ClientEnvelope, SamMessage, SamMessageType, ServerEnvelope},
     AccountId,
@@ -56,8 +56,11 @@ pub async fn encrypt(
 
     let addr_len = recipient_addrs.values().map(|v| v.len()).sum();
     let mut messages = Vec::with_capacity(addr_len);
-
     for (recipient, addresses) in recipient_addrs {
+        debug!(
+            "Encrypting for recipient '{recipient}' devices '{:?}'",
+            addresses
+        );
         for device_id in addresses {
             let addr = ProtocolAddress::new(recipient.to_string(), (*device_id).into());
             let message = message_encrypt(
@@ -97,9 +100,10 @@ pub async fn encrypt(
 ///
 /// * `Ok(DecryptedEnvelope)` The an envelope type containing the decrypted message.
 /// * `Err(ClientError)` if decryption fails.
-pub async fn decrypt(
+pub async fn decrypt<T: Rng + CryptoRng + Default>(
     envelope: ServerEnvelope,
     store: &mut Store<impl StoreType>,
+    rng: &mut T,
 ) -> Result<DecryptedEnvelope, EncryptionError> {
     let message = match envelope.r#type() {
         SamMessageType::SignalMessage => {
@@ -119,7 +123,7 @@ pub async fn decrypt(
     let source = AccountId::try_from(envelope.source_account_id)
         .inspect_err(|e| debug!("{e}"))
         .map_err(|_| EncryptionError::InvalidAccountId("Could not parse bytes".to_owned()))?;
-
+    debug!("Decrypting message from '{source}'");
     let bytes = unpad_message(
         &message_decrypt(
             &message,
@@ -129,7 +133,7 @@ pub async fn decrypt(
             &mut store.pre_key_store,
             &store.signed_pre_key_store,
             &mut store.kyber_pre_key_store,
-            &mut OsRng,
+            rng,
         )
         .await?,
     )
@@ -307,7 +311,7 @@ mod test {
             .content(message.content.clone())
             .build();
 
-        let decrypted = decrypt(envelope, &mut bob_store)
+        let decrypted = decrypt(envelope, &mut bob_store, &mut csprng)
             .await
             .expect("should be able to decrypt");
 

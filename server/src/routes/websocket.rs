@@ -129,7 +129,7 @@ mod test {
                     .registration_id(43284.into())
                     .name("Device 27".to_string())
                     .password(
-                        Password::generate("password".to_string())
+                        Password::generate("password".to_string(), &mut state.rng)
                             .expect("Password can be generated"),
                     )
                     .build(),

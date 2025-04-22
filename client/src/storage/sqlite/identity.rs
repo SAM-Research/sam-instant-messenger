@@ -4,6 +4,7 @@ use libsignal_protocol::{
     Direction, IdentityKey, IdentityKeyPair, IdentityKeyStore, PrivateKey, ProtocolAddress,
     SignalProtocolError,
 };
+use log::debug;
 use sqlx::{Pool, Sqlite};
 
 use crate::storage::error::{DatabaseError, KeyStoreError, StoreCreationError};
@@ -35,6 +36,7 @@ impl SqliteIdentityKeyStore {
         .execute(&self.database)
         .await
         .map(|_| ())
+        .inspect_err(|e| debug!("{e}"))
         .map_err(|err| DatabaseError::Database(format!("{err}")).into())
     }
 
@@ -58,6 +60,7 @@ impl SqliteIdentityKeyStore {
         .execute(&self.database)
         .await
         .map(|_| ())
+        .inspect_err(|e| debug!("{e}"))
         .map_err(|err| DatabaseError::Database(format!("{err}")).into())
     }
 
@@ -91,6 +94,7 @@ impl IdentityKeyStore for SqliteIdentityKeyStore {
         )
         .fetch_one(&self.database)
         .await
+        .inspect_err(|e| debug!("{e}"))
         {
             Ok(row) => Ok(IdentityKeyPair::new(
                 IdentityKey::decode(&BASE64_STANDARD.decode(row.public_key).map_err(|err| {
@@ -139,6 +143,7 @@ impl IdentityKeyStore for SqliteIdentityKeyStore {
         .fetch_one(&self.database)
         .await
         .map(|row| row.registration_id as u32)
+        .inspect_err(|e| debug!("{e}"))
         .map_err(|err| {
             SignalProtocolError::ApplicationCallbackError(
                 "Could not Retrieve local registration id",
@@ -155,6 +160,7 @@ impl IdentityKeyStore for SqliteIdentityKeyStore {
         match self
             .get_identity(address)
             .await
+            .inspect_err(|e| debug!("{e}"))
             .map_err(|err| SignalProtocolError::InvalidArgument(format!("{err}")))?
         {
             Some(key) if key == *identity => Ok(false),
@@ -214,6 +220,7 @@ impl IdentityKeyStore for SqliteIdentityKeyStore {
         )
         .fetch_one(&self.database)
         .await
+        .inspect_err(|e| debug!("{e}"))
         {
             Ok(row) => Ok(Some(
                 BASE64_STANDARD

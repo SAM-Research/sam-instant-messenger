@@ -84,7 +84,7 @@ pub async fn create_device<T: StateType>(
         .id(device_id)
         .registration_id(device_info.registration_id)
         .name(device_info.name)
-        .password(Password::generate(password)?)
+        .password(Password::generate(password, &mut state.rng)?)
         .build();
 
     state.devices.add_device(account_id, &device).await?;
@@ -120,8 +120,8 @@ mod test {
             },
         },
         state::ServerState,
-        test_utils::{create_device_link, create_publish_pre_keys},
     };
+    use sam_test_utils::server_utils::{create_device_link, create_publish_pre_keys};
 
     #[tokio::test]
     async fn test_create_device() {

@@ -1,5 +1,3 @@
-use crate::utils::server::{in_memory_server_state, postgres_server_state, TestServer};
-
 use libsignal_protocol::IdentityKeyPair;
 use rand::rngs::OsRng;
 use rstest::rstest;
@@ -12,10 +10,11 @@ use sam_client::{
 use sam_common::{address::RegistrationId, AccountId};
 use sam_net::tls::{create_tls_client_config, create_tls_server_config};
 use sam_server::{ServerState, StateType};
-use sam_test_utils::get_next_port;
+use sam_test_utils::{
+    e2e::{in_memory_server_state, postgres_server_state, TestServer},
+    get_next_port,
+};
 use uuid::Uuid;
-
-mod utils;
 
 pub async fn register_someone(address: String) -> Result<Client<SqliteClientType>, ClientError> {
     let name = Uuid::new_v4().to_string();

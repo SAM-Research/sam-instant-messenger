@@ -1,5 +1,6 @@
 use async_trait::async_trait;
 use libsignal_protocol::{InMemKyberPreKeyStore, KyberPreKeyId};
+use log::debug;
 
 use crate::storage::{error::KeyStoreError, ProvidesKeyId};
 
@@ -12,6 +13,8 @@ impl ProvidesKeyId<KyberPreKeyId> for InMemKyberPreKeyStore {
             .cloned()
             .map(|id| id.into())
             .unwrap_or_default();
-        Ok((max + 1).into())
+        let next = max + 1;
+        debug!("Next Kyber Pre Key ID: {next}");
+        Ok(next.into())
     }
 }

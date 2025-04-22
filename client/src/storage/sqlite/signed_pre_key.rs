@@ -4,6 +4,7 @@ use libsignal_protocol::{
     GenericSignedPreKey as _, SignalProtocolError, SignedPreKeyId, SignedPreKeyRecord,
     SignedPreKeyStore,
 };
+use log::debug;
 use sqlx::{Pool, Sqlite};
 
 use crate::storage::{
@@ -37,6 +38,7 @@ impl ProvidesKeyId<SignedPreKeyId> for SqliteSignedPreKeyStore {
         .await
         .map(|row| SignedPreKeyId::from(row.pkid.unwrap_or(0) as u32 + 1))
         .map_err(|err| DatabaseError::Database(format!("{err}")).into())
+        .inspect_err(|e| debug!("{e}"))
     }
 }
 
@@ -61,6 +63,7 @@ impl SignedPreKeyStore for SqliteSignedPreKeyStore {
         )
         .fetch_one(&self.database)
         .await
+        .inspect_err(|e| debug!("{e}"))
         {
             Ok(row) => SignedPreKeyRecord::deserialize(
                 BASE64_STANDARD
@@ -107,6 +110,7 @@ impl SignedPreKeyStore for SqliteSignedPreKeyStore {
         .execute(&self.database)
         .await
         .map(|_| ())
+        .inspect_err(|e| debug!("{e}"))
         .map_err(|err| {
             SignalProtocolError::ApplicationCallbackError(
                 "save signed pre key",

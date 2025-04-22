@@ -1,9 +1,10 @@
 use crate::auth::error::AuthorizationError;
 use argon2::{
-    password_hash::{rand_core::OsRng, PasswordHash, PasswordHasher, PasswordVerifier, SaltString},
+    password_hash::{PasswordHash, PasswordHasher, PasswordVerifier, SaltString},
     Argon2,
 };
 use log::debug;
+use rand::{CryptoRng, Rng};
 
 #[derive(Clone, bon::Builder, PartialEq, Eq)]
 pub struct Password {
@@ -14,9 +15,12 @@ impl Password {
     pub fn hash(&self) -> &String {
         &self.hash
     }
-    pub fn generate(password: String) -> Result<Self, AuthorizationError> {
+    pub fn generate<T: Rng + CryptoRng + Default>(
+        password: String,
+        rng: &mut T,
+    ) -> Result<Self, AuthorizationError> {
         let argon = Argon2::default();
-        let salt = SaltString::generate(&mut OsRng);
+        let salt = SaltString::generate(rng);
         let hash = argon
             .hash_password(password.as_bytes(), &salt)
             .inspect_err(|e| debug!("{e}"))

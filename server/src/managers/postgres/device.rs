@@ -418,7 +418,9 @@ mod test {
         let device = Device::builder()
             .id(device_id)
             .name(username.to_string())
-            .password(Password::generate(username.to_string()).expect("can create password"))
+            .password(
+                Password::generate(username.to_string(), &mut OsRng).expect("can create password"),
+            )
             .registration_id(RegistrationId::generate(&mut OsRng))
             .build();
 
@@ -494,7 +496,10 @@ mod test {
         let device = Device::builder()
             .id(device_id)
             .name(device_name.to_string())
-            .password(Password::generate(device_name.to_string()).expect("can create password"))
+            .password(
+                Password::generate(device_name.to_string(), &mut OsRng)
+                    .expect("can create password"),
+            )
             .registration_id(RegistrationId::generate(&mut OsRng))
             .build();
 
@@ -548,7 +553,9 @@ mod test {
         let device = Device::builder()
             .id(device_id)
             .name(username.to_string())
-            .password(Password::generate(username.to_string()).expect("can create password"))
+            .password(
+                Password::generate(username.to_string(), &mut OsRng).expect("can create password"),
+            )
             .registration_id(RegistrationId::generate(&mut OsRng))
             .build();
 
@@ -575,7 +582,9 @@ mod test {
         let device = Device::builder()
             .id(device_id)
             .name(username.to_string())
-            .password(Password::generate(username.to_string()).expect("can create password"))
+            .password(
+                Password::generate(username.to_string(), &mut OsRng).expect("can create password"),
+            )
             .registration_id(RegistrationId::generate(&mut OsRng))
             .build();
 

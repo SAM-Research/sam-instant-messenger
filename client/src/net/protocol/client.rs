@@ -177,6 +177,7 @@ impl ProtocolClient {
         match status.validate(req_id)? {
             Some(status) => Ok(status),
             None => {
+                debug!("Server responded with wrong id, closing WebSocket connection...");
                 let res = self
                     .client
                     .lock()
@@ -198,6 +199,7 @@ impl ProtocolClient {
 #[async_trait]
 impl SamProtocolClient for ProtocolClient {
     async fn connect(&mut self) -> Result<Receiver<ServerEnvelope>, ProtocolError> {
+        debug!("Connecting with WebSocket to Server...");
         let (status_sender, status_receiver) = channel(self.channel_buffer_size);
 
         let (tx, rx) = mpsc::channel(self.channel_buffer_size);
@@ -214,6 +216,7 @@ impl SamProtocolClient for ProtocolClient {
         Ok(rx)
     }
     async fn disconnect(&mut self) -> Result<(), ProtocolError> {
+        debug!("Closing WebSocket connection...");
         self.status_messages = None;
         self.client
             .lock()

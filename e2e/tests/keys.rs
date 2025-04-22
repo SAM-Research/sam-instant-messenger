@@ -5,14 +5,11 @@ use sam_client::net::protocol::WebSocketProtocolClientConfig;
 use sam_client::storage::sqlite::SqliteStoreConfig;
 use sam_client::Client;
 use sam_server::{ServerState, StateType};
-use sam_test_utils::get_next_port;
+use sam_test_utils::{
+    e2e::{in_memory_server_state, postgres_server_state, TestServer},
+    get_next_port,
+};
 use uuid::Uuid;
-
-mod utils;
-
-use crate::utils::server::TestServer;
-
-use utils::server::{in_memory_server_state, postgres_server_state};
 
 #[tokio::test]
 #[rstest]

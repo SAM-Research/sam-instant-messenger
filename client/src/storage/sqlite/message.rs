@@ -47,6 +47,7 @@ impl MessageStore for SqliteMessageStore {
         .execute(&self.database)
         .await
         .map(|_| ())
+        .inspect_err(|e| debug!("{e}"))
         .map_err(|err| DatabaseError::Database(format!("{err}")));
         match res {
             Ok(()) => self

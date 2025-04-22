@@ -1,3 +1,5 @@
+use rand::rngs::OsRng;
+
 use crate::StateType;
 
 mod account;
@@ -18,6 +20,7 @@ use super::in_memory::{keys::InMemoryKeyManager, message::InMemoryMessageManager
 pub struct PostgresStateType;
 
 impl StateType for PostgresStateType {
+    type Rng = OsRng;
     type AccountManager = PostgresAccountManager;
     type DeviceManager = PostgresDeviceManager;
     // TODO: Replace with postgres as they are implemented

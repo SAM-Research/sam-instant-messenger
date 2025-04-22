@@ -1,7 +1,3 @@
-mod utils;
-
-use std::time::Duration;
-
 use libsignal_protocol::IdentityKeyPair;
 use rstest::rstest;
 use sam_client::{
@@ -16,13 +12,14 @@ use sam_common::{api::LinkDeviceToken, AccountId};
 use sam_net::tls::{create_tls_client_config, MutualTlsConfig};
 use sam_server::config::TlsConfig;
 use sam_server::{ServerState, StateType};
-use sam_test_utils::get_next_port;
+use sam_test_utils::{
+    e2e::{in_memory_server_state, postgres_server_state, TestServer},
+    get_next_port,
+};
+use std::time::Duration;
 use tempfile::NamedTempFile;
 use tokio::{sync::broadcast::Receiver, time::timeout};
 use uuid::Uuid;
-
-use crate::utils::server::TestServer;
-use utils::server::{in_memory_server_state, postgres_server_state};
 
 const TIMEOUT_SECS: u64 = 120;
 

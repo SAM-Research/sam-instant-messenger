@@ -31,24 +31,33 @@ pub trait ClientType {
     type Rng: Rng + CryptoRng + Default;
 }
 
-pub struct DefaultClientType<T: StoreType, U: ApiClient, V: SamProtocolClient> {
+pub struct DefaultClientType<
+    T: StoreType,
+    U: ApiClient,
+    V: SamProtocolClient,
+    R: Rng + CryptoRng + Default,
+> {
     _store: std::marker::PhantomData<T>,
     _api: std::marker::PhantomData<U>,
     _protocol: std::marker::PhantomData<V>,
+    _rng: std::marker::PhantomData<R>,
 }
 
-impl<T: StoreType, U: ApiClient, V: SamProtocolClient> ClientType for DefaultClientType<T, U, V> {
+impl<T: StoreType, U: ApiClient, V: SamProtocolClient, R: Rng + CryptoRng + Default> ClientType
+    for DefaultClientType<T, U, V, R>
+{
     type Store = T;
 
     type ApiClient = U;
 
     type ProtocolClient = V;
 
-    type Rng = OsRng;
+    type Rng = R;
 }
 
-pub type InMemoryClientType = DefaultClientType<InMemoryStoreType, HttpClient, ProtocolClient>;
-pub type SqliteClientType = DefaultClientType<SqliteStoreType, HttpClient, ProtocolClient>;
+pub type InMemoryClientType =
+    DefaultClientType<InMemoryStoreType, HttpClient, ProtocolClient, OsRng>;
+pub type SqliteClientType = DefaultClientType<SqliteStoreType, HttpClient, ProtocolClient, OsRng>;
 
 pub struct Client<T: ClientType> {
     store: Store<T::Store>,
@@ -210,16 +219,19 @@ impl<T: ClientType> Client<T> {
         let device_id = self.device_id().await;
         let password = self.password().await;
 
-        let Ok(account_id) = account_id else {
-            return Err((self, account_id.unwrap_err()));
+        let account_id = match account_id {
+            Ok(id) => id,
+            Err(err) => return Err((self, err)),
         };
 
-        let Ok(device_id) = device_id else {
-            return Err((self, device_id.unwrap_err()));
+        let device_id = match device_id {
+            Ok(id) => id,
+            Err(err) => return Err((self, err)),
         };
 
-        let Ok(password) = password else {
-            return Err((self, password.unwrap_err()));
+        let password = match password {
+            Ok(pwd) => pwd,
+            Err(err) => return Err((self, err)),
         };
 
         let delete_result = self
@@ -341,12 +353,24 @@ impl<T: ClientType> Client<T> {
 
     /// Recieve and decrypt messages. Block until at least one message is received.
     pub async fn process_messages_blocking(&mut self) -> Result<(), ClientError> {
-        Ok(process_messages(&mut self.store, &mut self.envelope_queue, true).await?)
+        Ok(process_messages(
+            &mut self.store,
+            &mut self.envelope_queue,
+            true,
+            &mut self.rng,
+        )
+        .await?)
     }
 
     /// Recieve and decrypt messages.
     pub async fn process_messages(&mut self) -> Result<(), ClientError> {
-        Ok(process_messages(&mut self.store, &mut self.envelope_queue, false).await?)
+        Ok(process_messages(
+            &mut self.store,
+            &mut self.envelope_queue,
+            false,
+            &mut self.rng,
+        )
+        .await?)
     }
 
     /// Publish new prekeys.
