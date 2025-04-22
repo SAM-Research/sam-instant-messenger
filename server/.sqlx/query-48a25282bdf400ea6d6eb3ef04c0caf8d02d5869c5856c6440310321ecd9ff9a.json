@@ -1,6 +1,6 @@
 {
   "db_name": "PostgreSQL",
-  "query": "\n            SELECT device_id,\n                   name,\n                   hash,\n                   salt,\n                   registration_id\n            FROM devices\n            WHERE owner =\n                    (SELECT id\n                     FROM accounts\n                     WHERE account_id = $1)\n            AND device_id = $2\n            ",
+  "query": "\n            SELECT device_id,\n                   name,\n                   hash,\n                   registration_id\n            FROM devices\n            WHERE owner =\n                    (SELECT id\n                     FROM accounts\n                     WHERE account_id = $1)\n            AND device_id = $2\n            ",
   "describe": {
     "columns": [
       {
@@ -20,11 +20,6 @@
       },
       {
         "ordinal": 3,
-        "name": "salt",
-        "type_info": "Text"
-      },
-      {
-        "ordinal": 4,
         "name": "registration_id",
         "type_info": "Int8"
       }
@@ -39,9 +34,8 @@
       false,
       false,
       false,
-      false,
       false
     ]
   },
-  "hash": "4747f1b05ecc3e1c417d4827ec4c06a4d9ef2babd5b70b31975fa91325d57012"
+  "hash": "48a25282bdf400ea6d6eb3ef04c0caf8d02d5869c5856c6440310321ecd9ff9a"
 }
