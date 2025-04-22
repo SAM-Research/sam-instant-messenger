@@ -15,7 +15,6 @@ CREATE TABLE devices (
     registration_id uint32 NOT NULL,
     name            TEXT   NOT NULL,
     hash            TEXT   NOT NULL,
-    salt            TEXT   NOT NULL,
     UNIQUE(owner, device_id)
 );
 

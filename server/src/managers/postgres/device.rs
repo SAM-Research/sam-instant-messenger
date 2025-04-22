@@ -124,7 +124,6 @@ impl DeviceManager for PostgresDeviceManager {
             SELECT device_id,
                    name,
                    hash,
-                   salt,
                    registration_id
             FROM devices
             WHERE owner =
@@ -140,7 +139,7 @@ impl DeviceManager for PostgresDeviceManager {
         .await
         {
             Ok(row) => {
-                let password = Password::builder().hash(row.hash).salt(row.salt).build();
+                let password = Password::builder().hash(row.hash).build();
                 let device_id = u32::try_from(row.device_id)
                     .inspect_err(|_| {
                         error!(
@@ -313,13 +312,12 @@ impl DeviceManager for PostgresDeviceManager {
         let pwd = device.password();
         match sqlx::query!(
             r#"
-            INSERT INTO devices (owner, device_id, registration_id, name, hash, salt) 
+            INSERT INTO devices (owner, device_id, registration_id, name, hash) 
             SELECT id,
                    $2,
                    $3,
                    $4,
-                   $5,
-                   $6
+                   $5
             FROM accounts
             WHERE account_id = $1
             "#,
@@ -328,7 +326,6 @@ impl DeviceManager for PostgresDeviceManager {
             (*device.registration_id()) as i64,
             device.name(),
             pwd.hash(),
-            pwd.salt().to_string()
         )
         .execute(&self.pool)
         .await
