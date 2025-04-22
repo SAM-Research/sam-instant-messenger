@@ -10,13 +10,14 @@ use sam_server::{
             message::InMemoryMessageManager,
             InMemStateType,
         },
-        postgres::{PostgresAccountManager, PostgresDeviceManager, PostgresStateType},
+        postgres::{
+            PostgresAccountManager, PostgresConnector, PostgresDeviceManager, PostgresStateType,
+        },
         KeyManager,
     },
     start_server, ServerConfig, ServerState, StateType,
 };
 
-use sqlx::postgres::PgPoolOptions;
 use tokio::{
     sync::oneshot::{self, Receiver},
     task::JoinHandle,
@@ -75,10 +76,10 @@ pub async fn in_memory_server_state() -> ServerState<InMemStateType> {
 
 pub async fn postgres_server_state() -> ServerState<PostgresStateType> {
     let connection_str = "postgres://test:test@127.0.0.1:5432/sam_test_db";
-    let pool = PgPoolOptions::new()
-        .connect(connection_str)
+    let pool = PostgresConnector::connect(connection_str)
         .await
-        .expect("Can connect to the database");
+        .expect("can connect to the postgres test server")
+        .pool();
 
     ServerState::<PostgresStateType>::new(
         PostgresAccountManager::new(pool.clone()),

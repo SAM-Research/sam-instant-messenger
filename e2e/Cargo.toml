@@ -22,4 +22,3 @@ rustls-pemfile = { workspace = true }
 rstest = { workspace = true }
 tempfile = { workspace = true }
 uuid = { workspace = true }
-sqlx = { workspace = true }
