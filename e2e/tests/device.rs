@@ -1,16 +1,10 @@
-use crate::utils::server::TestServer;
 use sam_client::client::SqliteClientType;
 use sam_client::net::http_client::HttpClientConfig;
 use sam_client::net::protocol::WebSocketProtocolClientConfig;
 use sam_client::storage::sqlite::SqliteStoreConfig;
 use sam_client::Client;
+use test_utils::e2e::TestServer;
 use test_utils::get_next_port;
-
-mod utils;
-
-/*
-   PORTS USED: 938x
-*/
 
 #[tokio::test]
 async fn can_link_device() {

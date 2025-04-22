@@ -214,8 +214,8 @@ mod test {
             },
         },
         state::ServerState,
-        test_utils::create_publish_pre_keys,
     };
+    use test_utils::server_utils::create_publish_pre_keys;
 
     #[tokio::test]
     async fn test_add_keybundle() {
@@ -290,7 +290,10 @@ mod test {
         let device = Device::builder()
             .id(1.into())
             .name("Alice Secret Phone".to_string())
-            .password(Password::generate("dave<3".to_string()).expect("Alice can create password"))
+            .password(
+                Password::generate("dave<3".to_string(), &mut rng)
+                    .expect("Alice can create password"),
+            )
             .creation(0)
             .registration_id(1.into())
             .build();
@@ -417,7 +420,10 @@ mod test {
         let device = Device::builder()
             .id(1.into())
             .name("Alice Secret Phone".to_string())
-            .password(Password::generate("dave<3".to_string()).expect("Alice can create password"))
+            .password(
+                Password::generate("dave<3".to_string(), &mut rng)
+                    .expect("Alice can create password"),
+            )
             .creation(0)
             .registration_id(1.into())
             .build();

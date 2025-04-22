@@ -6,7 +6,7 @@ use libsignal_protocol::{
     SenderKeyMessage, SignalMessage,
 };
 use log::debug;
-use rand::rngs::OsRng;
+use rand::{CryptoRng, Rng};
 use sam_common::{
     sam_message::{ClientEnvelope, SamMessage, SamMessageType, ServerEnvelope},
     AccountId,
@@ -97,9 +97,10 @@ pub async fn encrypt(
 ///
 /// * `Ok(DecryptedEnvelope)` The an envelope type containing the decrypted message.
 /// * `Err(ClientError)` if decryption fails.
-pub async fn decrypt(
+pub async fn decrypt<T: Rng + CryptoRng + Default>(
     envelope: ServerEnvelope,
     store: &mut Store<impl StoreType>,
+    rng: &mut T,
 ) -> Result<DecryptedEnvelope, EncryptionError> {
     let message = match envelope.r#type() {
         SamMessageType::SignalMessage => {
@@ -129,7 +130,7 @@ pub async fn decrypt(
             &mut store.pre_key_store,
             &store.signed_pre_key_store,
             &mut store.kyber_pre_key_store,
-            &mut OsRng,
+            rng,
         )
         .await?,
     )
@@ -307,7 +308,7 @@ mod test {
             .content(message.content.clone())
             .build();
 
-        let decrypted = decrypt(envelope, &mut bob_store)
+        let decrypted = decrypt(envelope, &mut bob_store, &mut csprng)
             .await
             .expect("should be able to decrypt");
 

@@ -1,4 +1,5 @@
 use account::PostgresAccountManager;
+use rand::rngs::OsRng;
 
 use crate::StateType;
 
@@ -12,6 +13,7 @@ pub mod account;
 pub struct PostgresStateType;
 
 impl StateType for PostgresStateType {
+    type Rng = OsRng;
     type AccountManager = PostgresAccountManager;
     type DeviceManager = InMemoryDeviceManager;
     type MessageManager = InMemoryMessageManager;

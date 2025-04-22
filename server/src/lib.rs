@@ -9,9 +9,6 @@ pub mod server;
 pub mod state;
 pub mod tls;
 
-#[cfg(test)]
-mod test_utils;
-
 pub use config::ServerConfig;
 pub use error::ServerError;
 pub use server::start_server;

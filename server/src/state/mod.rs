@@ -5,6 +5,7 @@ use crate::managers::KeyManager;
 
 #[derive(Clone)]
 pub struct ServerState<T: StateType> {
+    pub rng: T::Rng,
     pub accounts: T::AccountManager,
     pub devices: T::DeviceManager,
     pub messages: T::MessageManager,
@@ -13,12 +14,14 @@ pub struct ServerState<T: StateType> {
 
 impl<T: StateType> ServerState<T> {
     pub fn new(
+        rng: T::Rng,
         account: T::AccountManager,
         device: T::DeviceManager,
         message: T::MessageManager,
         key: KeyManager<T::KeyManagerType>,
     ) -> Self {
         Self {
+            rng,
             accounts: account,
             devices: device,
             messages: message,

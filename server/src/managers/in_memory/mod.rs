@@ -14,6 +14,7 @@ pub mod message;
 pub mod test_utils;
 
 use account::InMemoryAccountManager;
+use rand::rngs::OsRng;
 
 use crate::state::{state_type::StateType, ServerState};
 
@@ -23,6 +24,7 @@ use super::KeyManager;
 pub struct InMemStateType;
 
 impl StateType for InMemStateType {
+    type Rng = OsRng;
     type AccountManager = InMemoryAccountManager;
     type DeviceManager = InMemoryDeviceManager;
     type MessageManager = InMemoryMessageManager;
@@ -36,6 +38,7 @@ impl ServerState<InMemStateType> {
         message_buffer: usize,
     ) -> Self {
         ServerState::new(
+            OsRng,
             InMemoryAccountManager::default(),
             InMemoryDeviceManager::new(link_secret, provision_expire_seconds),
             InMemoryMessageManager::new(message_buffer),
@@ -53,6 +56,7 @@ impl ServerState<InMemStateType> {
         use test_utils::LINK_SECRET;
 
         ServerState::new(
+            OsRng,
             InMemoryAccountManager::default(),
             InMemoryDeviceManager::new(LINK_SECRET.to_string(), 600),
             InMemoryMessageManager::default(),
