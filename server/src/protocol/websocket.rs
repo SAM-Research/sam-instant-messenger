@@ -69,6 +69,10 @@ async fn websocket_message_receiver<T: StateType>(
     message_producer: Sender<Result<Option<ServerMessage>, WebSocketSessionError>>,
     auth_user: AuthenticatedUser,
 ) {
+    debug!(
+        "Started WS receiver for user '{}'",
+        auth_user.account().username()
+    );
     while let Some(Ok(msg)) = receiver.next().await {
         let decode_res = match msg {
             Message::Binary(b) => {
@@ -96,6 +100,10 @@ async fn websocket_message_receiver<T: StateType>(
             break;
         }
     }
+    debug!(
+        "Stopped WS receiver for user '{}'",
+        auth_user.account().username()
+    );
 }
 
 async fn websocket_message_sender<T: StateType>(
@@ -104,6 +112,10 @@ async fn websocket_message_sender<T: StateType>(
     mut message_consumer: Receiver<Result<Option<ServerMessage>, WebSocketSessionError>>,
     auth_user: AuthenticatedUser,
 ) {
+    debug!(
+        "Started WS message sender for user '{}'",
+        auth_user.account().username()
+    );
     while let Some(msg_res) = message_consumer.recv().await {
         let send_res = match msg_res {
             Ok(Some(msg)) => {
@@ -118,6 +130,11 @@ async fn websocket_message_sender<T: StateType>(
                 WebSocketSessionError::from(WebSocketError::WebSocketDisconnected),
             ),
             Err(err) => {
+                error!("Websocket error: {err}");
+                error!(
+                    "Closing connection for '{}'",
+                    auth_user.account().username()
+                );
                 let res = sender
                     .send(Message::Close(Some(CloseFrame {
                         code: 1011,
@@ -151,6 +168,10 @@ async fn websocket_message_sender<T: StateType>(
         .messages
         .unsubscribe(auth_user.account().id(), auth_user.device().id())
         .await;
+    debug!(
+        "Stopped WS message sender for user '{}'",
+        auth_user.account().username()
+    );
 }
 
 async fn websocket_dispatcher<T: StateType>(
@@ -159,6 +180,10 @@ async fn websocket_dispatcher<T: StateType>(
     message_producer: Sender<Result<Option<ServerMessage>, WebSocketSessionError>>,
     auth_user: AuthenticatedUser,
 ) {
+    debug!(
+        "Started WS dispatcher for user '{}'",
+        auth_user.account().username()
+    );
     while let Some(msg_id) = dispatch.recv().await {
         debug!(
             "Dispatching message to user '{}'",
@@ -181,4 +206,8 @@ async fn websocket_dispatcher<T: StateType>(
             break;
         }
     }
+    debug!(
+        "Stopped WS dispatcher for user '{}'",
+        auth_user.account().username()
+    );
 }
