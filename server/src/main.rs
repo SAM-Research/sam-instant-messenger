@@ -4,111 +4,151 @@ use clap::{Arg, Command};
 use log::{debug, error, info};
 
 use sam_server::{
-    config::TlsConfig, error::CliError, start_server, state::ServerState, ServerConfig,
+    config::ServerCliConfig, error::CliError, start_server, state::ServerState, ServerConfig,
 };
+
+const DEFAULT_ADDR: &str = "127.0.0.1:8080";
+const DEFAULT_LINK_SECRET: &str = "verysecret";
+const DEFAULT_PROVISION_TIMEOUT_SECS: u64 = 600;
+const DEFAULT_MESSAGE_BUFFER_SIZE: usize = 10;
+
+fn welcome(config: &ServerCliConfig) {
+    let addr = config.address.clone().unwrap_or(DEFAULT_ADDR.to_string());
+    let prov_timeout = config
+        .provision_timeout
+        .unwrap_or(DEFAULT_PROVISION_TIMEOUT_SECS);
+    let buffer_size = config
+        .message_buffer_size
+        .unwrap_or(DEFAULT_MESSAGE_BUFFER_SIZE);
+    info!("*********Configuration*********");
+    info!("Server Address: {addr}");
+    info!("Provision Timeout: {prov_timeout} seconds");
+    info!("Message Buffer Size: {buffer_size}");
+    if let Some(tls) = &config.tls {
+        if let Some(ca) = &tls.ca_cert_path {
+            info!("Connection Security: mTLS");
+            info!("Certificate Authority: {}", ca);
+        } else {
+            info!("Connection Security: TLS");
+        }
+        info!("Server Certificate: {}", tls.cert_path);
+        info!("Server Key: {}", tls.key_path);
+    } else {
+        info!("Connection Security: Insecure")
+    }
+    info!("*******************************");
+}
 
 async fn cli() -> Result<(), CliError> {
     let matches = Command::new("sam_server")
         .arg(
-            Arg::new("cert")
-                .short('c')
-                .long("tls-certificate")
-                .required(false)
-                .help(".crt file (Server)")
-                .requires("key"),
-        )
-        .arg(
-            Arg::new("key")
-                .short('k')
-                .long("tls-key")
-                .required(false)
-                .help(".key file (Server)")
-                .requires("cert"),
-        )
-        .arg(
-            Arg::new("client_auth")
-                .short('a')
-                .long("authenticate-client")
-                .required(false)
-                .help(".crt file (Certificate Authority)")
-                .requires("cert")
-                .requires("key"),
-        )
-        .arg(
-            Arg::new("ip")
-                .short('i')
-                .long("ip")
+            Arg::new("server_address")
+                .short('s')
+                .long("server-address")
                 .required(false)
                 .help("IP to run server on")
-                .default_value("127.0.0.1"),
+                .default_value(DEFAULT_ADDR)
+                .conflicts_with("config"),
         )
         .arg(
-            Arg::new("port")
-                .short('p')
-                .long("port")
+            Arg::new("link_secret")
+                .short('l')
+                .long("link-secret")
                 .required(false)
-                .help("Port to run server on")
-                .default_value("8080"),
+                .help("Link secret used to create link signature")
+                .default_value(DEFAULT_LINK_SECRET)
+                .conflicts_with("config"),
+        )
+        .arg(
+            Arg::new("provision_timeout")
+                .short('p')
+                .long("provision-timeout")
+                .required(false)
+                .help("Provision timeout for linking new devices in seconds")
+                .default_value(DEFAULT_PROVISION_TIMEOUT_SECS.to_string())
+                .conflicts_with("config"),
+        )
+        .arg(
+            Arg::new("buffer_size")
+                .short('m')
+                .long("message-buffer-size")
+                .required(false)
+                .help("How many messages can be in a buffer channel before blocking behaviour")
+                .default_value(DEFAULT_MESSAGE_BUFFER_SIZE.to_string())
+                .conflicts_with("config"),
         )
         .arg(
             Arg::new("config")
-                .short('t')
-                .long("tls-config")
+                .short('c')
+                .long("config")
                 .required(false)
-                .help("JSON TLS Config path")
-                .conflicts_with("key")
-                .conflicts_with("cert")
-                .conflicts_with("client_auth"),
+                .help("JSON Config path"),
         )
         .get_matches();
 
-    let tls_config = if let Some(config_path) = matches.get_one::<String>("config") {
+    let config = if let Some(config_path) = matches.get_one::<String>("config") {
         let file = std::fs::File::open(config_path)?;
         let reader = BufReader::new(file);
-        Some(TlsConfig::load(reader)?)
-    } else if let (Some(cert), Some(key), ca_cert) = (
-        matches.get_one::<String>("cert"),
-        matches.get_one::<String>("key"),
-        matches.get_one::<String>("client_auth"),
-    ) {
-        Some(TlsConfig {
-            ca_cert_path: ca_cert.map(|s| s.to_string()),
-            cert_path: cert.to_string(),
-            key_path: key.to_string(),
-        })
+        ServerCliConfig::load(reader)?
     } else {
-        None
+        let addr = matches.get_one::<String>("server_address");
+        let link_secret = matches.get_one::<String>("link_secret");
+        let prov_timeout = matches
+            .get_one::<String>("provision_timeout")
+            .ok_or(CliError::ArgumentError(
+                "Expected provision timeout".to_string(),
+            ))?
+            .parse()
+            .map_err(|_| {
+                CliError::ArgumentError("Expected u64 for provision timeout".to_string())
+            })?;
+        let buffer_size = matches.get_one::<String>("buffer_size").ok_or(CliError::ArgumentError("Expected buffer size".to_string()))?
+        .parse()
+        .map_err(|_| {
+            CliError::ArgumentError("Expected usize for deniable ratio. On 32 bit target, this is 4 bytes and on a 64 bit target, this is 8 bytes".to_string())
+        })?;
+        ServerCliConfig::new(
+            addr.cloned(),
+            link_secret.cloned(),
+            Some(prov_timeout),
+            Some(buffer_size),
+            None,
+            None,
+        )
     };
 
-    let tls = if let Some(config) = tls_config {
-        let is_mutual = config.ca_cert_path.is_some();
-        info!("Using {}TLS", (if is_mutual { "m" } else { "" }));
-        info!("Cerificate: '{}'", config.cert_path);
-        info!("Key: '{}'", config.key_path);
-        if let Some(path) = &config.ca_cert_path {
-            info!("CA Cerificate: '{}'", path);
-        }
+    if let Some(filter) = &config.logging {
+        env_logger::builder().parse_filters(filter).init();
+    } else {
+        env_logger::init();
+    }
 
+    welcome(&config);
+
+    let tls = if let Some(config) = config.tls {
         let _ = rustls::crypto::ring::default_provider().install_default();
         Some(config.try_into()?)
     } else {
         None
     };
 
-    let ip = matches
-        .get_one::<String>("ip")
-        .ok_or(CliError::ArgumentError("IP has default".to_string()))?;
-    let port = matches
-        .get_one::<String>("port")
-        .ok_or(CliError::ArgumentError("Port has default".to_string()))?;
-
-    let addr = format!("{}:{}", ip, port);
-
-    let state = ServerState::in_memory("test".to_string(), 600, 10);
+    let state = ServerState::in_memory(
+        config
+            .link_secret
+            .unwrap_or(DEFAULT_LINK_SECRET.to_string()),
+        config
+            .provision_timeout
+            .unwrap_or(DEFAULT_PROVISION_TIMEOUT_SECS),
+        config
+            .message_buffer_size
+            .unwrap_or(DEFAULT_MESSAGE_BUFFER_SIZE),
+    );
 
     let config = ServerConfig {
         state,
-        addr: addr
+        addr: config
+            .address
+            .unwrap_or(DEFAULT_ADDR.to_string())
             .parse()
             .inspect_err(|e| debug!("{e}"))
             .map_err(|_| CliError::AddressParseError)?,
@@ -119,9 +159,10 @@ async fn cli() -> Result<(), CliError> {
 
 #[tokio::main]
 pub async fn main() {
-    env_logger::init();
-    match cli().await {
+    let res = cli().await;
+    let _ = env_logger::try_init();
+    match res {
         Ok(_) => info!("Goodbye!"),
-        Err(e) => error!("Fatal CLI Error: {}", e),
-    };
+        Err(e) => error!("Fatal Proxy Error: {}", e),
+    }
 }

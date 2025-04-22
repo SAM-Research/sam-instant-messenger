@@ -12,6 +12,9 @@ use log::debug;
 use rand::Rng;
 use uuid::Uuid;
 
+/// Device IDs start at 1
+pub const DEFAULT_DEVICE_ID: u32 = 1u32;
+
 macro_rules! define_uuid_type {
     ($name:ident) => {
         #[derive(Debug, Clone, Copy, Hash, PartialEq, Eq, From, Into, Serialize, Deserialize)]

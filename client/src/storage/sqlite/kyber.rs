@@ -4,6 +4,7 @@ use libsignal_protocol::{
     GenericSignedPreKey as _, KyberPreKeyId, KyberPreKeyRecord, KyberPreKeyStore,
     SignalProtocolError,
 };
+use log::debug;
 use sqlx::{Pool, Sqlite};
 
 use crate::storage::{
@@ -36,6 +37,7 @@ impl ProvidesKeyId<KyberPreKeyId> for SqliteKyberPreKeyStore {
         .fetch_one(&self.database)
         .await
         .map(|row| KyberPreKeyId::from(row.pkid.unwrap_or(0) as u32 + 1))
+        .inspect_err(|e| debug!("{e}"))
         .map_err(|err| DatabaseError::Database(format!("{err}")).into())
     }
 }
@@ -61,6 +63,7 @@ impl KyberPreKeyStore for SqliteKyberPreKeyStore {
         )
         .fetch_one(&self.database)
         .await
+        .inspect_err(|e| debug!("{e}"))
         {
             Ok(row) => KyberPreKeyRecord::deserialize(
                 BASE64_STANDARD
@@ -98,6 +101,7 @@ impl KyberPreKeyStore for SqliteKyberPreKeyStore {
         .execute(&self.database)
         .await
         .map(|_| ())
+        .inspect_err(|e| debug!("{e}"))
         .map_err(|err| {
             SignalProtocolError::ApplicationCallbackError(
                 "save kyber pre key",

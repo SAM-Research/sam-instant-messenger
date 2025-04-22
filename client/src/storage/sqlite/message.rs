@@ -47,6 +47,7 @@ impl MessageStore for SqliteMessageStore {
         .execute(&self.database)
         .await
         .map(|_| ())
+        .inspect_err(|e| debug!("{e}"))
         .map_err(|err| DatabaseError::Database(format!("{err}")));
         match res {
             Ok(()) => self
@@ -81,7 +82,7 @@ mod test {
     #[tokio::test]
     async fn test_store_and_send_to_subscriber() {
         let mut csprng = OsRng;
-        let mut store = SqliteStoreConfig::in_memory()
+        let mut store = SqliteStoreConfig::in_memory(10)
             .await
             .create_store(
                 IdentityKeyPair::generate(&mut csprng),

@@ -39,6 +39,7 @@ pub enum KeyStoreError {
 
 #[derive(Debug, Display, Error, From)]
 pub enum DatabaseError {
-    #[from(ignore)]
     Database(#[error(not(source))] String),
+    FailedToConnect,
+    FailedToMigrate,
 }

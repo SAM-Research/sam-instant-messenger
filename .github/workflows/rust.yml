@@ -108,7 +108,13 @@ jobs:
 
       - name: Run Clippy
         run: cargo clippy --all-targets --all-features -- -D warnings
-
+  docker:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      - name: Build Docker image
+        run: docker build -t sam-server .
   test:
     runs-on: ubuntu-latest
     steps:
@@ -175,12 +181,12 @@ jobs:
 
       - name: Generate Certificates
         run: cd ./scripts && ./generate_cert.sh ../e2e/cert
-      
+
       - name: Init docker-compose
         uses: hoverkraft-tech/compose-action@v2.0.1
         with:
           compose-file: "./server/database/test-database.yml"
-      
+
       - name: Test & Coverage
         run: cargo llvm-cov --workspace --lcov --output-path lcov.info -- --include-ignored
 

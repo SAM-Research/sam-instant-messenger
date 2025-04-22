@@ -6,13 +6,15 @@ repository = "https://github.com/SAM-Research/sam-instant-messenger"
 [workspace]
 resolver = "2"
 
-members = ["server", "common", "client", "e2e", "test_utils"]
+members = ["server", "common", "client", "e2e", "test_utils", "net", "security"]
 
 [workspace.dependencies]
 sam-server = { path = "server" }
 sam-client = { path = "client" }
 sam-common = { path = "common" }
-test-utils = { path = "test_utils" }
+sam-net = { path = "net" }
+sam-security = { path = "security" }
+sam-test-utils = { path = "test_utils" }
 
 libsignal-protocol = { git = "https://github.com/signalapp/libsignal.git", version = "0.1.0" }
 libsignal-core = { git = "https://github.com/signalapp/libsignal.git", version = "0.1.0" }

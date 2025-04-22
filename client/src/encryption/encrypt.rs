@@ -56,8 +56,11 @@ pub async fn encrypt(
 
     let addr_len = recipient_addrs.values().map(|v| v.len()).sum();
     let mut messages = Vec::with_capacity(addr_len);
-
     for (recipient, addresses) in recipient_addrs {
+        debug!(
+            "Encrypting for recipient '{recipient}' devices '{:?}'",
+            addresses
+        );
         for device_id in addresses {
             let addr = ProtocolAddress::new(recipient.to_string(), (*device_id).into());
             let message = message_encrypt(
@@ -120,7 +123,7 @@ pub async fn decrypt<T: Rng + CryptoRng + Default>(
     let source = AccountId::try_from(envelope.source_account_id)
         .inspect_err(|e| debug!("{e}"))
         .map_err(|_| EncryptionError::InvalidAccountId("Could not parse bytes".to_owned()))?;
-
+    debug!("Decrypting message from '{source}'");
     let bytes = unpad_message(
         &message_decrypt(
             &message,

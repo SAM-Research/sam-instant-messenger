@@ -1,4 +1,4 @@
-use log::error;
+use log::{debug, error};
 use rand::{CryptoRng, Rng};
 use sam_common::{
     sam_message::{ClientEnvelope, ServerEnvelope},
@@ -42,12 +42,11 @@ pub async fn process_message<T: Rng + CryptoRng + Default>(
     rng: &mut T,
 ) -> Result<(), LogicError> {
     let envelope = decrypt(envelope, store, rng).await?;
-
     store
         .contact_store
         .add_device(envelope.source_account_id(), envelope.source_device_id())
         .await?;
-
+    debug!("Processed Message from '{}'", envelope.source_account_id());
     store.message_store.store_message(envelope).await?;
     Ok(())
 }
@@ -60,11 +59,13 @@ pub async fn prepare_message<T: StoreType, R: Rng + CryptoRng>(
     mut rng: &mut R,
 ) -> Result<ClientEnvelope, LogicError> {
     if !store.contact_store.contains_contact(recipient).await? {
+        debug!("Unknown recipient '{recipient}', fetching keys...");
         fetch_prekeys(store, api_client, recipient, None, &mut rng).await?;
     }
 
     let my_id = store.account_store.get_account_id().await?;
     if !store.contact_store.contains_contact(my_id).await? {
+        debug!("No Contact for self, fetching keys...");
         fetch_prekeys(store, api_client, my_id, None, &mut rng).await?;
     }
     let envelope = encrypt(msg, vec![recipient, my_id], store).await?;
@@ -79,7 +80,12 @@ pub async fn handle_message_response<T: StoreType, R: Rng + CryptoRng>(
 ) -> Result<(), LogicError> {
     match status {
         MessageStatus::ExtraDevices(device_lists) => {
+            debug!("Sent message contained extra devices, removing devices...");
             for list in device_lists {
+                debug!(
+                    "Removing devices '{:?}' from contact '{}'",
+                    list.devices, list.account_id
+                );
                 for device in list.devices {
                     store
                         .contact_store
@@ -90,6 +96,7 @@ pub async fn handle_message_response<T: StoreType, R: Rng + CryptoRng>(
             Ok(())
         }
         MessageStatus::MissingDevices(device_lists) => {
+            debug!("Sent message contained missing devices, fetching keys...");
             for list in device_lists {
                 fetch_prekeys(
                     store,

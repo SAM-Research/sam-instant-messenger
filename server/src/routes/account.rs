@@ -86,7 +86,7 @@ mod test {
         },
         state::ServerState,
     };
-    use test_utils::server_utils::{create_publish_pre_keys, pq_pre_key, signed_ec_pre_key};
+    use sam_test_utils::server_utils::{create_publish_pre_keys, pq_pre_key, signed_ec_pre_key};
 
     #[tokio::test]
     async fn test_post_api_v1_account() {

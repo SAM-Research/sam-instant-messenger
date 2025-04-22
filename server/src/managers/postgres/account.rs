@@ -1,6 +1,6 @@
 use async_trait::async_trait;
 use libsignal_protocol::IdentityKey;
-use log::error;
+use log::{debug, error};
 use sam_common::AccountId;
 use sqlx::{postgres::PgDatabaseError, types::Uuid, Pool, Postgres};
 
@@ -32,6 +32,7 @@ impl AccountManager for PostgresAccountManager {
         )
         .fetch_one(&self.pool)
         .await
+        .inspect_err(|e| debug!("{e}"))
         {
             Ok(row) => {
                 let identity = IdentityKey::decode(row.identity_key.as_slice())
@@ -64,6 +65,7 @@ impl AccountManager for PostgresAccountManager {
         )
         .fetch_one(&self.pool)
         .await
+        .inspect_err(|e| debug!("{e}"))
         {
             Ok(row) => Ok(row.account_id.into()),
             Err(sqlx::Error::RowNotFound) => Err(AccountManagerError::AccountDoesNotExist),
@@ -89,6 +91,7 @@ impl AccountManager for PostgresAccountManager {
         )
         .execute(&self.pool)
         .await
+        .inspect_err(|e| debug!("{e}"))
         {
             Ok(_) => Ok(()),
             Err(sqlx::Error::Database(err)) => {
@@ -123,6 +126,7 @@ impl AccountManager for PostgresAccountManager {
         )
         .fetch_one(&self.pool)
         .await
+        .inspect_err(|e| debug!("{e}"))
         {
             Ok(_) => Ok(()),
             Err(sqlx::Error::RowNotFound) => Err(AccountManagerError::AccountDoesNotExist),
@@ -165,7 +169,6 @@ mod test {
     #[tokio::test]
     #[ignore = "requires a postgres test database"]
     async fn postgres_account_manager() {
-        let _ = env_logger::try_init();
         let mut manager = accounts(connection_str()).await;
         let username = Uuid::new_v4();
         let account = Account::builder()

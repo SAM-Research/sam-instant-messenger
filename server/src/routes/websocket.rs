@@ -55,7 +55,7 @@ mod test {
         },
     };
 
-    use test_utils::get_next_port;
+    use sam_test_utils::get_next_port;
     use tokio::{sync::oneshot, task::JoinHandle};
     use tokio_tungstenite::{
         connect_async, tungstenite::client::IntoClientRequest, MaybeTlsStream, WebSocketStream,

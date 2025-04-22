@@ -6,7 +6,7 @@ use crate::{
     state::{state_type::StateType, ServerState},
     ServerError,
 };
-use log::warn;
+use log::{debug, warn};
 use sam_common::{
     address::{AccountId, DeviceId, MessageId},
     sam_message::{
@@ -25,7 +25,11 @@ pub async fn handle_client_message<T: StateType>(
         Ok(id) => id,
         Err(_) => return Err(ServerError::EnvelopeMalformed),
     };
-
+    debug!(
+        "User '{}' sent '{:?}'",
+        auth_user.account().username(),
+        message.r#type()
+    );
     match message.r#type() {
         ClientMessageType::ClientMessage => match message.message {
             Some(envelope) => Ok(Some(
@@ -81,6 +85,10 @@ async fn handle_client_envelope<T: StateType>(
     let mut extra_devices: HashMap<AccountId, Vec<DeviceId>> = HashMap::new();
 
     if dest_acc_ids.is_empty() {
+        debug!(
+            "User '{}' sent an empty message",
+            auth_user.account().username()
+        );
         return Ok(ServerMessage::builder()
             .id(message_id.into())
             .r#type(ServerMessageType::EmptyMessage.into())

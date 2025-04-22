@@ -3,8 +3,8 @@ use sam_client::net::http_client::HttpClientConfig;
 use sam_client::net::protocol::WebSocketProtocolClientConfig;
 use sam_client::storage::sqlite::SqliteStoreConfig;
 use sam_client::Client;
-use test_utils::e2e::TestServer;
-use test_utils::get_next_port;
+use sam_test_utils::e2e::TestServer;
+use sam_test_utils::get_next_port;
 
 #[tokio::test]
 pub async fn alice_can_upload_keys() {
@@ -19,9 +19,9 @@ pub async fn alice_can_upload_keys() {
     let mut alice: Client<SqliteClientType> = Client::from_registration()
         .username("Alice")
         .device_name("Alice's Device")
-        .store_config(SqliteStoreConfig::in_memory().await)
+        .store_config(SqliteStoreConfig::in_memory(10).await)
         .api_client_config(HttpClientConfig::new(address.clone()))
-        .protocol_config(WebSocketProtocolClientConfig::new(address.clone()))
+        .protocol_config(WebSocketProtocolClientConfig::new(address.clone(), 10))
         .call()
         .await
         .unwrap();

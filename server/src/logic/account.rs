@@ -138,7 +138,7 @@ mod test {
         },
         state::ServerState,
     };
-    use test_utils::server_utils::create_publish_pre_keys;
+    use sam_test_utils::server_utils::create_publish_pre_keys;
 
     #[tokio::test]
     async fn test_create_account() {

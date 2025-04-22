@@ -102,7 +102,7 @@ mod test {
     use rstest::rstest;
     use sam_common::api::{keys::PreKeyBundles, PreKeyBundle};
     use sam_common::DeviceId;
-    use test_utils::server_utils::create_publish_pre_keys;
+    use sam_test_utils::server_utils::create_publish_pre_keys;
 
     #[tokio::test]
     async fn test_post_api_v1_keys() {

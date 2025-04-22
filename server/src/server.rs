@@ -30,7 +30,7 @@ pub async fn start_server<T: StateType>(config: ServerConfig<T>) -> Result<(), s
     let is_tls = config.tls_config.is_some();
 
     info!(
-        "Starting SAM Server on http{}://{}...",
+        "Starting SAM Server on http{}://{}",
         if is_tls { "s" } else { "" },
         config.addr
     );
