@@ -1,7 +1,3 @@
-mod utils;
-
-use std::time::Duration;
-
 use libsignal_protocol::IdentityKeyPair;
 use rstest::rstest;
 use sam_client::{
@@ -15,11 +11,10 @@ use sam_client::{
 use sam_common::{api::LinkDeviceToken, AccountId};
 use sam_net::tls::{create_tls_client_config, MutualTlsConfig};
 use sam_server::config::TlsConfig;
-use sam_test_utils::get_next_port;
+use sam_test_utils::{e2e::TestServer, get_next_port};
+use std::time::Duration;
 use tempfile::NamedTempFile;
 use tokio::{sync::broadcast::Receiver, time::timeout};
-
-use crate::utils::server::TestServer;
 
 const TIMEOUT_SECS: u64 = 120;
 
@@ -81,10 +76,6 @@ async fn client_device(
         .await
         .expect("Can provision device")
 }
-
-/*
-   PORTS USED: 9180-9190
-*/
 
 #[tokio::test]
 async fn test_alice_send_to_bob_offline() {

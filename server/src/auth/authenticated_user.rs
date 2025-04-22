@@ -123,7 +123,7 @@ mod test {
         let device = Device::builder()
             .id(device_id)
             .name("a".to_string())
-            .password(Password::generate(account_pwd).expect("abc3 can create password"))
+            .password(Password::generate(account_pwd, &mut rng).expect("abc3 can create password"))
             .creation(0)
             .registration_id(1.into())
             .build();

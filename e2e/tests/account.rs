@@ -1,5 +1,3 @@
-use crate::utils::server::TestServer;
-
 use libsignal_protocol::IdentityKeyPair;
 use rand::rngs::OsRng;
 use sam_client::{
@@ -10,10 +8,7 @@ use sam_client::{
 };
 use sam_common::{address::RegistrationId, AccountId};
 use sam_net::tls::{create_tls_client_config, create_tls_server_config};
-
-use sam_test_utils::get_next_port;
-
-mod utils;
+use sam_test_utils::{e2e::TestServer, get_next_port};
 
 pub async fn register_alice(address: String) -> Result<Client<SqliteClientType>, ClientError> {
     Client::from_registration()

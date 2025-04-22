@@ -3,15 +3,8 @@ use sam_client::net::http_client::HttpClientConfig;
 use sam_client::net::protocol::WebSocketProtocolClientConfig;
 use sam_client::storage::sqlite::SqliteStoreConfig;
 use sam_client::Client;
+use sam_test_utils::e2e::TestServer;
 use sam_test_utils::get_next_port;
-
-mod utils;
-
-use crate::utils::server::TestServer;
-
-/*
-   PORTS USED: 939x
-*/
 
 #[tokio::test]
 pub async fn alice_can_upload_keys() {

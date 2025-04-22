@@ -1,3 +1,6 @@
+pub mod e2e;
+pub mod server_utils;
+
 use std::sync::atomic::{AtomicU16, Ordering};
 
 static BASE_PORT: u16 = 3080;

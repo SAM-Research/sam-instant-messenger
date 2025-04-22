@@ -95,7 +95,6 @@ mod test {
             test_utils::{create_user, test_server},
         },
         state::ServerState,
-        test_utils::create_publish_pre_keys,
     };
     use axum::http;
     use base64::{prelude::BASE64_STANDARD, Engine};
@@ -103,6 +102,7 @@ mod test {
     use rstest::rstest;
     use sam_common::api::{keys::PreKeyBundles, PreKeyBundle};
     use sam_common::DeviceId;
+    use sam_test_utils::server_utils::create_publish_pre_keys;
 
     #[tokio::test]
     async fn test_post_api_v1_keys() {

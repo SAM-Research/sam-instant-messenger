@@ -89,8 +89,8 @@ mod test {
             test_utils::{create_user, test_server},
         },
         state::ServerState,
-        test_utils::create_publish_pre_keys,
     };
+    use sam_test_utils::server_utils::create_publish_pre_keys;
 
     #[tokio::test]
     async fn test_get_api_v1_devices_provision() {
@@ -182,7 +182,7 @@ mod test {
                     .registration_id(1.into())
                     .name("microwave".to_string())
                     .password(
-                        Password::generate("otherpass".to_string())
+                        Password::generate("otherpass".to_string(), &mut state.rng)
                             .expect("Password can be generated"),
                     )
                     .build(),

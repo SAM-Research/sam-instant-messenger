@@ -14,17 +14,18 @@ use crate::{
 
 use super::{key::fetch_prekeys, LogicError};
 
-pub async fn process_messages<T: StoreType>(
+pub async fn process_messages<T: StoreType, R: Rng + CryptoRng + Default>(
     store: &mut Store<T>,
     envelope_queue: &mut Receiver<ServerEnvelope>,
     block: bool,
+    rng: &mut R,
 ) -> Result<(), LogicError> {
     if !block && envelope_queue.is_empty() {
         return Ok(());
     }
     while let Some(envelope) = envelope_queue.recv().await {
         // TODO: How should we handle failure to decrypt and/or store message?
-        process_message(envelope, store)
+        process_message(envelope, store, rng)
             .await
             .inspect_err(|e| error!("Failed to store message {e}"))?;
 
@@ -35,12 +36,12 @@ pub async fn process_messages<T: StoreType>(
     Ok(())
 }
 
-pub async fn process_message(
+pub async fn process_message<T: Rng + CryptoRng + Default>(
     envelope: ServerEnvelope,
     store: &mut Store<impl StoreType>,
+    rng: &mut T,
 ) -> Result<(), LogicError> {
-    let envelope = decrypt(envelope, store).await?;
-
+    let envelope = decrypt(envelope, store, rng).await?;
     store
         .contact_store
         .add_device(envelope.source_account_id(), envelope.source_device_id())

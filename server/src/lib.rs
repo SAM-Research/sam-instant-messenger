@@ -8,9 +8,6 @@ pub mod routes;
 pub mod server;
 pub mod state;
 
-#[cfg(test)]
-mod test_utils;
-
 pub use config::ServerConfig;
 pub use error::ServerError;
 pub use server::start_server;
