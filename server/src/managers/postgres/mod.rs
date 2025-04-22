@@ -9,10 +9,7 @@ pub(super) mod test_utils;
 pub use account::PostgresAccountManager;
 pub use device::PostgresDeviceManager;
 
-use super::in_memory::{
-    keys::InMemoryKeyManager,
-    message::InMemoryMessageManager,
-};
+use super::in_memory::{keys::InMemoryKeyManager, message::InMemoryMessageManager};
 
 #[derive(Clone)]
 pub struct PostgresStateType;
