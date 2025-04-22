@@ -1,8 +1,10 @@
+use rstest::rstest;
 use sam_client::client::SqliteClientType;
 use sam_client::net::http_client::HttpClientConfig;
 use sam_client::net::protocol::WebSocketProtocolClientConfig;
 use sam_client::storage::sqlite::SqliteStoreConfig;
 use sam_client::Client;
+use sam_server::{ServerState, StateType};
 use sam_test_utils::get_next_port;
 use uuid::Uuid;
 
@@ -10,14 +12,19 @@ mod utils;
 
 use crate::utils::server::TestServer;
 
-/*
-   PORTS USED: 939x
-*/
+use utils::server::{in_memory_server_state, postgres_server_state};
 
 #[tokio::test]
-pub async fn alice_can_upload_keys() {
+#[rstest]
+#[case(postgres_server_state())]
+#[case(in_memory_server_state())]
+pub async fn alice_can_upload_keys(
+    #[future]
+    #[case]
+    state: ServerState<impl StateType>,
+) {
     let address = format!("127.0.0.1:{}", get_next_port());
-    let mut server = TestServer::start(&address, None).await;
+    let mut server = TestServer::start(&address, None, state.await).await;
 
     server
         .started_rx()

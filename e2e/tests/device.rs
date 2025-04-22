@@ -1,22 +1,29 @@
 use crate::utils::server::TestServer;
+use rstest::rstest;
 use sam_client::client::SqliteClientType;
 use sam_client::net::http_client::HttpClientConfig;
 use sam_client::net::protocol::WebSocketProtocolClientConfig;
 use sam_client::storage::sqlite::SqliteStoreConfig;
 use sam_client::Client;
+use sam_server::{ServerState, StateType};
 use sam_test_utils::get_next_port;
 use uuid::Uuid;
 
 mod utils;
 
-/*
-   PORTS USED: 938x
-*/
+use utils::server::{in_memory_server_state, postgres_server_state};
 
 #[tokio::test]
-async fn can_link_device() {
+#[rstest]
+#[case(postgres_server_state())]
+#[case(in_memory_server_state())]
+async fn can_link_device(
+    #[future]
+    #[case]
+    state: ServerState<impl StateType>,
+) {
     let address = format!("127.0.0.1:{}", get_next_port());
-    let mut server = TestServer::start(&address, None).await;
+    let mut server = TestServer::start(&address, None, state.await).await;
 
     server
         .started_rx()
@@ -66,9 +73,16 @@ async fn can_link_device() {
 }
 
 #[tokio::test]
-async fn can_unlink_device() {
+#[rstest]
+#[case(postgres_server_state())]
+#[case(in_memory_server_state())]
+async fn can_unlink_device(
+    #[future]
+    #[case]
+    state: ServerState<impl StateType>,
+) {
     let address = format!("127.0.0.1:{}", get_next_port());
-    let mut server = TestServer::start(&address, None).await;
+    let mut server = TestServer::start(&address, None, state.await).await;
 
     server
         .started_rx()
@@ -123,9 +137,16 @@ async fn can_unlink_device() {
 }
 
 #[tokio::test]
-async fn can_delete_device() {
+#[rstest]
+#[case(postgres_server_state())]
+#[case(in_memory_server_state())]
+async fn can_delete_device(
+    #[future]
+    #[case]
+    state: ServerState<impl StateType>,
+) {
     let address = format!("127.0.0.1:{}", get_next_port());
-    let mut server = TestServer::start(&address, None).await;
+    let mut server = TestServer::start(&address, None, state.await).await;
 
     server
         .started_rx()
@@ -177,9 +198,16 @@ async fn can_delete_device() {
 }
 
 #[tokio::test]
-async fn can_delete_account() {
+#[rstest]
+#[case(postgres_server_state())]
+#[case(in_memory_server_state())]
+async fn can_delete_account(
+    #[future]
+    #[case]
+    state: ServerState<impl StateType>,
+) {
     let address = format!("127.0.0.1:{}", get_next_port());
-    let mut server = TestServer::start(&address, None).await;
+    let mut server = TestServer::start(&address, None, state.await).await;
 
     server
         .started_rx()

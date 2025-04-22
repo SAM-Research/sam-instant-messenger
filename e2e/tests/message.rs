@@ -15,12 +15,14 @@ use sam_client::{
 use sam_common::{api::LinkDeviceToken, AccountId};
 use sam_net::tls::{create_tls_client_config, MutualTlsConfig};
 use sam_server::config::TlsConfig;
+use sam_server::{ServerState, StateType};
 use sam_test_utils::get_next_port;
 use tempfile::NamedTempFile;
 use tokio::{sync::broadcast::Receiver, time::timeout};
 use uuid::Uuid;
 
 use crate::utils::server::TestServer;
+use utils::server::{in_memory_server_state, postgres_server_state};
 
 const TIMEOUT_SECS: u64 = 120;
 
@@ -84,15 +86,18 @@ async fn client_device(
         .expect("Can provision device")
 }
 
-/*
-   PORTS USED: 9180-9190
-*/
-
 #[tokio::test]
-async fn test_alice_send_to_bob_offline() {
+#[rstest]
+#[case(postgres_server_state())]
+#[case(in_memory_server_state())]
+async fn test_alice_send_to_bob_offline(
+    #[future]
+    #[case]
+    state: ServerState<impl StateType>,
+) {
     timeout(Duration::from_secs(TIMEOUT_SECS), async {
         let address = format!("127.0.0.1:{}", get_next_port());
-        let mut server = TestServer::start(&address, None).await;
+        let mut server = TestServer::start(&address, None, state.await).await;
         server
             .started_rx()
             .await
@@ -129,10 +134,17 @@ async fn test_alice_send_to_bob_offline() {
 }
 
 #[tokio::test]
-async fn test_alice_send_to_bob_two_devices() {
+#[rstest]
+#[case(postgres_server_state())]
+#[case(in_memory_server_state())]
+async fn test_alice_send_to_bob_two_devices(
+    #[future]
+    #[case]
+    state: ServerState<impl StateType>,
+) {
     timeout(Duration::from_secs(TIMEOUT_SECS), async {
         let address = format!("127.0.0.1:{}", get_next_port());
-        let mut server = TestServer::start(&address, None).await;
+        let mut server = TestServer::start(&address, None, state.await).await;
         server
             .started_rx()
             .await
@@ -185,10 +197,17 @@ async fn test_alice_send_to_bob_two_devices() {
 }
 
 #[tokio::test]
-async fn test_alice_send_to_bob_missing_devices() {
+#[rstest]
+#[case(postgres_server_state())]
+#[case(in_memory_server_state())]
+async fn test_alice_send_to_bob_missing_devices(
+    #[future]
+    #[case]
+    state: ServerState<impl StateType>,
+) {
     timeout(Duration::from_secs(TIMEOUT_SECS), async {
         let address = format!("127.0.0.1:{}", get_next_port());
-        let mut server = TestServer::start(&address, None).await;
+        let mut server = TestServer::start(&address, None, state.await).await;
         server
             .started_rx()
             .await
@@ -228,10 +247,17 @@ async fn test_alice_send_to_bob_missing_devices() {
 }
 
 #[tokio::test]
-async fn test_alice_send_to_bob_extra_devices() {
+#[rstest]
+#[case(postgres_server_state())]
+#[case(in_memory_server_state())]
+async fn test_alice_send_to_bob_extra_devices(
+    #[future]
+    #[case]
+    state: ServerState<impl StateType>,
+) {
     timeout(Duration::from_secs(TIMEOUT_SECS), async {
         let address = format!("127.0.0.1:{}", get_next_port());
-        let mut server = TestServer::start(&address, None).await;
+        let mut server = TestServer::start(&address, None, state.await).await;
         server
             .started_rx()
             .await
@@ -303,10 +329,17 @@ async fn test_alice_send_to_bob_extra_devices() {
 }
 
 #[tokio::test]
-async fn test_alice_send_to_bob_and_self() {
+#[rstest]
+#[case(postgres_server_state())]
+#[case(in_memory_server_state())]
+async fn test_alice_send_to_bob_and_self(
+    #[future]
+    #[case]
+    state: ServerState<impl StateType>,
+) {
     timeout(Duration::from_secs(TIMEOUT_SECS), async {
         let address = format!("127.0.0.1:{}", get_next_port());
-        let mut server = TestServer::start(&address, None).await;
+        let mut server = TestServer::start(&address, None, state.await).await;
         server
             .started_rx()
             .await
@@ -365,6 +398,9 @@ async fn test_alice_send_to_bob_with_tls(
     #[case] ca_cert: Option<String>,
     #[case] mutual_config: Option<MutualTlsConfig>,
     #[case] port: u16,
+    #[future(awt)]
+    #[values(postgres_server_state(), in_memory_server_state())]
+    state: ServerState<impl StateType>,
 ) {
     timeout(Duration::from_secs(TIMEOUT_SECS), async {
         let _ = rustls::crypto::ring::default_provider().install_default();
@@ -376,7 +412,7 @@ async fn test_alice_send_to_bob_with_tls(
         }
         .try_into()
         .expect("Can create server config");
-        let mut server = TestServer::start(&address, Some(server_config)).await;
+        let mut server = TestServer::start(&address, Some(server_config), state).await;
         server
             .started_rx()
             .await
@@ -441,10 +477,16 @@ async fn send(
 #[case(vec![Message::Alice("a"), Message::Alice("aa"), Message::Alice("aaa"), Message::Bob("b"), Message::Bob("bb")], get_next_port())]
 #[case(vec![Message::Bob("b"), Message::Alice("a")], get_next_port())]
 #[tokio::test]
-async fn test_ongoing_communication<'a>(#[case] sequence: Vec<Message<'a>>, #[case] port: u16) {
+async fn test_ongoing_communication<'a>(
+    #[case] sequence: Vec<Message<'a>>,
+    #[case] port: u16,
+    #[future(awt)]
+    #[values(postgres_server_state(), in_memory_server_state())]
+    state: ServerState<impl StateType>,
+) {
     timeout(Duration::from_secs(TIMEOUT_SECS), async {
         let address = format!("127.0.0.1:{}", port);
-        let mut server = TestServer::start(&address, None).await;
+        let mut server = TestServer::start(&address, None, state).await;
         server
             .started_rx()
             .await
@@ -474,11 +516,16 @@ async fn test_ongoing_communication<'a>(#[case] sequence: Vec<Message<'a>>, #[ca
     .expect("Test took to long to complete")
 }
 
+#[rstest]
 #[tokio::test]
-async fn sqlite_stores_alice_send_to_bob() {
+async fn sqlite_stores_alice_send_to_bob(
+    #[future(awt)]
+    #[values(postgres_server_state(), in_memory_server_state())]
+    state: ServerState<impl StateType>,
+) {
     timeout(Duration::from_secs(TIMEOUT_SECS), async {
         let address = format!("127.0.0.1:{}", get_next_port());
-        let mut server = TestServer::start(&address, None).await;
+        let mut server = TestServer::start(&address, None, state).await;
         server
             .started_rx()
             .await

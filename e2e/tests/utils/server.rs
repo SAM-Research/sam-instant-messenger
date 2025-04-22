@@ -13,7 +13,7 @@ use sam_server::{
         postgres::{PostgresAccountManager, PostgresDeviceManager, PostgresStateType},
         KeyManager,
     },
-    start_server, ServerConfig, ServerState,
+    start_server, ServerConfig, ServerState, StateType,
 };
 
 use sqlx::postgres::PgPoolOptions;
@@ -34,9 +34,13 @@ impl Drop for TestServer {
 }
 
 impl TestServer {
-    pub async fn start(address: &str, tls_config: Option<rustls::ServerConfig>) -> Self {
+    pub async fn start<T: StateType>(
+        address: &str,
+        tls_config: Option<rustls::ServerConfig>,
+        server_state: ServerState<T>,
+    ) -> Self {
         let config = ServerConfig {
-            state: postgres_server_state().await,
+            state: server_state,
             addr: address.parse().expect("Unable to parse socket address"),
             tls_config,
         };
@@ -55,7 +59,7 @@ impl TestServer {
     }
 }
 
-pub fn in_memory_server_state() -> ServerState<InMemStateType> {
+pub async fn in_memory_server_state() -> ServerState<InMemStateType> {
     ServerState::new(
         InMemoryAccountManager::default(),
         InMemoryDeviceManager::new("test".to_string(), 600),

@@ -1,7 +1,8 @@
-use crate::utils::server::TestServer;
+use crate::utils::server::{in_memory_server_state, postgres_server_state, TestServer};
 
 use libsignal_protocol::IdentityKeyPair;
 use rand::rngs::OsRng;
+use rstest::rstest;
 use sam_client::{
     client::SqliteClientType,
     net::{http_client::HttpClientConfig, protocol::WebSocketProtocolClientConfig},
@@ -10,14 +11,12 @@ use sam_client::{
 };
 use sam_common::{address::RegistrationId, AccountId};
 use sam_net::tls::{create_tls_client_config, create_tls_server_config};
+use sam_server::{ServerState, StateType};
 use sam_test_utils::get_next_port;
 use uuid::Uuid;
 
 mod utils;
 
-/*
-   Ports used: 937x
-*/
 pub async fn register_someone(address: String) -> Result<Client<SqliteClientType>, ClientError> {
     let name = Uuid::new_v4().to_string();
     Client::from_registration()
@@ -31,9 +30,16 @@ pub async fn register_someone(address: String) -> Result<Client<SqliteClientType
 }
 
 #[tokio::test]
-pub async fn one_client_can_register() {
+#[rstest]
+#[case(postgres_server_state())]
+#[case(in_memory_server_state())]
+pub async fn one_client_can_register(
+    #[future]
+    #[case]
+    state: ServerState<impl StateType>,
+) {
     let address = format!("127.0.0.1:{}", get_next_port());
-    let mut server = TestServer::start(&address, None).await;
+    let mut server = TestServer::start(&address, None, state.await).await;
 
     server
         .started_rx()
@@ -46,9 +52,16 @@ pub async fn one_client_can_register() {
 }
 
 #[tokio::test]
-pub async fn can_delete_account() {
+#[rstest]
+#[case(postgres_server_state())]
+#[case(in_memory_server_state())]
+pub async fn can_delete_account(
+    #[future]
+    #[case]
+    state: ServerState<impl StateType>,
+) {
     let address = format!("127.0.0.1:{}", get_next_port());
-    let mut server = TestServer::start(&address, None).await;
+    let mut server = TestServer::start(&address, None, state.await).await;
 
     server
         .started_rx()
@@ -63,9 +76,16 @@ pub async fn can_delete_account() {
 }
 
 #[tokio::test]
-pub async fn cannot_create_client_without_valid_account() {
+#[rstest]
+#[case(postgres_server_state())]
+#[case(in_memory_server_state())]
+pub async fn cannot_create_client_without_valid_account(
+    #[future]
+    #[case]
+    state: ServerState<impl StateType>,
+) {
     let address = format!("127.0.0.1:{}", get_next_port());
-    let mut server = TestServer::start(&address, None).await;
+    let mut server = TestServer::start(&address, None, state.await).await;
 
     server
         .started_rx()
@@ -113,9 +133,16 @@ pub async fn cannot_create_client_without_valid_account() {
 }
 
 #[tokio::test]
-pub async fn can_delete_a_device() {
+#[rstest]
+#[case(postgres_server_state())]
+#[case(in_memory_server_state())]
+pub async fn can_delete_a_device(
+    #[future]
+    #[case]
+    state: ServerState<impl StateType>,
+) {
     let address = format!("127.0.0.1:{}", get_next_port());
-    let mut server = TestServer::start(&address, None).await;
+    let mut server = TestServer::start(&address, None, state.await).await;
 
     server
         .started_rx()
@@ -135,9 +162,16 @@ pub async fn can_delete_a_device() {
 }
 
 #[tokio::test]
-pub async fn alice_can_find_bobs_account_id() {
+#[rstest]
+#[case(postgres_server_state())]
+#[case(in_memory_server_state())]
+pub async fn alice_can_find_bobs_account_id(
+    #[future]
+    #[case]
+    state: ServerState<impl StateType>,
+) {
     let address = format!("127.0.0.1:{}", get_next_port());
-    let mut server = TestServer::start(&address, None).await;
+    let mut server = TestServer::start(&address, None, state.await).await;
 
     server
         .started_rx()
@@ -166,14 +200,21 @@ pub async fn alice_can_find_bobs_account_id() {
 }
 
 #[tokio::test]
-pub async fn one_client_can_register_with_tls() {
+#[rstest]
+#[case(postgres_server_state())]
+#[case(in_memory_server_state())]
+pub async fn one_client_can_register_with_tls(
+    #[future]
+    #[case]
+    state: ServerState<impl StateType>,
+) {
     let _ = rustls::crypto::ring::default_provider().install_default();
     let address = format!("127.0.0.1:{}", get_next_port());
     let server_config = create_tls_server_config("./cert/server.crt", "./cert/server.key", None)
         .expect("Can create server config");
     let client_config =
         create_tls_client_config("./cert/rootCA.crt", None).expect("Can create client config");
-    let mut server = TestServer::start(&address, Some(server_config)).await;
+    let mut server = TestServer::start(&address, Some(server_config), state.await).await;
 
     server
         .started_rx()
@@ -200,9 +241,16 @@ pub async fn one_client_can_register_with_tls() {
 }
 
 #[tokio::test]
-pub async fn two_clients_cannot_have_the_same_username() {
+#[rstest]
+#[case(postgres_server_state())]
+#[case(in_memory_server_state())]
+pub async fn two_clients_cannot_have_the_same_username(
+    #[future]
+    #[case]
+    state: ServerState<impl StateType>,
+) {
     let address = format!("127.0.0.1:{}", get_next_port());
-    let mut server = TestServer::start(&address, None).await;
+    let mut server = TestServer::start(&address, None, state.await).await;
 
     let username = Uuid::new_v4().to_string();
 
