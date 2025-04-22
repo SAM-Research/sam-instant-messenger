@@ -88,8 +88,9 @@ async fn client_device(
 
 #[tokio::test]
 #[rstest]
-#[case(postgres_server_state())]
-#[case(in_memory_server_state())]
+#[ignore = "requires a postgres test database"]
+#[case::postgres(postgres_server_state())]
+#[case::in_memory(in_memory_server_state())]
 async fn test_alice_send_to_bob_offline(
     #[future]
     #[case]
@@ -135,8 +136,9 @@ async fn test_alice_send_to_bob_offline(
 
 #[tokio::test]
 #[rstest]
-#[case(postgres_server_state())]
-#[case(in_memory_server_state())]
+#[ignore = "requires a postgres test database"]
+#[case::postgres(postgres_server_state())]
+#[case::in_memory(in_memory_server_state())]
 async fn test_alice_send_to_bob_two_devices(
     #[future]
     #[case]
@@ -198,8 +200,9 @@ async fn test_alice_send_to_bob_two_devices(
 
 #[tokio::test]
 #[rstest]
-#[case(postgres_server_state())]
-#[case(in_memory_server_state())]
+#[ignore = "requires a postgres test database"]
+#[case::postgres(postgres_server_state())]
+#[case::in_memory(in_memory_server_state())]
 async fn test_alice_send_to_bob_missing_devices(
     #[future]
     #[case]
@@ -248,8 +251,9 @@ async fn test_alice_send_to_bob_missing_devices(
 
 #[tokio::test]
 #[rstest]
-#[case(postgres_server_state())]
-#[case(in_memory_server_state())]
+#[ignore = "requires a postgres test database"]
+#[case::postgres(postgres_server_state())]
+#[case::in_memory(in_memory_server_state())]
 async fn test_alice_send_to_bob_extra_devices(
     #[future]
     #[case]
@@ -328,10 +332,11 @@ async fn test_alice_send_to_bob_extra_devices(
     .expect("Test took to long to complete")
 }
 
-#[tokio::test]
 #[rstest]
-#[case(postgres_server_state())]
-#[case(in_memory_server_state())]
+#[ignore = "requires a postgres test database"]
+#[case::postgres(postgres_server_state())]
+#[case::in_memory(in_memory_server_state())]
+#[tokio::test]
 async fn test_alice_send_to_bob_and_self(
     #[future]
     #[case]
@@ -391,15 +396,19 @@ async fn test_alice_send_to_bob_and_self(
 }
 
 #[rstest]
-#[case(Some("./cert/rootCA.crt".to_string()), Some(MutualTlsConfig::new("./cert/client.key".to_string(), "./cert/client.crt".to_string())), get_next_port())]
-#[case(None, None, get_next_port())]
+#[ignore = "requires a postgres test database"]
+#[case(Some("./cert/rootCA.crt".to_string()), Some(MutualTlsConfig::new("./cert/client.key".to_string(), "./cert/client.crt".to_string())), get_next_port(), postgres_server_state())]
+#[ignore = "requires a postgres test database"]
+#[case(None, None, get_next_port(), postgres_server_state())]
+#[case(Some("./cert/rootCA.crt".to_string()), Some(MutualTlsConfig::new("./cert/client.key".to_string(), "./cert/client.crt".to_string())), get_next_port(), in_memory_server_state())]
+#[case(None, None, get_next_port(), in_memory_server_state())]
 #[tokio::test]
 async fn test_alice_send_to_bob_with_tls(
     #[case] ca_cert: Option<String>,
     #[case] mutual_config: Option<MutualTlsConfig>,
     #[case] port: u16,
     #[future(awt)]
-    #[values(postgres_server_state(), in_memory_server_state())]
+    #[case]
     state: ServerState<impl StateType>,
 ) {
     timeout(Duration::from_secs(TIMEOUT_SECS), async {
@@ -473,15 +482,21 @@ async fn send(
 }
 
 #[rstest]
-#[case(vec![Message::Alice("a"), Message::Bob("b"), Message::Alice("aa"), Message::Alice("aaa"), Message::Bob("bb")], get_next_port())]
-#[case(vec![Message::Alice("a"), Message::Alice("aa"), Message::Alice("aaa"), Message::Bob("b"), Message::Bob("bb")], get_next_port())]
-#[case(vec![Message::Bob("b"), Message::Alice("a")], get_next_port())]
+#[case(vec![Message::Alice("a"), Message::Bob("b"), Message::Alice("aa"), Message::Alice("aaa"), Message::Bob("bb")], get_next_port(), in_memory_server_state())]
+#[case(vec![Message::Alice("a"), Message::Alice("aa"), Message::Alice("aaa"), Message::Bob("b"), Message::Bob("bb")], get_next_port(), in_memory_server_state())]
+#[case(vec![Message::Bob("b"), Message::Alice("a")], get_next_port(), in_memory_server_state())]
+#[ignore = "requires a postgres test database"]
+#[case(vec![Message::Alice("a"), Message::Bob("b"), Message::Alice("aa"), Message::Alice("aaa"), Message::Bob("bb")], get_next_port(), postgres_server_state())]
+#[ignore = "requires a postgres test database"]
+#[case(vec![Message::Alice("a"), Message::Alice("aa"), Message::Alice("aaa"), Message::Bob("b"), Message::Bob("bb")], get_next_port(), postgres_server_state())]
+#[ignore = "requires a postgres test database"]
+#[case(vec![Message::Bob("b"), Message::Alice("a")], get_next_port(), postgres_server_state())]
 #[tokio::test]
 async fn test_ongoing_communication<'a>(
     #[case] sequence: Vec<Message<'a>>,
     #[case] port: u16,
     #[future(awt)]
-    #[values(postgres_server_state(), in_memory_server_state())]
+    #[case]
     state: ServerState<impl StateType>,
 ) {
     timeout(Duration::from_secs(TIMEOUT_SECS), async {
@@ -517,10 +532,13 @@ async fn test_ongoing_communication<'a>(
 }
 
 #[rstest]
+#[ignore = "requires a postgres test database"]
+#[case::postgres(postgres_server_state())]
+#[case::in_memory(in_memory_server_state())]
 #[tokio::test]
 async fn sqlite_stores_alice_send_to_bob(
     #[future(awt)]
-    #[values(postgres_server_state(), in_memory_server_state())]
+    #[case]
     state: ServerState<impl StateType>,
 ) {
     timeout(Duration::from_secs(TIMEOUT_SECS), async {

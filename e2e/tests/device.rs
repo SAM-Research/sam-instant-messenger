@@ -15,8 +15,9 @@ use utils::server::{in_memory_server_state, postgres_server_state};
 
 #[tokio::test]
 #[rstest]
-#[case(postgres_server_state())]
-#[case(in_memory_server_state())]
+#[ignore = "requires a postgres test database"]
+#[case::postgres(postgres_server_state())]
+#[case::in_memory(in_memory_server_state())]
 async fn can_link_device(
     #[future]
     #[case]
@@ -74,8 +75,9 @@ async fn can_link_device(
 
 #[tokio::test]
 #[rstest]
-#[case(postgres_server_state())]
-#[case(in_memory_server_state())]
+#[ignore = "requires a postgres test database"]
+#[case::postgres(postgres_server_state())]
+#[case::in_memory(in_memory_server_state())]
 async fn can_unlink_device(
     #[future]
     #[case]
@@ -138,8 +140,9 @@ async fn can_unlink_device(
 
 #[tokio::test]
 #[rstest]
-#[case(postgres_server_state())]
-#[case(in_memory_server_state())]
+#[ignore = "requires a postgres test database"]
+#[case::postgres(postgres_server_state())]
+#[case::in_memory(in_memory_server_state())]
 async fn can_delete_device(
     #[future]
     #[case]
@@ -199,8 +202,9 @@ async fn can_delete_device(
 
 #[tokio::test]
 #[rstest]
-#[case(postgres_server_state())]
-#[case(in_memory_server_state())]
+#[ignore = "requires a postgres test database"]
+#[case::postgres(postgres_server_state())]
+#[case::in_memory(in_memory_server_state())]
 async fn can_delete_account(
     #[future]
     #[case]

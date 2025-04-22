@@ -1,5 +1,5 @@
 use async_trait::async_trait;
-use log::error;
+use log::{debug, error};
 use sam_common::{AccountId, DeviceId};
 use sqlx::{postgres::PgDatabaseError, Pool, Postgres};
 
@@ -141,10 +141,28 @@ impl DeviceManager for PostgresDeviceManager {
         {
             Ok(row) => {
                 let password = Password::builder().hash(row.hash).salt(row.salt).build();
+                let device_id = u32::try_from(row.device_id)
+                    .inspect_err(|_| {
+                        error!(
+                            "Error parsing device ID from database - ID was {}",
+                            row.device_id
+                        )
+                    })
+                    .map_err(|_| DeviceManagerError::ServiceUnavailable)?;
+
+                let registration_id = u32::try_from(row.registration_id)
+                    .inspect_err(|_| {
+                        error!(
+                            "Error parsing registration ID from database - ID was {}",
+                            row.registration_id
+                        )
+                    })
+                    .map_err(|_| DeviceManagerError::ServiceUnavailable)?;
+
                 Ok(Device::builder()
                     .name(row.name)
-                    .id((row.device_id as u32).into())
-                    .registration_id((row.registration_id as u32).into())
+                    .id(device_id.into())
+                    .registration_id(registration_id.into())
                     .password(password)
                     .build())
             }
@@ -177,12 +195,24 @@ impl DeviceManager for PostgresDeviceManager {
         {
             Ok(rows) => {
                 if rows.is_empty() {
+                    debug!("Tried to get all devices for {account_id}, but there were none");
                     return Err(DeviceManagerError::NoDevicesFound);
                 }
-                Ok(rows
-                    .iter()
-                    .map(|record| (record.device_id as u32).into())
-                    .collect())
+                let mut results = Vec::new();
+                for result in rows.iter().map(|record| {
+                    u32::try_from(record.device_id)
+                        .inspect_err(|_| {
+                            error!(
+                                "Error parsing device ID from database - ID was {}",
+                                record.device_id
+                            )
+                        })
+                        .map_err(|_| DeviceManagerError::ServiceUnavailable)
+                }) {
+                    results.push(result?.into());
+                }
+
+                Ok(results)
             }
             Err(err) => {
                 error!("Error while getting all device IDs for {account_id}: {err}");

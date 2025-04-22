@@ -31,8 +31,9 @@ pub async fn register_someone(address: String) -> Result<Client<SqliteClientType
 
 #[tokio::test]
 #[rstest]
-#[case(postgres_server_state())]
-#[case(in_memory_server_state())]
+#[ignore = "requires a postgres test database"]
+#[case::postgres(postgres_server_state())]
+#[case::in_memory(in_memory_server_state())]
 pub async fn one_client_can_register(
     #[future]
     #[case]
@@ -53,8 +54,9 @@ pub async fn one_client_can_register(
 
 #[tokio::test]
 #[rstest]
-#[case(postgres_server_state())]
-#[case(in_memory_server_state())]
+#[ignore = "requires a postgres test database"]
+#[case::postgres(postgres_server_state())]
+#[case::in_memory(in_memory_server_state())]
 pub async fn can_delete_account(
     #[future]
     #[case]
@@ -77,8 +79,9 @@ pub async fn can_delete_account(
 
 #[tokio::test]
 #[rstest]
-#[case(postgres_server_state())]
-#[case(in_memory_server_state())]
+#[ignore = "requires a postgres test database"]
+#[case::postgres(postgres_server_state())]
+#[case::in_memory(in_memory_server_state())]
 pub async fn cannot_create_client_without_valid_account(
     #[future]
     #[case]
@@ -134,8 +137,9 @@ pub async fn cannot_create_client_without_valid_account(
 
 #[tokio::test]
 #[rstest]
-#[case(postgres_server_state())]
-#[case(in_memory_server_state())]
+#[ignore = "requires a postgres test database"]
+#[case::postgres(postgres_server_state())]
+#[case::in_memory(in_memory_server_state())]
 pub async fn can_delete_a_device(
     #[future]
     #[case]
@@ -163,8 +167,9 @@ pub async fn can_delete_a_device(
 
 #[tokio::test]
 #[rstest]
-#[case(postgres_server_state())]
-#[case(in_memory_server_state())]
+#[ignore = "requires a postgres test database"]
+#[case::postgres(postgres_server_state())]
+#[case::in_memory(in_memory_server_state())]
 pub async fn alice_can_find_bobs_account_id(
     #[future]
     #[case]
@@ -201,8 +206,9 @@ pub async fn alice_can_find_bobs_account_id(
 
 #[tokio::test]
 #[rstest]
-#[case(postgres_server_state())]
-#[case(in_memory_server_state())]
+#[ignore = "requires a postgres test database"]
+#[case::postgres(postgres_server_state())]
+#[case::in_memory(in_memory_server_state())]
 pub async fn one_client_can_register_with_tls(
     #[future]
     #[case]
@@ -242,8 +248,9 @@ pub async fn one_client_can_register_with_tls(
 
 #[tokio::test]
 #[rstest]
-#[case(postgres_server_state())]
-#[case(in_memory_server_state())]
+#[ignore = "requires a postgres test database"]
+#[case::postgres(postgres_server_state())]
+#[case::in_memory(in_memory_server_state())]
 pub async fn two_clients_cannot_have_the_same_username(
     #[future]
     #[case]
