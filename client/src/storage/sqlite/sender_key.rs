@@ -2,7 +2,7 @@ use async_trait::async_trait;
 use base64::{prelude::BASE64_STANDARD, Engine as _};
 use libsignal_protocol::{ProtocolAddress, SenderKeyRecord, SenderKeyStore, SignalProtocolError};
 use log::debug;
-use sqlx::{Pool, Sqlite};
+use sqlx::{Error, Pool, Sqlite};
 use uuid::Uuid;
 
 use crate::storage::error::DatabaseError;
@@ -84,7 +84,11 @@ impl SenderKeyStore for SqliteSenderKeyStore {
                     .as_slice(),
             )
             .map(Some),
-            Err(_) => Ok(None), // TODO: Mistake?
+            Err(Error::RowNotFound) => Ok(None),
+            Err(err) => Err(SignalProtocolError::ApplicationCallbackError(
+                "store sender key",
+                Box::new(DatabaseError::Database(format!("{err}"))),
+            )), // TODO: Mistake?
         }
     }
 }
