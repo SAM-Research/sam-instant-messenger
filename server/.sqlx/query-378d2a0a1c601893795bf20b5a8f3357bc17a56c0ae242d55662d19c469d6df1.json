@@ -1,0 +1,20 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\n            SELECT provision_expire_seconds \n            FROM device_link_info\n            ",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "provision_expire_seconds",
+        "type_info": "Int8"
+      }
+    ],
+    "parameters": {
+      "Left": []
+    },
+    "nullable": [
+      false
+    ]
+  },
+  "hash": "378d2a0a1c601893795bf20b5a8f3357bc17a56c0ae242d55662d19c469d6df1"
+}

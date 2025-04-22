@@ -1,0 +1,21 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\n            UPDATE device_link_info\n            SET provision_expire_seconds = $1\n            WHERE id = 1\n            ",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        {
+          "Custom": {
+            "name": "uint32",
+            "kind": {
+              "Domain": "Int8"
+            }
+          }
+        }
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "1f9024c715db7d1f26a38b2474603ef337f9b078136f293f6386cf67f049291b"
+}
