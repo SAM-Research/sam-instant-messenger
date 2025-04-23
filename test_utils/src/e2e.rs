@@ -12,6 +12,10 @@ use sam_server::{
             InMemStateType,
         },
         postgres::{
+            keys::{
+                PostgresEcPreKeyManager, PostgresLastResortPqPreKeyManager,
+                PostgresPqPreKeyManager, PostgresSignedPreKeyManager,
+            },
             PostgresAccountManager, PostgresConnector, PostgresDeviceManager, PostgresStateType,
         },
         KeyManager,
@@ -86,15 +90,15 @@ pub async fn postgres_server_state() -> ServerState<PostgresStateType> {
     ServerState::<PostgresStateType>::new(
         OsRng,
         PostgresAccountManager::new(pool.clone()),
-        PostgresDeviceManager::create(pool, "TEST_LINK_SECRET", 30)
+        PostgresDeviceManager::create(pool.clone(), "TEST_LINK_SECRET", 30)
             .await
             .expect("Can save device manager configuration"),
         InMemoryMessageManager::default(),
         KeyManager {
-            pre_keys: InMemoryEcPreKeyManager::default(),
-            pq_pre_keys: InMemoryPqPreKeyManager::default(),
-            signed_pre_keys: InMemorySignedPreKeyManager::default(),
-            last_resort_keys: InMemoryLastResortPqPreKeyManager::default(),
+            pre_keys: PostgresEcPreKeyManager::new(pool.clone()),
+            pq_pre_keys: PostgresPqPreKeyManager::new(pool.clone()),
+            signed_pre_keys: PostgresSignedPreKeyManager::new(pool.clone()),
+            last_resort_keys: PostgresLastResortPqPreKeyManager::new(pool),
         },
     )
 }

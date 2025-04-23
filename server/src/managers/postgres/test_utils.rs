@@ -1,9 +1,7 @@
-use rstest::fixture;
 use sqlx::{Pool, Postgres};
 
 use super::{account::PostgresAccountManager, device::PostgresDeviceManager};
 
-#[fixture]
 pub fn connection_str() -> &'static str {
     "postgres://test:test@127.0.0.1:5432/sam_test_db"
 }

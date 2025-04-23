@@ -24,3 +24,37 @@ CREATE TABLE device_link_info (
     provision_expire_seconds uint32 NOT NULL
 );
 
+CREATE TABLE ec_pre_keys (
+    id          INTEGER PRIMARY KEY NOT NULL GENERATED ALWAYS AS IDENTITY,
+    owner       INTEGER NOT NULL REFERENCES devices(id) ON DELETE CASCADE,
+    key_id      bigint  NOT NULL,
+    public_key  BYTEA   NOT NULL,
+    UNIQUE(owner, key_id)
+);
+
+CREATE TABLE pq_pre_keys (
+    id          INTEGER PRIMARY KEY NOT NULL GENERATED ALWAYS AS IDENTITY,
+    owner       INTEGER NOT NULL REFERENCES devices(id) ON DELETE CASCADE,
+    key_id      bigint  NOT NULL,
+    public_key  BYTEA   NOT NULL,
+    signature   BYTEA   NOT NULL,
+    UNIQUE(owner, key_id)
+);
+
+CREATE TABLE signed_pre_keys (
+    id          INTEGER PRIMARY KEY NOT NULL GENERATED ALWAYS AS IDENTITY,
+    owner       INTEGER NOT NULL UNIQUE REFERENCES devices(id) ON DELETE CASCADE,
+    key_id      bigint  NOT NULL,
+    public_key  BYTEA NOT NULL,
+    signature   BYTEA NOT NULL,
+    UNIQUE(owner, key_id)
+);
+
+CREATE TABLE last_resort_pq_pre_keys (
+    id          INTEGER PRIMARY KEY NOT NULL GENERATED ALWAYS AS IDENTITY,
+    owner       INTEGER NOT NULL UNIQUE REFERENCES devices(id) ON DELETE CASCADE,
+    key_id      bigint  NOT NULL,
+    public_key  BYTEA NOT NULL,
+    signature   BYTEA NOT NULL,
+    UNIQUE(owner, key_id)
+);

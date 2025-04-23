@@ -1,0 +1,35 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\n            SELECT key_id, public_key, signature\n            FROM pq_pre_keys\n            WHERE owner =\n                (SELECT id\n                 FROM devices\n                 WHERE owner = \n                         (SELECT id\n                         FROM accounts\n                         WHERE account_id = $1)\n                   AND devices.device_id = $2)\n            ",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "key_id",
+        "type_info": "Int8"
+      },
+      {
+        "ordinal": 1,
+        "name": "public_key",
+        "type_info": "Bytea"
+      },
+      {
+        "ordinal": 2,
+        "name": "signature",
+        "type_info": "Bytea"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Uuid",
+        "Int8"
+      ]
+    },
+    "nullable": [
+      false,
+      false,
+      false
+    ]
+  },
+  "hash": "bdbd90449987d10f0a413a8f74578107f1c80f9ac526bdcdc77ef192568abf6b"
+}
