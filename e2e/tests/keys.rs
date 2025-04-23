@@ -21,7 +21,6 @@ pub async fn alice_can_upload_keys(
     #[case]
     state: ServerState<impl StateType>,
 ) {
-    _ = env_logger::try_init();
     let address = format!("127.0.0.1:{}", get_next_port());
     let mut server = TestServer::start(&address, None, state.await).await;
 
