@@ -60,7 +60,7 @@ impl EcPreKeyManager for PostgresEcPreKeyManager {
             Err(sqlx::Error::RowNotFound) => Ok(None),
             Err(err) => {
                 error!(
-                    "Error while attempting to fetch a Pre Key for {account_id}.{device_id}: {err}"
+                    "Error while attempting to fetch an EC Pre Key for {account_id}.{device_id}: {err}"
                 );
                 Err(KeyManagerError::ServiceUnavailable)
             }
@@ -95,7 +95,7 @@ impl EcPreKeyManager for PostgresEcPreKeyManager {
         {
             Ok(rows) => Ok(Some(rows.iter().map(|row| row.key_id as u32).collect())),
             Err(err) => {
-                error!("Error getting all pre key ids for {account_id}.{device_id}: {err}");
+                error!("Error getting all EC Pre Key IDs for {account_id}.{device_id}: {err}");
                 Err(KeyManagerError::ServiceUnavailable)
             }
         }

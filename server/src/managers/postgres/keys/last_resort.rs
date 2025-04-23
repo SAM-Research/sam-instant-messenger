@@ -69,7 +69,7 @@ impl LastResortPqPreKeyManager for PostgresLastResortPqPreKeyManager {
             Err(sqlx::Error::RowNotFound) => Err(KeyManagerError::KeyDoesNotExist),
             Err(err) => {
                 error!(
-                    "Error while attempting to fetch a pre key for {account_id}.{device_id}: {err}"
+                    "Error while attempting to fetch a Last Resort PQ Pre Key for {account_id}.{device_id}: {err}"
                 );
                 Err(KeyManagerError::ServiceUnavailable)
             }
@@ -121,7 +121,7 @@ impl LastResortPqPreKeyManager for PostgresLastResortPqPreKeyManager {
         {
             Ok(_) => Ok(()),
             Err(err) => {
-                error!("The database failed to set a last resort PQ pre key for {account_id}.{device_id}: {err}");
+                error!("The database failed to set a Last Resort PQ Pre Key for {account_id}.{device_id}: {err}");
                 Err(KeyManagerError::ServiceUnavailable)
             }
         }
@@ -155,12 +155,12 @@ impl LastResortPqPreKeyManager for PostgresLastResortPqPreKeyManager {
         {
             Ok(res) => {
                 if res.rows_affected() < 1 {
-                    debug!("The database failed to delete a last resort PQ pre key. It may have been deleted already");
+                    debug!("The database failed to delete a last resort PQ Pre Key for {account_id}.{device_id}. It may have been deleted already");
                 }
                 Ok(())
             }
             Err(err) => {
-                error!("Error while removing Last Resort Pq pre key for {account_id}.{device_id}: {err}");
+                error!("Error while removing Last Resort PQ Pre Key for {account_id}.{device_id}: {err}");
                 Err(KeyManagerError::ServiceUnavailable)
             }
         }

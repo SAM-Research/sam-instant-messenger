@@ -68,7 +68,7 @@ impl PqPreKeyManager for PostgresPqPreKeyManager {
             }
             Err(sqlx::Error::RowNotFound) => Err(KeyManagerError::KeyDoesNotExist),
             Err(err) => {
-                error!("Error while attempting to fetch a Pq pre key for {account_id}.{device_id}: {err}");
+                error!("Error while attempting to fetch a PQ Pre Key for {account_id}.{device_id}: {err}");
                 Err(KeyManagerError::ServiceUnavailable)
             }
         }
@@ -102,7 +102,7 @@ impl PqPreKeyManager for PostgresPqPreKeyManager {
         {
             Ok(rows) => Ok(Some(rows.iter().map(|row| row.key_id as u32).collect())),
             Err(err) => {
-                error!("Error getting all PQ pre key ids for {account_id}.{device_id}: {err}");
+                error!("Error getting all PQ Pre Key IDs for {account_id}.{device_id}: {err}");
                 Err(KeyManagerError::ServiceUnavailable)
             }
         }
@@ -148,7 +148,7 @@ impl PqPreKeyManager for PostgresPqPreKeyManager {
         {
             Ok(_) => Ok(()),
             Err(err) => {
-                error!("Failed to insert PQ pre key for {account_id}.{device_id}: {err}");
+                error!("Failed to insert PQ Pre Key for {account_id}.{device_id}: {err}");
                 Err(KeyManagerError::ServiceUnavailable)
             }
         }
@@ -185,12 +185,12 @@ impl PqPreKeyManager for PostgresPqPreKeyManager {
         {
             Ok(res) => {
                 if res.rows_affected() < 1 {
-                    debug!("The database failed to delete a PQ pre key. It may have already been deleted");
+                    debug!("The database failed to delete a PQ Pre Key. It may have already been deleted");
                 }
                 Ok(())
             }
             Err(err) => {
-                error!("Error while removing Pq pre key with ID {id} for {account_id}.{device_id}: {err}");
+                error!("Error while removing Pq Pre Key with ID {id} for {account_id}.{device_id}: {err}");
                 Err(KeyManagerError::ServiceUnavailable)
             }
         }

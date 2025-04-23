@@ -58,7 +58,7 @@ impl SignedPreKeyManager for PostgresSignedPreKeyManager {
                     .key_id
                     .try_into()
                     .map_err(|_| {
-                        error!("Device {device_id} belonging to {account_id} has a signed pre key with an invalid ID '{}' ", row.key_id);
+                        error!("Device {device_id} belonging to {account_id} has a Signed EC Pre Key with an invalid ID '{}' ", row.key_id);
                         KeyManagerError::ServiceUnavailable})?;
                 Ok(SignedEcPreKey {
                     public_key,
@@ -68,7 +68,7 @@ impl SignedPreKeyManager for PostgresSignedPreKeyManager {
             }
             Err(sqlx::Error::RowNotFound) => Err(KeyManagerError::KeyDoesNotExist),
             Err(err) => {
-                error!("Error while attempting to fetch a Signed Pre Key for {account_id}.{device_id}: {err}");
+                error!("Error while attempting to fetch a Signed EC Pre Key for {account_id}.{device_id}: {err}");
                 Err(KeyManagerError::ServiceUnavailable)
             }
         }
@@ -119,7 +119,7 @@ impl SignedPreKeyManager for PostgresSignedPreKeyManager {
         {
             Ok(_) => Ok(()),
             Err(err) => {
-                error!("Failed to insert Signed Pre Key for {account_id}.{device_id}: {err}");
+                error!("Failed to insert Signed EC Pre Key for {account_id}.{device_id}: {err}");
                 Err(KeyManagerError::ServiceUnavailable)
             }
         }
@@ -153,12 +153,14 @@ impl SignedPreKeyManager for PostgresSignedPreKeyManager {
         {
             Ok(res) => {
                 if res.rows_affected() != 1 {
-                    debug!("The database failed to delete a Signed Pre Key for {account_id}.{device_id}. It may have already been deleted");
+                    debug!("The database failed to delete a Signed EC Pre Key for {account_id}.{device_id}. It may have already been deleted");
                 }
                 Ok(())
             }
             Err(err) => {
-                error!("Error while removing Signed pre key for {account_id}.{device_id}: {err}");
+                error!(
+                    "Error while removing Signed EC Pre Key for {account_id}.{device_id}: {err}"
+                );
                 Err(KeyManagerError::ServiceUnavailable)
             }
         }
