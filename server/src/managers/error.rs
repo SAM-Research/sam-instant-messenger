@@ -73,6 +73,7 @@ pub enum KeyManagerError {
     AccountDoesNotExist,
     KeyDoesNotExist,
     Authorization(AuthorizationError),
+    ServiceUnavailable,
 }
 
 impl IntoResponse for KeyManagerError {
@@ -86,6 +87,7 @@ impl IntoResponse for KeyManagerError {
                 (StatusCode::NOT_FOUND, "Key does not exist.").into_response()
             }
             KeyManagerError::Authorization(err) => err.into_response(),
+            KeyManagerError::ServiceUnavailable => StatusCode::SERVICE_UNAVAILABLE.into_response(),
         }
     }
 }
