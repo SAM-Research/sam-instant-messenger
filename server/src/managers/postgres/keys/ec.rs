@@ -59,7 +59,9 @@ impl EcPreKeyManager for PostgresEcPreKeyManager {
             }
             Err(sqlx::Error::RowNotFound) => Ok(None),
             Err(err) => {
-                error!("Error while attempting to fetch a pre key: {err}");
+                error!(
+                    "Error while attempting to fetch a Pre Key for {account_id}.{device_id}: {err}"
+                );
                 Err(KeyManagerError::ServiceUnavailable)
             }
         }
@@ -93,7 +95,7 @@ impl EcPreKeyManager for PostgresEcPreKeyManager {
         {
             Ok(rows) => Ok(Some(rows.iter().map(|row| row.key_id as u32).collect())),
             Err(err) => {
-                error!("Error getting all pre key ids: {err}");
+                error!("Error getting all pre key ids for {account_id}.{device_id}: {err}");
                 Err(KeyManagerError::ServiceUnavailable)
             }
         }
@@ -132,13 +134,15 @@ impl EcPreKeyManager for PostgresEcPreKeyManager {
         {
             Ok(res) => {
                 if res.rows_affected() != 1 {
-                    error!("The database failed to insert an EC pre key");
+                    error!(
+                        "The database failed to insert an EC Pre Key for {account_id}.{device_id}"
+                    );
                     return Err(KeyManagerError::ServiceUnavailable);
                 }
                 Ok(())
             }
             Err(err) => {
-                error!("Failed to insert EC pre key: {err}");
+                error!("Failed to insert EC Pre Key for {account_id}.{device_id}: {err}");
                 Err(KeyManagerError::ServiceUnavailable)
             }
         }
@@ -175,7 +179,7 @@ impl EcPreKeyManager for PostgresEcPreKeyManager {
         {
             Ok(res) => {
                 if res.rows_affected() < 1 {
-                    debug!("The database did not delete an EC pre key. It may have already been deleted");
+                    debug!("The database did not delete an EC Pre Key for {account_id}.{device_id}. It may have already been deleted");
                 }
                 Ok(())
             }

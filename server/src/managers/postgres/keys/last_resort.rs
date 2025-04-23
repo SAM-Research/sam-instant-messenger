@@ -68,7 +68,9 @@ impl LastResortPqPreKeyManager for PostgresLastResortPqPreKeyManager {
             }
             Err(sqlx::Error::RowNotFound) => Err(KeyManagerError::KeyDoesNotExist),
             Err(err) => {
-                error!("Error while attempting to fetch a pre key: {err}");
+                error!(
+                    "Error while attempting to fetch a pre key for {account_id}.{device_id}: {err}"
+                );
                 Err(KeyManagerError::ServiceUnavailable)
             }
         }
@@ -157,7 +159,10 @@ impl LastResortPqPreKeyManager for PostgresLastResortPqPreKeyManager {
                 }
                 Ok(())
             }
-            Err(_) => Err(KeyManagerError::ServiceUnavailable),
+            Err(err) => {
+                error!("Error while removing Last Resort Pq pre key for {account_id}.{device_id}: {err}");
+                Err(KeyManagerError::ServiceUnavailable)
+            }
         }
     }
 }

@@ -68,7 +68,7 @@ impl SignedPreKeyManager for PostgresSignedPreKeyManager {
             }
             Err(sqlx::Error::RowNotFound) => Err(KeyManagerError::KeyDoesNotExist),
             Err(err) => {
-                error!("Error while attempting to fetch a signed pre key: {err}");
+                error!("Error while attempting to fetch a Signed Pre Key for {account_id}.{device_id}: {err}");
                 Err(KeyManagerError::ServiceUnavailable)
             }
         }
@@ -119,7 +119,7 @@ impl SignedPreKeyManager for PostgresSignedPreKeyManager {
         {
             Ok(_) => Ok(()),
             Err(err) => {
-                error!("Failed to insert signed pre key: {err}");
+                error!("Failed to insert Signed Pre Key for {account_id}.{device_id}: {err}");
                 Err(KeyManagerError::ServiceUnavailable)
             }
         }
@@ -153,11 +153,14 @@ impl SignedPreKeyManager for PostgresSignedPreKeyManager {
         {
             Ok(res) => {
                 if res.rows_affected() != 1 {
-                    debug!("The database failed to delete a signed pre key. It may have already been deleted");
+                    debug!("The database failed to delete a Signed Pre Key for {account_id}.{device_id}. It may have already been deleted");
                 }
                 Ok(())
             }
-            Err(_) => Err(KeyManagerError::ServiceUnavailable),
+            Err(err) => {
+                error!("Error while removing Signed pre key for {account_id}.{device_id}: {err}");
+                Err(KeyManagerError::ServiceUnavailable)
+            }
         }
     }
 }

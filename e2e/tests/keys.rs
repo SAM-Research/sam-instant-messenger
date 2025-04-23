@@ -47,5 +47,5 @@ pub async fn alice_can_upload_keys(
         .call()
         .await;
 
-    assert!(publish_keys.inspect_err(|err| println!("{err}")).is_ok())
+    assert!(publish_keys.is_ok())
 }

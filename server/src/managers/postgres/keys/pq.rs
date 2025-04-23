@@ -68,7 +68,7 @@ impl PqPreKeyManager for PostgresPqPreKeyManager {
             }
             Err(sqlx::Error::RowNotFound) => Err(KeyManagerError::KeyDoesNotExist),
             Err(err) => {
-                error!("Error while attempting to fetch a pre key: {err}");
+                error!("Error while attempting to fetch a Pq pre key for {account_id}.{device_id}: {err}");
                 Err(KeyManagerError::ServiceUnavailable)
             }
         }
@@ -102,7 +102,7 @@ impl PqPreKeyManager for PostgresPqPreKeyManager {
         {
             Ok(rows) => Ok(Some(rows.iter().map(|row| row.key_id as u32).collect())),
             Err(err) => {
-                error!("Error getting all PQ pre key ids: {err}");
+                error!("Error getting all PQ pre key ids for {account_id}.{device_id}: {err}");
                 Err(KeyManagerError::ServiceUnavailable)
             }
         }
@@ -148,7 +148,7 @@ impl PqPreKeyManager for PostgresPqPreKeyManager {
         {
             Ok(_) => Ok(()),
             Err(err) => {
-                error!("Failed to insert PQ pre key: {err}");
+                error!("Failed to insert PQ pre key for {account_id}.{device_id}: {err}");
                 Err(KeyManagerError::ServiceUnavailable)
             }
         }
@@ -189,7 +189,10 @@ impl PqPreKeyManager for PostgresPqPreKeyManager {
                 }
                 Ok(())
             }
-            Err(_) => Err(KeyManagerError::ServiceUnavailable),
+            Err(err) => {
+                error!("Error while removing Pq pre key with ID {id} for {account_id}.{device_id}: {err}");
+                Err(KeyManagerError::ServiceUnavailable)
+            }
         }
     }
 }
