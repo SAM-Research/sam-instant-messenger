@@ -1,0 +1,15 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\n            DELETE FROM pq_pre_keys\n            WHERE owner = \n                (SELECT id\n                 FROM devices\n                 WHERE owner = \n                         (SELECT id\n                         FROM accounts\n                         WHERE account_id = $1)\n                   AND devices.device_id = $2)\n            ",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Uuid",
+        "Int8"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "b3af69a2e5eddd570d6cb52178c09427000a53fd53616e4195b79bc78ad4ce3d"
+}
