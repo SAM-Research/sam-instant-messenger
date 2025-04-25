@@ -7,15 +7,13 @@
 
 ```
 $ sam-server --help
-Usage: sam-server [OPTIONS]
+Usage: sam-server [OPTIONS] --database-url <database_url>
 
 Options:
+  -d, --database-url <database_url>
+          PostgreSQL connection url
   -s, --server-address <server_address>
           IP to run server on [default: 127.0.0.1:8080]
-  -l, --link-secret <link_secret>
-          Link secret used to create link signature [default: verysecret]
-  -p, --provision-timeout <provision_timeout>
-          Provision timeout for linking new devices in seconds [default: 600]
   -m, --message-buffer-size <buffer_size>
           How many messages can be in a buffer channel before blocking behaviour [default: 10]
   -c, --config <config>
@@ -24,7 +22,7 @@ Options:
           Print help
 ```
 
-prefix the command with `RUST_LOG=info` if you want the server to output info messages
+prefix the command with `RUST_LOG=info` if you want the server to output info messages or set it in the json config
 
 ## JSON Configuration
 
@@ -38,9 +36,8 @@ where the config looks like this:
 
 ```jsonc
 {
+  "databaseUrl": "postgres://admin:admin@127.0.0.1:5432/samdb", // Address to postgres db
   "address": "127.0.0.1:8080", // Address to run SAM Server on (optional)
-  "linkSecret": "verysecret", // Secret for provision signature (optional)
-  "provisionTimeout": 600, // Seconds before a provision token becomes invalid (optional)
   "messageBufferSize": 10, // Internal message communication, might affect performance of server (optional)
   "logging": "info", // enable logging, uses the same syntax as RUST_LOG (optional)
 
@@ -58,6 +55,10 @@ provide the config in cli arguments with:
 ```sh
 cargo run  --bin sam-server -- --tls-config ./config.json
 ```
+
+## Database setup
+
+to make have an initialized db run the `.\server\database\.init.sql` and insert your link secret and provision timeout in the `device_link_info` table.
 
 # Docker
 

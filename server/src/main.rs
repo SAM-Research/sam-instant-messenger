@@ -8,21 +8,15 @@ use sam_server::{
 };
 
 const DEFAULT_ADDR: &str = "127.0.0.1:8080";
-const DEFAULT_LINK_SECRET: &str = "verysecret";
-const DEFAULT_PROVISION_TIMEOUT_SECS: u32 = 600;
 const DEFAULT_MESSAGE_BUFFER_SIZE: usize = 10;
 
 fn welcome(config: &ServerCliConfig) {
     let addr = config.address.clone().unwrap_or(DEFAULT_ADDR.to_string());
-    let prov_timeout = config
-        .provision_timeout
-        .unwrap_or(DEFAULT_PROVISION_TIMEOUT_SECS);
     let buffer_size = config
         .message_buffer_size
         .unwrap_or(DEFAULT_MESSAGE_BUFFER_SIZE);
     info!("*********Configuration*********");
     info!("Server Address: {addr}");
-    info!("Provision Timeout: {prov_timeout} seconds");
     info!("Message Buffer Size: {buffer_size}");
     if let Some(tls) = &config.tls {
         if let Some(ca) = &tls.ca_cert_path {
@@ -59,24 +53,6 @@ async fn cli() -> Result<(), CliError> {
                 .conflicts_with("config"),
         )
         .arg(
-            Arg::new("link_secret")
-                .short('l')
-                .long("link-secret")
-                .required(false)
-                .help("Link secret used to create link signature")
-                .default_value(DEFAULT_LINK_SECRET)
-                .conflicts_with("config"),
-        )
-        .arg(
-            Arg::new("provision_timeout")
-                .short('p')
-                .long("provision-timeout")
-                .required(false)
-                .help("Provision timeout for linking new devices in seconds")
-                .default_value(DEFAULT_PROVISION_TIMEOUT_SECS.to_string())
-                .conflicts_with("config"),
-        )
-        .arg(
             Arg::new("buffer_size")
                 .short('m')
                 .long("message-buffer-size")
@@ -103,30 +79,12 @@ async fn cli() -> Result<(), CliError> {
             .get_one::<String>("database_url")
             .ok_or(CliError::ArgumentError("Expected Database url".to_string()))?;
         let addr = matches.get_one::<String>("server_address");
-        let link_secret = matches.get_one::<String>("link_secret");
-        let prov_timeout = matches
-            .get_one::<String>("provision_timeout")
-            .ok_or(CliError::ArgumentError(
-                "Expected provision timeout".to_string(),
-            ))?
-            .parse()
-            .map_err(|_| {
-                CliError::ArgumentError("Expected u64 for provision timeout".to_string())
-            })?;
         let buffer_size = matches.get_one::<String>("buffer_size").ok_or(CliError::ArgumentError("Expected buffer size".to_string()))?
         .parse()
         .map_err(|_| {
             CliError::ArgumentError("Expected usize for deniable ratio. On 32 bit target, this is 4 bytes and on a 64 bit target, this is 8 bytes".to_string())
         })?;
-        ServerCliConfig::new(
-            url.clone(),
-            addr.cloned(),
-            link_secret.cloned(),
-            Some(prov_timeout),
-            Some(buffer_size),
-            None,
-            None,
-        )
+        ServerCliConfig::new(url.clone(), addr.cloned(), Some(buffer_size), None, None)
     };
 
     if let Some(filter) = &config.logging {
