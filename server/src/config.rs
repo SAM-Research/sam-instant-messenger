@@ -14,6 +14,7 @@ pub struct ServerConfig<T: StateType> {
 #[derive(Debug, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct ServerCliConfig {
+    pub database_url: String,
     pub address: Option<String>,
     pub link_secret: Option<String>,
     pub provision_timeout: Option<u32>,
@@ -24,6 +25,7 @@ pub struct ServerCliConfig {
 
 impl ServerCliConfig {
     pub fn new(
+        database_url: String,
         address: Option<String>,
         link_secret: Option<String>,
         provision_timeout: Option<u32>,
@@ -32,6 +34,7 @@ impl ServerCliConfig {
         logging: Option<String>,
     ) -> Self {
         Self {
+            database_url,
             address,
             link_secret,
             provision_timeout,

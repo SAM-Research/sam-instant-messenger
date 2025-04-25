@@ -42,6 +42,14 @@ fn welcome(config: &ServerCliConfig) {
 async fn cli() -> Result<(), CliError> {
     let matches = Command::new("sam_server")
         .arg(
+            Arg::new("database_url")
+                .short('d')
+                .long("database-url")
+                .required(true)
+                .help("PostgreSQL connection url")
+                .conflicts_with("config"),
+        )
+        .arg(
             Arg::new("server_address")
                 .short('s')
                 .long("server-address")
@@ -91,6 +99,9 @@ async fn cli() -> Result<(), CliError> {
         let reader = BufReader::new(file);
         ServerCliConfig::load(reader)?
     } else {
+        let url = matches
+            .get_one::<String>("database_url")
+            .ok_or(CliError::ArgumentError("Expected Database url".to_string()))?;
         let addr = matches.get_one::<String>("server_address");
         let link_secret = matches.get_one::<String>("link_secret");
         let prov_timeout = matches
@@ -108,6 +119,7 @@ async fn cli() -> Result<(), CliError> {
             CliError::ArgumentError("Expected usize for deniable ratio. On 32 bit target, this is 4 bytes and on a 64 bit target, this is 8 bytes".to_string())
         })?;
         ServerCliConfig::new(
+            url.clone(),
             addr.cloned(),
             link_secret.cloned(),
             Some(prov_timeout),
@@ -132,17 +144,12 @@ async fn cli() -> Result<(), CliError> {
         None
     };
 
-    let state = ServerState::in_memory(
-        config
-            .link_secret
-            .unwrap_or(DEFAULT_LINK_SECRET.to_string()),
-        config
-            .provision_timeout
-            .unwrap_or(DEFAULT_PROVISION_TIMEOUT_SECS),
-        config
-            .message_buffer_size
-            .unwrap_or(DEFAULT_MESSAGE_BUFFER_SIZE),
-    );
+    let state = match ServerState::connect(&config.database_url, DEFAULT_MESSAGE_BUFFER_SIZE).await
+    {
+        Ok(state) => state,
+        Err(e) => Err(CliError::DatabaseError(e))?,
+    };
+    info!("Database: OK");
 
     let config = ServerConfig {
         state,
