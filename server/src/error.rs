@@ -11,6 +11,7 @@ use log::error;
 
 use sam_common::LibError;
 use sam_net::error::ServerTlsError;
+use sqlx::Error as SqlxError;
 
 pub type Result<T> = std::result::Result<T, ServerError>;
 
@@ -35,6 +36,7 @@ pub enum CliError {
     IoError(std::io::Error),
     #[error(ignore)]
     ArgumentError(String),
+    DatabaseError(SqlxError),
 }
 
 impl IntoResponse for ServerError {

@@ -14,9 +14,8 @@ pub struct ServerConfig<T: StateType> {
 #[derive(Debug, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct ServerCliConfig {
+    pub database_url: String,
     pub address: Option<String>,
-    pub link_secret: Option<String>,
-    pub provision_timeout: Option<u32>,
     pub message_buffer_size: Option<usize>,
     pub tls: Option<TlsConfig>,
     pub logging: Option<String>,
@@ -24,17 +23,15 @@ pub struct ServerCliConfig {
 
 impl ServerCliConfig {
     pub fn new(
+        database_url: String,
         address: Option<String>,
-        link_secret: Option<String>,
-        provision_timeout: Option<u32>,
         message_buffer_size: Option<usize>,
         tls: Option<TlsConfig>,
         logging: Option<String>,
     ) -> Self {
         Self {
+            database_url,
             address,
-            link_secret,
-            provision_timeout,
             message_buffer_size,
             tls,
             logging,

@@ -8,21 +8,15 @@ use sam_server::{
 };
 
 const DEFAULT_ADDR: &str = "127.0.0.1:8080";
-const DEFAULT_LINK_SECRET: &str = "verysecret";
-const DEFAULT_PROVISION_TIMEOUT_SECS: u32 = 600;
 const DEFAULT_MESSAGE_BUFFER_SIZE: usize = 10;
 
 fn welcome(config: &ServerCliConfig) {
     let addr = config.address.clone().unwrap_or(DEFAULT_ADDR.to_string());
-    let prov_timeout = config
-        .provision_timeout
-        .unwrap_or(DEFAULT_PROVISION_TIMEOUT_SECS);
     let buffer_size = config
         .message_buffer_size
         .unwrap_or(DEFAULT_MESSAGE_BUFFER_SIZE);
     info!("*********Configuration*********");
     info!("Server Address: {addr}");
-    info!("Provision Timeout: {prov_timeout} seconds");
     info!("Message Buffer Size: {buffer_size}");
     if let Some(tls) = &config.tls {
         if let Some(ca) = &tls.ca_cert_path {
@@ -42,30 +36,20 @@ fn welcome(config: &ServerCliConfig) {
 async fn cli() -> Result<(), CliError> {
     let matches = Command::new("sam_server")
         .arg(
+            Arg::new("database_url")
+                .short('d')
+                .long("database-url")
+                .required(true)
+                .help("PostgreSQL connection url")
+                .conflicts_with("config"),
+        )
+        .arg(
             Arg::new("server_address")
                 .short('s')
                 .long("server-address")
                 .required(false)
                 .help("IP to run server on")
                 .default_value(DEFAULT_ADDR)
-                .conflicts_with("config"),
-        )
-        .arg(
-            Arg::new("link_secret")
-                .short('l')
-                .long("link-secret")
-                .required(false)
-                .help("Link secret used to create link signature")
-                .default_value(DEFAULT_LINK_SECRET)
-                .conflicts_with("config"),
-        )
-        .arg(
-            Arg::new("provision_timeout")
-                .short('p')
-                .long("provision-timeout")
-                .required(false)
-                .help("Provision timeout for linking new devices in seconds")
-                .default_value(DEFAULT_PROVISION_TIMEOUT_SECS.to_string())
                 .conflicts_with("config"),
         )
         .arg(
@@ -91,30 +75,16 @@ async fn cli() -> Result<(), CliError> {
         let reader = BufReader::new(file);
         ServerCliConfig::load(reader)?
     } else {
+        let url = matches
+            .get_one::<String>("database_url")
+            .ok_or(CliError::ArgumentError("Expected Database url".to_string()))?;
         let addr = matches.get_one::<String>("server_address");
-        let link_secret = matches.get_one::<String>("link_secret");
-        let prov_timeout = matches
-            .get_one::<String>("provision_timeout")
-            .ok_or(CliError::ArgumentError(
-                "Expected provision timeout".to_string(),
-            ))?
-            .parse()
-            .map_err(|_| {
-                CliError::ArgumentError("Expected u64 for provision timeout".to_string())
-            })?;
         let buffer_size = matches.get_one::<String>("buffer_size").ok_or(CliError::ArgumentError("Expected buffer size".to_string()))?
         .parse()
         .map_err(|_| {
             CliError::ArgumentError("Expected usize for deniable ratio. On 32 bit target, this is 4 bytes and on a 64 bit target, this is 8 bytes".to_string())
         })?;
-        ServerCliConfig::new(
-            addr.cloned(),
-            link_secret.cloned(),
-            Some(prov_timeout),
-            Some(buffer_size),
-            None,
-            None,
-        )
+        ServerCliConfig::new(url.clone(), addr.cloned(), Some(buffer_size), None, None)
     };
 
     if let Some(filter) = &config.logging {
@@ -132,17 +102,12 @@ async fn cli() -> Result<(), CliError> {
         None
     };
 
-    let state = ServerState::in_memory(
-        config
-            .link_secret
-            .unwrap_or(DEFAULT_LINK_SECRET.to_string()),
-        config
-            .provision_timeout
-            .unwrap_or(DEFAULT_PROVISION_TIMEOUT_SECS),
-        config
-            .message_buffer_size
-            .unwrap_or(DEFAULT_MESSAGE_BUFFER_SIZE),
-    );
+    let state = match ServerState::connect(&config.database_url, DEFAULT_MESSAGE_BUFFER_SIZE).await
+    {
+        Ok(state) => state,
+        Err(e) => Err(CliError::DatabaseError(e))?,
+    };
+    info!("Database: OK");
 
     let config = ServerConfig {
         state,
