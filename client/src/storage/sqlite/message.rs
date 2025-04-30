@@ -49,15 +49,14 @@ impl MessageStore for SqliteMessageStore {
         .map(|_| ())
         .inspect_err(|e| debug!("{e}"))
         .map_err(|err| DatabaseError::Database(format!("{err}")));
-        match res {
-            Ok(()) => self
-                .sender
-                .send(envelope)
-                .inspect_err(|e| debug!("{e}"))
-                .map_err(|_| MessageStoreError::SendError)
-                .map(|_| ()),
+        let send_res = match res {
+            Ok(()) => self.sender.send(envelope),
             Err(e) => Err(e)?,
+        };
+        if let Err(e) = send_res {
+            debug!("No receivers on broadcast channel: {e}");
         }
+        Ok(())
     }
     fn subscribe(&self) -> Receiver<DecryptedEnvelope> {
         self.sender.subscribe()
@@ -120,5 +119,42 @@ mod test {
         assert!(*envelope.content_bytes() == vec![55, 66, 77]);
         assert!(envelope.source_account_id() == account_id);
         assert!(envelope.source_device_id() == device_id);
+    }
+
+    #[tokio::test]
+    async fn message_sender_persists_after_dead_receiver() {
+        let _ = env_logger::try_init();
+        let mut csprng = OsRng;
+        let mut store = SqliteStoreConfig::in_memory(10)
+            .await
+            .create_store(
+                IdentityKeyPair::generate(&mut csprng),
+                RegistrationId::generate(&mut csprng),
+            )
+            .await
+            .expect("Can create store");
+
+        {
+            let _ = store.message_store.subscribe();
+        }
+
+        let account_id = AccountId::generate();
+        let device_id: DeviceId = 1.into();
+        store
+            .contact_store
+            .add_device(account_id, device_id)
+            .await
+            .expect("Can add device");
+        store
+            .message_store
+            .store_message(
+                DecryptedEnvelope::builder()
+                    .content(vec![55, 66, 77])
+                    .source_account_id(account_id)
+                    .source_device_id(device_id)
+                    .build(),
+            )
+            .await
+            .expect("Can store message");
     }
 }
