@@ -28,7 +28,6 @@ pub enum ContactStoreError {
 #[derive(Debug, Display, Error, From)]
 pub enum MessageStoreError {
     Database(DatabaseError),
-    SendError,
 }
 
 #[derive(Debug, Display, Error, From)]

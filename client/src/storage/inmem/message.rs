@@ -29,11 +29,10 @@ impl MessageStore for InMemoryMessageStore {
         envelope: DecryptedEnvelope,
     ) -> Result<(), MessageStoreError> {
         self.messages.push(envelope.clone());
-        self.sender
-            .send(envelope)
-            .inspect_err(|e| debug!("{e}"))
-            .map_err(|_| MessageStoreError::SendError)
-            .map(|_| ())
+        if let Err(e) = self.sender.send(envelope).inspect_err(|e| debug!("{e}")) {
+            debug!("No receivers on broadcast channel: {e}");
+        }
+        Ok(())
     }
     fn subscribe(&self) -> Receiver<DecryptedEnvelope> {
         self.sender.subscribe()
