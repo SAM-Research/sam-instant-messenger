@@ -23,7 +23,7 @@ pub async fn start_server<T: StateType>(config: ServerConfig<T>) -> Result<(), s
     let state = config.state;
 
     let app = router()
-        .route("/hello", get(|| async { "Hello From Sam Server" }))
+        .route("/health", get(|| async { "OK" }))
         .layer(from_fn(log_request))
         .with_state(state.clone());
 
