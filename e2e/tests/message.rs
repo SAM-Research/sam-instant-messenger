@@ -104,7 +104,7 @@ async fn test_alice_send_to_bob_offline(
         let mut alice = client(&address, "alice device").await;
         let mut bob = client(&address, "bob device").await;
 
-        let bob_id = bob.account_id().await.expect("Bob can get his id");
+        let bob_id = bob.account_id();
 
         bob.disconnect().await.expect("Bob can disconnect");
 
@@ -156,7 +156,7 @@ async fn test_alice_send_to_bob_two_devices(
             .create_provision()
             .await
             .expect("bob can init provisioning");
-        let bob_id = bob.account_id().await.expect("Bob can get account id");
+        let bob_id = bob.account_id();
 
         let mut bob_device = client_device(
             &address,
@@ -220,7 +220,7 @@ async fn test_alice_send_to_bob_missing_devices(
             .create_provision()
             .await
             .expect("bob can init provisioning");
-        let bob_id = bob.account_id().await.expect("Bob can get account id");
+        let bob_id = bob.account_id();
 
         alice
             .send_message(bob_id, "Hello bob!")
@@ -271,7 +271,7 @@ async fn test_alice_send_to_bob_extra_devices(
             .create_provision()
             .await
             .expect("bob can init provisioning");
-        let bob_id = bob.account_id().await.expect("Bob can get account id");
+        let bob_id = bob.account_id();
 
         let mut bob_device = client_device(
             &address,
@@ -354,7 +354,7 @@ async fn test_alice_send_to_bob_and_self(
             .create_provision()
             .await
             .expect("bob can init provisioning");
-        let bob_id = bob.account_id().await.expect("Bob can get account id");
+        let bob_id = bob.account_id();
 
         let mut alice_device = client_device(
             &address,
@@ -427,7 +427,7 @@ async fn test_alice_send_to_bob_with_tls(
         let mut alice = tls_client(&address, "alice device", mutual_config.clone()).await;
         let mut bob = tls_client(&address, "bob device", mutual_config).await;
 
-        let bob_id = bob.account_id().await.expect("Bob can get his id");
+        let bob_id = bob.account_id();
 
         let mut bob_recv = bob.subscribe();
 
@@ -507,8 +507,8 @@ async fn test_ongoing_communication<'a>(
         let mut alice = client(&address, "alice device").await;
         let mut bob = client(&address, "bob device").await;
 
-        let alice_id = alice.account_id().await.expect("Alice can get id");
-        let bob_id = bob.account_id().await.expect("Bob can get id");
+        let alice_id = alice.account_id();
+        let bob_id = bob.account_id();
 
         let mut alice_recv = alice.subscribe();
         let mut bob_recv = bob.subscribe();
@@ -585,10 +585,7 @@ async fn sqlite_stores_alice_send_to_bob(
             .await
             .unwrap();
 
-        alice
-            .send_message(bob.account_id().await.unwrap(), "Hello")
-            .await
-            .unwrap();
+        alice.send_message(bob.account_id(), "Hello").await.unwrap();
     })
     .await
     .expect("Test took to long to complete")

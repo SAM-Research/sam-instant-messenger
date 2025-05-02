@@ -65,6 +65,8 @@ pub struct Client<T: ClientType> {
     protocol_client: T::ProtocolClient,
     envelope_queue: MpscReceiver<ServerEnvelope>,
     rng: T::Rng,
+    account_id: AccountId,
+    device_id: DeviceId,
 }
 
 #[bon]
@@ -99,7 +101,8 @@ impl<T: ClientType> Client<T> {
             &mut rng,
         )
         .await?;
-
+        let account_id = store.account_store.get_account_id().await?;
+        let device_id = store.account_store.get_device_id().await?;
         let mut protocol_client = protocol_config
             .create(
                 store.account_store.get_account_id().await?,
@@ -116,6 +119,8 @@ impl<T: ClientType> Client<T> {
             protocol_client,
             envelope_queue: queue,
             rng,
+            account_id,
+            device_id,
         })
     }
 
@@ -149,7 +154,8 @@ impl<T: ClientType> Client<T> {
             &mut rng,
         )
         .await?;
-
+        let account_id = store.account_store.get_account_id().await?;
+        let device_id = store.account_store.get_device_id().await?;
         let mut protocol_client = protocol_config
             .create(
                 store.account_store.get_account_id().await?,
@@ -165,6 +171,8 @@ impl<T: ClientType> Client<T> {
             api_client,
             envelope_queue: queue,
             rng,
+            account_id,
+            device_id,
         })
     }
 
@@ -183,21 +191,25 @@ impl<T: ClientType> Client<T> {
             .create(account_id, device_id, password)
             .await?;
         let queue = protocol_client.connect().await?;
+        let account_id = store.account_store.get_account_id().await?;
+        let device_id = store.account_store.get_device_id().await?;
         Ok(Self {
             store,
             protocol_client,
             api_client: api_client_config.create().await?,
             envelope_queue: queue,
             rng,
+            account_id,
+            device_id,
         })
     }
 
-    pub async fn account_id(&self) -> Result<AccountId, ClientError> {
-        Ok(self.store.account_store.get_account_id().await?)
+    pub fn account_id(&self) -> AccountId {
+        self.account_id
     }
 
-    pub async fn device_id(&self) -> Result<DeviceId, ClientError> {
-        Ok(self.store.account_store.get_device_id().await?)
+    pub fn device_id(&self) -> DeviceId {
+        self.device_id
     }
 
     async fn password(&self) -> Result<String, ClientError> {
@@ -215,19 +227,9 @@ impl<T: ClientType> Client<T> {
     /// Delete Account and consumes the client.
     /// If account deletion fails, the client is returned along with the error.
     pub async fn delete_account(self) -> Result<(), (Self, ClientError)> {
-        let account_id = self.account_id().await;
-        let device_id = self.device_id().await;
+        let account_id = self.account_id;
+        let device_id = self.device_id;
         let password = self.password().await;
-
-        let account_id = match account_id {
-            Ok(id) => id,
-            Err(err) => return Err((self, err)),
-        };
-
-        let device_id = match device_id {
-            Ok(id) => id,
-            Err(err) => return Err((self, err)),
-        };
 
         let password = match password {
             Ok(pwd) => pwd,
@@ -251,17 +253,9 @@ impl<T: ClientType> Client<T> {
     ///
     /// See `unlink_device` if you want to delete another device.
     pub async fn delete_device(self) -> Result<(), (Self, ClientError)> {
-        let account_id = self.account_id().await;
-        let device_id = self.device_id().await;
+        let account_id = self.account_id;
+        let device_id = self.device_id;
         let password = self.password().await;
-
-        let Ok(account_id) = account_id else {
-            return Err((self, account_id.unwrap_err()));
-        };
-
-        let Ok(device_id) = device_id else {
-            return Err((self, device_id.unwrap_err()));
-        };
 
         let Ok(password) = password else {
             return Err((self, password.unwrap_err()));
@@ -284,8 +278,8 @@ impl<T: ClientType> Client<T> {
     pub async fn unlink_device(self, device_id: DeviceId) -> Result<(), ClientError> {
         self.api_client
             .delete_device(
-                self.account_id().await?,
-                self.device_id().await?,
+                self.account_id,
+                self.device_id,
                 &self.password().await?,
                 device_id,
             )
@@ -298,8 +292,8 @@ impl<T: ClientType> Client<T> {
         let account_id = self
             .api_client
             .get_user_account_id(
-                self.account_id().await?,
-                self.device_id().await?,
+                self.account_id,
+                self.device_id,
                 &self.password().await?,
                 username,
             )
@@ -396,11 +390,7 @@ impl<T: ClientType> Client<T> {
     pub async fn create_provision(&mut self) -> Result<LinkDeviceToken, ClientError> {
         Ok(self
             .api_client
-            .provision_device(
-                self.account_id().await?,
-                self.device_id().await?,
-                &self.password().await?,
-            )
+            .provision_device(self.account_id, self.device_id, &self.password().await?)
             .await?)
     }
 }
