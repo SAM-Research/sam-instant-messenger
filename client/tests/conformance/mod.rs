@@ -18,6 +18,7 @@ async fn sqlite() -> SqliteStore {
     let registration_id = 0u32;
     SqliteStoreConfig::in_memory(10)
         .await
+        .expect("can create inmemory")
         .create_store(key_pair, registration_id)
         .await
         .unwrap()

@@ -32,7 +32,9 @@ async fn can_link_device(
     let username = Uuid::new_v4().to_string();
     let device_name = "Alice's Device";
 
-    let store_config = SqliteStoreConfig::in_memory(10).await;
+    let store_config = SqliteStoreConfig::in_memory(10)
+        .await
+        .expect("can create inmemory");
     let protocol_config = WebSocketProtocolClientConfig::new(address.to_owned(), 10);
     let api_client_config = HttpClientConfig::new(address.to_owned());
 
@@ -51,7 +53,9 @@ async fn can_link_device(
         .await
         .expect("Can create a link token");
 
-    let store_config = SqliteStoreConfig::in_memory(10).await;
+    let store_config = SqliteStoreConfig::in_memory(10)
+        .await
+        .expect("can create inmemory");
     let protocol_config = WebSocketProtocolClientConfig::new(address.to_owned(), 10);
     let api_client_config = HttpClientConfig::new(address.to_owned());
     let id_key_pair = alice
@@ -92,7 +96,9 @@ async fn can_unlink_device(
     let username = Uuid::new_v4().to_string();
     let device_name = "Alice's Device";
 
-    let store_config = SqliteStoreConfig::in_memory(10).await;
+    let store_config = SqliteStoreConfig::in_memory(10)
+        .await
+        .expect("can create inmemory");
     let protocol_config = WebSocketProtocolClientConfig::new(address.to_owned(), 10);
     let api_client_config = HttpClientConfig::new(address.to_owned());
 
@@ -111,7 +117,9 @@ async fn can_unlink_device(
         .await
         .expect("Can create a link token");
 
-    let store_config = SqliteStoreConfig::in_memory(10).await;
+    let store_config = SqliteStoreConfig::in_memory(10)
+        .await
+        .expect("can create inmemory");
     let protocol_config = WebSocketProtocolClientConfig::new(address.to_owned(), 10);
     let api_client_config = HttpClientConfig::new(address.to_owned());
     let id_key_pair = alice
@@ -157,7 +165,9 @@ async fn can_delete_device(
     let username = Uuid::new_v4().to_string();
     let device_name = "Alice's Device";
 
-    let store_config = SqliteStoreConfig::in_memory(10).await;
+    let store_config = SqliteStoreConfig::in_memory(10)
+        .await
+        .expect("can create inmemory");
     let protocol_config = WebSocketProtocolClientConfig::new(address.to_owned(), 10);
     let api_client_config = HttpClientConfig::new(address.to_owned());
 
@@ -176,7 +186,9 @@ async fn can_delete_device(
         .await
         .expect("Can create a link token");
 
-    let store_config = SqliteStoreConfig::in_memory(10).await;
+    let store_config = SqliteStoreConfig::in_memory(10)
+        .await
+        .expect("can create inmemory");
     let protocol_config = WebSocketProtocolClientConfig::new(address.to_owned(), 10);
     let api_client_config = HttpClientConfig::new(address.to_owned());
     let id_key_pair = alice
@@ -219,7 +231,9 @@ async fn can_delete_account(
     let username = Uuid::new_v4().to_string();
     let device_name = "Alice's Device";
 
-    let store_config = SqliteStoreConfig::in_memory(10).await;
+    let store_config = SqliteStoreConfig::in_memory(10)
+        .await
+        .expect("can create inmemory");
     let protocol_config = WebSocketProtocolClientConfig::new(address.to_owned(), 10);
     let api_client_config = HttpClientConfig::new(address.to_owned());
 

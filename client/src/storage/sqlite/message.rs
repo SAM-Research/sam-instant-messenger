@@ -83,6 +83,7 @@ mod test {
         let mut csprng = OsRng;
         let mut store = SqliteStoreConfig::in_memory(10)
             .await
+            .expect("can create inmemory")
             .create_store(
                 IdentityKeyPair::generate(&mut csprng),
                 RegistrationId::generate(&mut csprng),
@@ -127,6 +128,7 @@ mod test {
         let mut csprng = OsRng;
         let mut store = SqliteStoreConfig::in_memory(10)
             .await
+            .expect("can create inmemory")
             .create_store(
                 IdentityKeyPair::generate(&mut csprng),
                 RegistrationId::generate(&mut csprng),
