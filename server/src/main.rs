@@ -128,6 +128,6 @@ pub async fn main() {
     let _ = env_logger::try_init();
     match res {
         Ok(_) => info!("Goodbye!"),
-        Err(e) => error!("Fatal Proxy Error: {}", e),
+        Err(e) => error!("Fatal Server Error: {}", e),
     }
 }

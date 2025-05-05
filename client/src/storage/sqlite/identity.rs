@@ -76,8 +76,8 @@ impl SqliteIdentityKeyStore {
         Ok(id_store)
     }
 
-    pub async fn load(database: Pool<Sqlite>) -> Result<Self, StoreCreationError> {
-        Ok(Self { database })
+    pub fn load(database: Pool<Sqlite>) -> Self {
+        Self { database }
     }
 }
 

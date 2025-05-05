@@ -48,45 +48,45 @@ impl StoreType for SqliteStoreType {
 }
 
 pub type SqliteStore = Store<SqliteStoreType>;
-#[derive(Debug)]
+
 pub struct SqliteStoreConfig {
-    url: String,
-    message_buffer_size: usize,
+    buffer_size: usize,
+    connector: SqliteConnector,
 }
 
 impl SqliteStoreConfig {
-    pub fn new(url: String, message_buffer_size: usize) -> Self {
+    pub fn new(connector: SqliteConnector, buffer_size: usize) -> Self {
         Self {
-            url,
-            message_buffer_size,
+            buffer_size,
+            connector,
         }
     }
 
-    pub async fn in_memory(message_buffer_size: usize) -> Self {
-        Self {
-            url: "sqlite::memory:".to_owned(),
-            message_buffer_size,
-        }
+    pub async fn in_memory(buffer_size: usize) -> Result<Self, StoreCreationError> {
+        let connector = SqliteConnector::migrate("sqlite::memory:").await?;
+        Ok(Self {
+            buffer_size,
+            connector,
+        })
     }
+}
 
-    /// Load an existing database.
-    pub async fn load(self) -> Result<SqliteStore, StoreCreationError> {
-        let conn = SqliteConnector::connect(&self.url).await?;
-
-        Ok(SqliteStore::builder()
-            .contact_store(SqliteContactStore::new(conn.pool()))
-            .account_store(SqliteAccountStore::new(conn.pool()))
-            .pre_key_store(SqlitePreKeyStore::new(conn.pool()))
-            .signed_pre_key_store(SqliteSignedPreKeyStore::new(conn.pool()))
-            .kyber_pre_key_store(SqliteKyberPreKeyStore::new(conn.pool()))
-            .sender_key_store(SqliteSenderKeyStore::new(conn.pool()))
-            .session_store(SqliteSessionStore::new(conn.pool()))
+impl From<SqliteStoreConfig> for SqliteStore {
+    fn from(val: SqliteStoreConfig) -> Self {
+        SqliteStore::builder()
+            .contact_store(SqliteContactStore::new(val.connector.pool()))
+            .account_store(SqliteAccountStore::new(val.connector.pool()))
+            .pre_key_store(SqlitePreKeyStore::new(val.connector.pool()))
+            .signed_pre_key_store(SqliteSignedPreKeyStore::new(val.connector.pool()))
+            .kyber_pre_key_store(SqliteKyberPreKeyStore::new(val.connector.pool()))
+            .sender_key_store(SqliteSenderKeyStore::new(val.connector.pool()))
+            .session_store(SqliteSessionStore::new(val.connector.pool()))
             .message_store(SqliteMessageStore::new(
-                conn.pool(),
-                self.message_buffer_size,
+                val.connector.pool(),
+                val.buffer_size,
             ))
-            .identity_key_store(SqliteIdentityKeyStore::load(conn.into()).await?)
-            .build())
+            .identity_key_store(SqliteIdentityKeyStore::load(val.connector.into()))
+            .build()
     }
 }
 
@@ -100,22 +100,25 @@ impl StoreConfig for SqliteStoreConfig {
         key_pair: IdentityKeyPair,
         registration_id: ID,
     ) -> Result<SqliteStore, StoreCreationError> {
-        let conn = SqliteConnector::migrate(&self.url).await?;
-
         Ok(SqliteStore::builder()
-            .contact_store(SqliteContactStore::new(conn.pool()))
-            .account_store(SqliteAccountStore::new(conn.pool()))
-            .pre_key_store(SqlitePreKeyStore::new(conn.pool()))
-            .signed_pre_key_store(SqliteSignedPreKeyStore::new(conn.pool()))
-            .kyber_pre_key_store(SqliteKyberPreKeyStore::new(conn.pool()))
-            .sender_key_store(SqliteSenderKeyStore::new(conn.pool()))
-            .session_store(SqliteSessionStore::new(conn.pool()))
+            .contact_store(SqliteContactStore::new(self.connector.pool()))
+            .account_store(SqliteAccountStore::new(self.connector.pool()))
+            .pre_key_store(SqlitePreKeyStore::new(self.connector.pool()))
+            .signed_pre_key_store(SqliteSignedPreKeyStore::new(self.connector.pool()))
+            .kyber_pre_key_store(SqliteKyberPreKeyStore::new(self.connector.pool()))
+            .sender_key_store(SqliteSenderKeyStore::new(self.connector.pool()))
+            .session_store(SqliteSessionStore::new(self.connector.pool()))
             .message_store(SqliteMessageStore::new(
-                conn.pool(),
-                self.message_buffer_size,
+                self.connector.pool(),
+                self.buffer_size,
             ))
             .identity_key_store(
-                SqliteIdentityKeyStore::new(conn.into(), key_pair, registration_id.into()).await?,
+                SqliteIdentityKeyStore::new(
+                    self.connector.into(),
+                    key_pair,
+                    registration_id.into(),
+                )
+                .await?,
             )
             .build())
     }
@@ -128,14 +131,19 @@ mod test {
     use sam_common::address::RegistrationId;
     use tempfile::NamedTempFile;
 
-    use crate::storage::{SqliteStoreConfig, StoreConfig};
+    use crate::storage::{
+        sqlite::sqlite_connector::SqliteConnector, SqliteStoreConfig, StoreConfig,
+    };
 
     #[tokio::test]
     async fn sqlite_database_file_can_be_created() {
         let mut csprng = OsRng;
         let temp = NamedTempFile::new().expect("Can create tempfile");
         let path = format!("sqlite://{}?mode=rwc", temp.path().to_string_lossy());
-        let store = SqliteStoreConfig::new(path, 10);
+        let connector = SqliteConnector::migrate(&path)
+            .await
+            .expect("can create connector");
+        let store = SqliteStoreConfig::new(connector, 10);
         let key_pair = IdentityKeyPair::generate(&mut csprng);
         let registration_id = RegistrationId::generate(&mut csprng);
         assert!(store.create_store(key_pair, registration_id).await.is_ok());
@@ -144,7 +152,9 @@ mod test {
     #[tokio::test]
     async fn sqlite_in_memory_database_can_be_created() {
         let mut csprng = OsRng;
-        let store = SqliteStoreConfig::new("sqlite::memory:".to_owned(), 10);
+        let store = SqliteStoreConfig::in_memory(10)
+            .await
+            .expect("can create inmemory");
         let key_pair = IdentityKeyPair::generate(&mut csprng);
         let registration_id = RegistrationId::generate(&mut csprng);
         assert!(store.create_store(key_pair, registration_id).await.is_ok());
@@ -155,7 +165,10 @@ mod test {
         let mut csprng = OsRng;
         let temp = NamedTempFile::new().expect("Can create tempfile");
         let path = format!("sqlite://{}?mode=rwc", temp.path().to_string_lossy());
-        let config = SqliteStoreConfig::new(path.clone(), 10);
+        let connector = SqliteConnector::migrate(&path)
+            .await
+            .expect("can create connector");
+        let config = SqliteStoreConfig::new(connector, 10);
         let key_pair = IdentityKeyPair::generate(&mut csprng);
         let registration_id = RegistrationId::generate(&mut csprng);
         let store = config
@@ -165,6 +178,6 @@ mod test {
 
         drop(store);
 
-        assert!(SqliteStoreConfig::new(path, 10).load().await.is_ok());
+        assert!(SqliteConnector::connect(&path).await.is_ok());
     }
 }
