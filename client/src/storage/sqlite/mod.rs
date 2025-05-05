@@ -71,21 +71,21 @@ impl SqliteStoreConfig {
     }
 }
 
-impl Into<SqliteStore> for SqliteStoreConfig {
-    fn into(self) -> SqliteStore {
+impl From<SqliteStoreConfig> for SqliteStore {
+    fn from(val: SqliteStoreConfig) -> Self {
         SqliteStore::builder()
-            .contact_store(SqliteContactStore::new(self.connector.pool()))
-            .account_store(SqliteAccountStore::new(self.connector.pool()))
-            .pre_key_store(SqlitePreKeyStore::new(self.connector.pool()))
-            .signed_pre_key_store(SqliteSignedPreKeyStore::new(self.connector.pool()))
-            .kyber_pre_key_store(SqliteKyberPreKeyStore::new(self.connector.pool()))
-            .sender_key_store(SqliteSenderKeyStore::new(self.connector.pool()))
-            .session_store(SqliteSessionStore::new(self.connector.pool()))
+            .contact_store(SqliteContactStore::new(val.connector.pool()))
+            .account_store(SqliteAccountStore::new(val.connector.pool()))
+            .pre_key_store(SqlitePreKeyStore::new(val.connector.pool()))
+            .signed_pre_key_store(SqliteSignedPreKeyStore::new(val.connector.pool()))
+            .kyber_pre_key_store(SqliteKyberPreKeyStore::new(val.connector.pool()))
+            .sender_key_store(SqliteSenderKeyStore::new(val.connector.pool()))
+            .session_store(SqliteSessionStore::new(val.connector.pool()))
             .message_store(SqliteMessageStore::new(
-                self.connector.pool(),
-                self.buffer_size,
+                val.connector.pool(),
+                val.buffer_size,
             ))
-            .identity_key_store(SqliteIdentityKeyStore::load(self.connector.into()))
+            .identity_key_store(SqliteIdentityKeyStore::load(val.connector.into()))
             .build()
     }
 }
