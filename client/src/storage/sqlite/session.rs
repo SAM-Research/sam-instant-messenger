@@ -52,7 +52,11 @@ impl SessionStore for SqliteSessionStore {
                     .as_slice(),
             )
             .map(Some),
-            Err(_) => Ok(None),
+            Err(sqlx::Error::RowNotFound) => Ok(None),
+            Err(err) => Err(SignalProtocolError::ApplicationCallbackError(
+                "load session from database",
+                Box::new(DatabaseError::Database(err.to_string())),
+            )),
         }
     }
     async fn store_session(
