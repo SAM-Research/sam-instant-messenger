@@ -107,6 +107,7 @@ mod test {
                     .content(vec![55, 66, 77])
                     .source_account_id(account_id)
                     .source_device_id(device_id)
+                    .timestamp(0)
                     .build(),
             )
             .await
@@ -154,6 +155,7 @@ mod test {
                     .content(vec![55, 66, 77])
                     .source_account_id(account_id)
                     .source_device_id(device_id)
+                    .timestamp(0)
                     .build(),
             )
             .await

@@ -9,7 +9,7 @@ use log::debug;
 use rand::{CryptoRng, Rng};
 use sam_common::{
     sam_message::{ClientEnvelope, SamMessage, SamMessageType, ServerEnvelope},
-    AccountId,
+    time_now_millis, AccountId,
 };
 
 use crate::storage::{AccountStore, ContactStore, Store, StoreType};
@@ -143,6 +143,7 @@ pub async fn decrypt<T: Rng + CryptoRng + Default>(
         .source_account_id(source)
         .source_device_id(envelope.source_device_id.into())
         .content(bytes)
+        .timestamp(time_now_millis())
         .build())
 }
 
