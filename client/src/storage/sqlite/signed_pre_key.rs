@@ -82,8 +82,9 @@ impl SignedPreKeyStore for SqliteSignedPreKeyStore {
                     Box::new(err),
                 )
             }),
+            Err(sqlx::Error::RowNotFound) => Err(SignalProtocolError::InvalidSignedPreKeyId),
             Err(err) => Err(SignalProtocolError::ApplicationCallbackError(
-                "save signed pre key",
+                "get signed pre key",
                 Box::new(DatabaseError::Database(format!("{err}"))),
             )),
         }

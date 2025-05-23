@@ -76,6 +76,7 @@ impl PreKeyStore for SqlitePreKeyStore {
                     Box::new(err),
                 )
             }),
+            Err(sqlx::Error::RowNotFound) => Err(SignalProtocolError::InvalidPreKeyId),
 
             Err(err) => Err(SignalProtocolError::ApplicationCallbackError(
                 "save pre key",

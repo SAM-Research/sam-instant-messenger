@@ -76,7 +76,11 @@ impl KyberPreKeyStore for SqliteKyberPreKeyStore {
                     })?
                     .as_slice(),
             ),
-            Err(_) => Err(SignalProtocolError::InvalidKyberPreKeyId),
+            Err(sqlx::Error::RowNotFound) => Err(SignalProtocolError::InvalidKyberPreKeyId),
+            Err(err) => Err(SignalProtocolError::ApplicationCallbackError(
+                "get kyber pre key",
+                Box::new(DatabaseError::Database(format!("{err}"))),
+            )),
         }
     }
 
