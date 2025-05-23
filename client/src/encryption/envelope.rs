@@ -6,6 +6,7 @@ pub struct DecryptedEnvelope {
     content: Vec<u8>,
     source_account_id: AccountId,
     source_device_id: DeviceId,
+    timestamp: u128,
 }
 
 impl DecryptedEnvelope {
@@ -25,5 +26,9 @@ impl DecryptedEnvelope {
 
     pub fn source_device_id(&self) -> DeviceId {
         self.source_device_id
+    }
+
+    pub fn timestamp(&self) -> u128 {
+        self.timestamp
     }
 }
