@@ -51,7 +51,7 @@ async fn tls_client(
 
 #[tokio::main]
 async fn main() {
-    let millis = 5;
+    let millis = 5000;
     env_logger::builder()
         .format(|buf: &mut Formatter, record: &log::Record| {
             let now = time_now_millis();
