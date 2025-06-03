@@ -122,6 +122,9 @@ async fn cli() -> Result<(), CliError> {
     Ok(start_server(config).await?)
 }
 
+#[global_allocator]
+static GLOBAL: tikv_jemallocator::Jemalloc = tikv_jemallocator::Jemalloc;
+
 #[tokio::main]
 pub async fn main() {
     let res = cli().await;

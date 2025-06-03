@@ -9,8 +9,8 @@ use sam_common::{
     address::MessageId,
     sam_message::{ClientMessage, ServerMessage},
 };
-use tokio::sync::mpsc;
-use tokio::sync::mpsc::{Receiver, Sender};
+use tokio::select;
+use tokio::sync::mpsc::Receiver;
 
 use crate::protocol::message::{handle_client_message, prepare_server_envelope};
 use crate::{
@@ -23,15 +23,6 @@ use crate::{
     ServerError,
 };
 
-macro_rules! closing_err {
-    ($username:expr, $err:expr) => {
-        error!(
-            "User '{}' websocket encountered an error '{}' closing connection...",
-            $username, $err
-        )
-    };
-}
-
 pub async fn init_websocket<T: StateType>(
     state: ServerState<T>,
     auth_user: AuthenticatedUser,
@@ -40,25 +31,12 @@ pub async fn init_websocket<T: StateType>(
 ) {
     info!("{} Connected!", auth_user.account().username());
     let (sender, receiver) = socket.split();
-    let (msg_producer, msg_consumer) = mpsc::channel(state.messages.channel_buffer().await);
 
     tokio::spawn(websocket_message_receiver(
         state.clone(),
         receiver,
-        msg_producer.clone(),
-        auth_user.clone(),
-    ));
-    tokio::spawn(websocket_dispatcher(
-        state.clone(),
         dispatch,
-        msg_producer,
-        auth_user.clone(),
-    ));
-
-    tokio::spawn(websocket_message_sender(
-        state,
         sender,
-        msg_consumer,
         auth_user,
     ));
 }
@@ -66,102 +44,67 @@ pub async fn init_websocket<T: StateType>(
 async fn websocket_message_receiver<T: StateType>(
     mut state: ServerState<T>,
     mut receiver: SplitStream<WebSocket>,
-    message_producer: Sender<Result<Option<ServerMessage>, WebSocketSessionError>>,
-    auth_user: AuthenticatedUser,
-) {
-    debug!(
-        "Started WS receiver for user '{}'",
-        auth_user.account().username()
-    );
-    while let Some(Ok(msg)) = receiver.next().await {
-        let decode_res = match msg {
-            Message::Binary(b) => {
-                info!(
-                    "Received websocket message from user '{}'",
-                    auth_user.account().username()
-                );
-                ClientMessage::decode(b)
-                    .inspect_err(|e| debug!("{e}"))
-                    .map_err(|_| WebSocketError::WebSocketDecodeError)
-            }
-            Message::Close(_) => Err(WebSocketError::WebSocketDisconnected),
-            _ => continue,
-        };
-
-        let msg_res = match decode_res {
-            Ok(msg) => handle_client_message(&mut state, &auth_user, msg)
-                .await
-                .map_err(WebSocketSessionError::from),
-            Err(e) => Err(WebSocketSessionError::from(e)),
-        };
-
-        let is_msg_res_err = msg_res.is_err();
-        if message_producer.send(msg_res).await.is_err() || is_msg_res_err {
-            break;
-        }
-    }
-    debug!(
-        "Stopped WS receiver for user '{}'",
-        auth_user.account().username()
-    );
-}
-
-async fn websocket_message_sender<T: StateType>(
-    mut state: ServerState<T>,
+    mut dispatch: Receiver<MessageId>,
     mut sender: SplitSink<WebSocket, Message>,
-    mut message_consumer: Receiver<Result<Option<ServerMessage>, WebSocketSessionError>>,
     auth_user: AuthenticatedUser,
 ) {
     debug!(
-        "Started WS message sender for user '{}'",
+        "Started WS handler for user '{}'",
         auth_user.account().username()
     );
-    while let Some(msg_res) = message_consumer.recv().await {
-        let send_res = match msg_res {
-            Ok(Some(msg)) => {
-                debug!("Sending message to '{}'", auth_user.account().username());
-                sender
-                    .send(Message::Binary(msg.encode_to_vec().into()))
-                    .await
-                    .inspect_err(|e| debug!("{e}"))
-                    .map_err(|_| WebSocketSessionError::from(WebSocketError::WebSocketSendError))
+    loop {
+        let res = select! {
+            msg = receiver.next() => {
+                if let Some(Ok(msg)) = msg {
+                    match handle_message_received(&mut state, &auth_user, msg).await {
+                        None => continue,
+                        Some(msg_res) => msg_res
+                    }
+                }
+                else {
+                    info!("User '{}' Disconnected", auth_user.account().username());
+                    break
+                }
+            },
+            msg_id = dispatch.recv() => {
+                if let Some(id) = msg_id {
+                    message_dispatched(&mut state, &auth_user, id).await
+                } else {
+                    info!("User '{}' Unsubscribed from message dispatcher", auth_user.account().username());
+                    break
+                }
             }
-            Err(WebSocketSessionError::WebSocket(WebSocketError::WebSocketDisconnected)) => Err(
-                WebSocketSessionError::from(WebSocketError::WebSocketDisconnected),
-            ),
-            Err(err) => {
-                error!("Websocket error: {err}");
+        };
+
+        let msg = match res {
+            Ok(Some(msg)) => msg,
+            Ok(None) => continue,
+            Err(WebSocketSessionError::WebSocket(WebSocketError::WebSocketDisconnected)) => {
+                break;
+            }
+            Err(e) => {
+                error!("Websocket error: {e}");
                 error!(
                     "Closing connection for '{}'",
                     auth_user.account().username()
                 );
-                let res = sender
+                let _ = sender
                     .send(Message::Close(Some(CloseFrame {
                         code: 1011,
                         reason: "Internal Server Error".into(),
                     })))
                     .await
-                    .inspect_err(|e| debug!("{e}"))
-                    .map_err(|_| WebSocketError::WebSocketSendError);
-                match res {
-                    Ok(_) => Err(err),
-                    Err(x) => Err(WebSocketSessionError::from(x)),
-                }
-            }
-            Ok(None) => continue,
-        };
-
-        match send_res {
-            Ok(_) => continue,
-            Err(err) => {
-                match err {
-                    WebSocketSessionError::WebSocket(WebSocketError::WebSocketDisconnected) => {
-                        break;
-                    }
-                    _ => closing_err!(auth_user.account().username(), err),
-                }
+                    .inspect_err(|e| debug!("{e}"));
                 break;
             }
+        };
+        if let Err(_) = sender
+            .send(Message::Binary(msg.encode_to_vec().into()))
+            .await
+            .inspect_err(|e| debug!("{e}"))
+        {
+            debug!("User disconnected");
+            break;
         }
     }
     state
@@ -169,45 +112,57 @@ async fn websocket_message_sender<T: StateType>(
         .unsubscribe(auth_user.account().id(), auth_user.device().id())
         .await;
     debug!(
-        "Stopped WS message sender for user '{}'",
+        "Stopped WS handler for user '{}'",
         auth_user.account().username()
     );
 }
 
-async fn websocket_dispatcher<T: StateType>(
-    mut state: ServerState<T>,
-    mut dispatch: Receiver<MessageId>,
-    message_producer: Sender<Result<Option<ServerMessage>, WebSocketSessionError>>,
-    auth_user: AuthenticatedUser,
-) {
-    debug!(
-        "Started WS dispatcher for user '{}'",
-        auth_user.account().username()
-    );
-    while let Some(msg_id) = dispatch.recv().await {
-        debug!(
-            "Dispatching message to user '{}'",
-            auth_user.account().username()
-        );
-        let msg_res = state
-            .messages
-            .get_envelope(auth_user.account().id(), auth_user.device().id(), msg_id)
-            .await;
-
-        let msg_res = match msg_res {
-            Ok(envelope) => prepare_server_envelope(&mut state, &auth_user, envelope)
-                .await
-                .map_err(WebSocketSessionError::from),
-            Err(e) => Err(WebSocketSessionError::from(ServerError::from(e))),
-        };
-
-        let is_msg_res_err = msg_res.is_err();
-        if message_producer.send(msg_res).await.is_err() || is_msg_res_err {
-            break;
+async fn handle_message_received<T: StateType>(
+    state: &mut ServerState<T>,
+    auth_user: &AuthenticatedUser,
+    msg: Message,
+) -> Option<Result<Option<ServerMessage>, WebSocketSessionError>> {
+    let decode_res = match msg {
+        Message::Binary(b) => {
+            info!(
+                "Received websocket message from user '{}'",
+                auth_user.account().username()
+            );
+            ClientMessage::decode(b)
+                .inspect_err(|e| debug!("{e}"))
+                .map_err(|_| WebSocketError::WebSocketDecodeError)
         }
-    }
+        Message::Close(_) => Err(WebSocketError::WebSocketDisconnected),
+        _ => return None,
+    };
+
+    let msg_res = match decode_res {
+        Ok(msg) => handle_client_message(state, auth_user, msg)
+            .await
+            .map_err(WebSocketSessionError::from),
+        Err(e) => Err(WebSocketSessionError::from(e)),
+    };
+    Some(msg_res)
+}
+
+async fn message_dispatched<T: StateType>(
+    state: &mut ServerState<T>,
+    auth_user: &AuthenticatedUser,
+    msg_id: MessageId,
+) -> Result<Option<ServerMessage>, WebSocketSessionError> {
     debug!(
-        "Stopped WS dispatcher for user '{}'",
+        "Dispatching message to user '{}'",
         auth_user.account().username()
     );
+    let msg_res = state
+        .messages
+        .get_envelope(auth_user.account().id(), auth_user.device().id(), msg_id)
+        .await;
+
+    match msg_res {
+        Ok(envelope) => prepare_server_envelope(state, auth_user, envelope)
+            .await
+            .map_err(WebSocketSessionError::from),
+        Err(e) => Err(WebSocketSessionError::from(ServerError::from(e))),
+    }
 }

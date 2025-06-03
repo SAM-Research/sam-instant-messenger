@@ -33,7 +33,7 @@ rustls-pemfile = { workspace = true }
 sqlx = { workspace = true, features = ["postgres", "uuid", "runtime-tokio"] }
 serde = { workspace = true, features = ["derive"] }
 serde_json = { workspace = true }
-
+tikv-jemallocator = { workspace = true }
 [dev-dependencies]
 sam-test-utils = { workspace = true }
 axum-test = { workspace = true }
