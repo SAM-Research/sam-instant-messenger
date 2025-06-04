@@ -111,7 +111,13 @@ async fn cli() -> Result<(), CliError> {
         None
     };
 
-    let state = match ServerState::connect(&config.database_url, DEFAULT_MESSAGE_BUFFER_SIZE).await
+    let state = match ServerState::connect(
+        &config.database_url,
+        config
+            .message_buffer_size
+            .unwrap_or(DEFAULT_MESSAGE_BUFFER_SIZE),
+    )
+    .await
     {
         Ok(state) => state,
         Err(e) => Err(CliError::DatabaseError(e))?,
