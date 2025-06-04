@@ -1,6 +1,7 @@
 use std::io::BufReader;
 
 use clap::{Arg, Command};
+
 use log::{debug, error, info};
 
 use sam_server::{
@@ -9,6 +10,18 @@ use sam_server::{
 
 const DEFAULT_ADDR: &str = "127.0.0.1:8080";
 const DEFAULT_MESSAGE_BUFFER_SIZE: usize = 10;
+
+fn init_logging(config: &ServerCliConfig) {
+    #[cfg(feature = "tokio-console")]
+    {
+        console_subscriber::init();
+    }
+    if let Some(filter) = &config.logging {
+        env_logger::builder().parse_filters(filter).init();
+    } else {
+        env_logger::init();
+    }
+}
 
 fn welcome(config: &ServerCliConfig) {
     let addr = config.address.clone().unwrap_or(DEFAULT_ADDR.to_string());
@@ -87,11 +100,7 @@ async fn cli() -> Result<(), CliError> {
         ServerCliConfig::new(url.clone(), addr.cloned(), Some(buffer_size), None, None)
     };
 
-    if let Some(filter) = &config.logging {
-        env_logger::builder().parse_filters(filter).init();
-    } else {
-        env_logger::init();
-    }
+    init_logging(&config);
 
     welcome(&config);
 
@@ -102,7 +111,13 @@ async fn cli() -> Result<(), CliError> {
         None
     };
 
-    let state = match ServerState::connect(&config.database_url, DEFAULT_MESSAGE_BUFFER_SIZE).await
+    let state = match ServerState::connect(
+        &config.database_url,
+        config
+            .message_buffer_size
+            .unwrap_or(DEFAULT_MESSAGE_BUFFER_SIZE),
+    )
+    .await
     {
         Ok(state) => state,
         Err(e) => Err(CliError::DatabaseError(e))?,
@@ -121,6 +136,9 @@ async fn cli() -> Result<(), CliError> {
     };
     Ok(start_server(config).await?)
 }
+
+#[global_allocator]
+static GLOBAL: tikv_jemallocator::Jemalloc = tikv_jemallocator::Jemalloc;
 
 #[tokio::main]
 pub async fn main() {

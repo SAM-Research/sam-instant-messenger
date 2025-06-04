@@ -7,6 +7,11 @@ repository.workspace = true
 license.workspace = true
 authors.workspace = true
 
+[features]
+default = []
+tokio-console = ["console-subscriber"]
+
+
 [dependencies]
 bon = { workspace = true }
 hkdf = { workspace = true }
@@ -33,6 +38,9 @@ rustls-pemfile = { workspace = true }
 sqlx = { workspace = true, features = ["postgres", "uuid", "runtime-tokio"] }
 serde = { workspace = true, features = ["derive"] }
 serde_json = { workspace = true }
+tikv-jemallocator = { workspace = true }
+tracing = { workspace = true }
+console-subscriber = { workspace = true, optional = true }
 
 [dev-dependencies]
 sam-test-utils = { workspace = true }
