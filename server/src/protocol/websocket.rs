@@ -98,10 +98,11 @@ async fn websocket_message_receiver<T: StateType>(
                 break;
             }
         };
-        if let Err(_) = sender
+        if sender
             .send(Message::Binary(msg.encode_to_vec().into()))
             .await
             .inspect_err(|e| debug!("{e}"))
+            .is_err()
         {
             debug!("User disconnected");
             break;
