@@ -26,13 +26,15 @@ pub async fn delete_account<T: StateType>(
 ) -> Result<(), ServerError> {
     {
         for device_id in state.devices.get_devices(account_id).await? {
-            if let Some(msgs) = state.messages.get_envelope_ids(account_id, device_id).await {
-                for msg_id in msgs {
-                    state
-                        .messages
-                        .remove_envelope(account_id, device_id, msg_id)
-                        .await?;
-                }
+            let msgs = state
+                .messages
+                .get_envelope_ids(account_id, device_id)
+                .await?;
+            for msg_id in msgs {
+                state
+                    .messages
+                    .remove_envelope(account_id, device_id, msg_id)
+                    .await?;
             }
 
             if let Some(ids) = state

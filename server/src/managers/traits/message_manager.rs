@@ -34,24 +34,30 @@ pub trait MessageManager: Send + Sync + Clone {
         &self,
         account_id: AccountId,
         device_id: DeviceId,
-    ) -> Option<Vec<EnvelopeId>>;
+    ) -> Result<Vec<EnvelopeId>, MessageManagerError>;
     async fn subscribe(
         &mut self,
         account_id: AccountId,
         device_id: DeviceId,
     ) -> Result<Receiver<EnvelopeId>, MessageManagerError>;
+
+    async fn unsubscribe(&mut self, account_id: AccountId, device_id: DeviceId);
+
     async fn dispatch_envelopes(
         &mut self,
         account_id: AccountId,
         device_id: DeviceId,
     ) -> Result<(), MessageManagerError>;
-    async fn unsubscribe(&mut self, account_id: AccountId, device_id: DeviceId);
+
+    /// Mark a message that is pending acknowledgement from the client.
     async fn add_pending_message(
         &mut self,
         account_id: AccountId,
         device_id: DeviceId,
         envelope_id: EnvelopeId,
     ) -> Result<(), MessageManagerError>;
+
+    /// Mark a message as having been acknowledged by the client.
     async fn remove_pending_message(
         &mut self,
         account_id: AccountId,

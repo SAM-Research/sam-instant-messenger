@@ -111,14 +111,16 @@ impl MessageManager for InMemoryMessageManager {
         &self,
         account_id: AccountId,
         device_id: DeviceId,
-    ) -> Option<Vec<EnvelopeId>> {
+    ) -> Result<Vec<EnvelopeId>, MessageManagerError> {
         let key = DeviceAddress::new(account_id, device_id);
 
-        self.envelopes
+        Ok(self
+            .envelopes
             .lock()
             .await
             .get(&key)
             .map(|msgs| msgs.keys().cloned().collect::<Vec<EnvelopeId>>())
+            .unwrap_or_default())
     }
 
     async fn subscribe(
@@ -152,26 +154,25 @@ impl MessageManager for InMemoryMessageManager {
         account_id: AccountId,
         device_id: DeviceId,
     ) -> Result<(), MessageManagerError> {
-        let ids = self.get_envelope_ids(account_id, device_id).await;
-        match ids {
-            Some(ids) => {
-                let key = DeviceAddress::new(account_id, device_id);
+        let ids = self.get_envelope_ids(account_id, device_id).await?;
+        if ids.len() > 0 {
+            let key = DeviceAddress::new(account_id, device_id);
 
-                match self.subscribers.lock().await.get(&key) {
-                    Some(sender) => {
-                        for id in ids {
-                            sender
-                                .send(id)
-                                .await
-                                .inspect_err(|e| debug!("{e}"))
-                                .map_err(|_| MessageManagerError::MessageSubscriberSendError)?;
-                        }
-                        Ok(())
+            match self.subscribers.lock().await.get(&key) {
+                Some(sender) => {
+                    for id in ids {
+                        sender
+                            .send(id)
+                            .await
+                            .inspect_err(|e| debug!("{e}"))
+                            .map_err(|_| MessageManagerError::MessageSubscriberSendError)?;
                     }
-                    None => Err(MessageManagerError::MessageSubscriberDoesNotExists)?,
+                    Ok(())
                 }
+                None => Err(MessageManagerError::MessageSubscriberDoesNotExists)?,
             }
-            None => Ok(()),
+        } else {
+            Ok(())
         }
     }
 

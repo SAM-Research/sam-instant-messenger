@@ -25,6 +25,7 @@ const TIMEOUT_SECS: u64 = 120;
 
 async fn client(address: &str, device_name: &str) -> Client<SqliteClientType> {
     let username = Uuid::new_v4().to_string();
+    println!("User {}, with device {}", &username, &device_name);
     Client::from_registration()
         .username(&username)
         .device_name(device_name)
@@ -351,6 +352,7 @@ async fn test_alice_send_to_bob_and_self(
     #[case]
     state: ServerState<impl StateType>,
 ) {
+    let _ = env_logger::try_init();
     timeout(Duration::from_secs(TIMEOUT_SECS), async {
         let address = format!("127.0.0.1:{}", get_next_port());
         let mut server = TestServer::start(&address, None, state.await).await;
@@ -383,17 +385,24 @@ async fn test_alice_send_to_bob_and_self(
             Err(ClientError::Logic(LogicError::MissingDevices))
         ));
 
+        println!("Alice could not send to bob");
+
         alice
             .send_message(bob_id, bob_expected)
             .await
             .expect("Alice can send message");
 
+        println!("Alice sent message");
+
         let mut alice_recv = alice_device.subscribe();
 
+        println!("Alice is waiting for her message");
         alice_device
             .process_messages_blocking()
             .await
             .expect("Alice device can process message");
+
+        println!("Alice processing messages");
 
         let res = alice_recv.recv().await.expect("receiver works");
         let bob_msg = String::from_utf8_lossy(res.content_bytes());

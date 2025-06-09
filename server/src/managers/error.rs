@@ -102,6 +102,7 @@ pub enum MessageManagerError {
     MessageSubscriberDoesNotExists,
     MessageAlreadyPending,
     MessageNotPending,
+    ServiceUnavailable,
 }
 
 impl IntoResponse for MessageManagerError {
@@ -109,33 +110,38 @@ impl IntoResponse for MessageManagerError {
         error!("MessageManagerError occurred: {}", self);
         match self {
             MessageManagerError::EnvelopeAlreadyExists => {
-                (StatusCode::CONFLICT, "Message already exists.")
+                (StatusCode::CONFLICT, "Message already exists.").into_response()
             }
             MessageManagerError::MessageSubscriberSendError => (
                 StatusCode::INTERNAL_SERVER_ERROR,
                 "Subscriber failed to send message.",
-            ),
+            )
+                .into_response(),
             MessageManagerError::EnvelopeDoesNotExists => {
-                (StatusCode::NOT_FOUND, "Message does not exist.")
+                (StatusCode::NOT_FOUND, "Message does not exist.").into_response()
             }
             MessageManagerError::AccountDoesNotExist => {
-                (StatusCode::NOT_FOUND, "Could not find account.")
+                (StatusCode::NOT_FOUND, "Could not find account.").into_response()
             }
             MessageManagerError::MessageSubscriberAlreadyExists => {
-                (StatusCode::CONFLICT, "Already subscribed to new messages.")
+                (StatusCode::CONFLICT, "Already subscribed to new messages.").into_response()
             }
             MessageManagerError::MessageSubscriberDoesNotExists => (
                 StatusCode::NOT_FOUND,
                 "Receiver not subscribed to new messages.",
-            ),
+            )
+                .into_response(),
             MessageManagerError::MessageAlreadyPending => (
                 StatusCode::INTERNAL_SERVER_ERROR,
                 "Message is already pending.",
-            ),
+            )
+                .into_response(),
             MessageManagerError::MessageNotPending => {
-                (StatusCode::INTERNAL_SERVER_ERROR, "Message not pending.")
+                (StatusCode::INTERNAL_SERVER_ERROR, "Message not pending.").into_response()
+            }
+            MessageManagerError::ServiceUnavailable => {
+                StatusCode::SERVICE_UNAVAILABLE.into_response()
             }
         }
-        .into_response()
     }
 }

@@ -58,3 +58,12 @@ CREATE TABLE last_resort_pq_pre_keys (
     signature   BYTEA NOT NULL,
     UNIQUE(owner, key_id)
 );
+
+CREATE TABLE msg_queue (
+    id           INTEGER PRIMARY KEY NOT NULL GENERATED ALWAYS AS IDENTITY,
+    envelope_id  UUID NOT NULL UNIQUE,
+    receiver     INTEGER NOT NULL REFERENCES devices(id) ON DELETE CASCADE,
+    msg          BYTEA NOT NULL,
+    acknowledged BOOL NOT NULL DEFAULT FALSE,
+    UNIQUE(receiver, envelope_id)
+);
